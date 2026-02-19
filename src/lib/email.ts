@@ -30,20 +30,79 @@ export async function sendEmail(params: {
   return { ok: true };
 }
 
-/** Base layout for BPM notification emails */
-function emailLayout(content: string): string {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+
+/** Accent colors per notification type (hex for email clients) */
+const ACCENT = {
+  assigned: "#0ea5e9",
+  started: "#8b5cf6",
+  approved: "#10b981",
+  rejected: "#ef4444",
+  completed: "#06b6d4",
+} as const;
+
+/** Base layout for BPM notification emails – branded header, card body, CTA button, footer */
+function emailLayout(options: {
+  title: string;
+  accent: keyof typeof ACCENT;
+  greeting: string;
+  intro: string;
+  details: Array<{ label: string; value: string }>;
+  ctaUrl: string;
+  ctaLabel: string;
+}): string {
+  const color = ACCENT[options.accent];
+  const detailsRows = options.details
+    .map(
+      (d) => `
+    <tr><td style="padding: 12px 16px 4px 16px; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">${escapeHtml(d.label)}</td></tr>
+    <tr><td style="padding: 0 16px 14px 16px; font-size: 15px; color: #0f172a; font-weight: 500;">${escapeHtml(d.value)}</td></tr>`
+    )
+    .join("");
   return `
 <!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="font-family: system-ui, sans-serif; line-height: 1.5; color: #333; max-width: 560px; margin: 0 auto; padding: 24px;">
-  <div style="background: #f8f9fa; border-radius: 8px; padding: 20px; margin-bottom: 16px;">
-    ${content}
-  </div>
-  <p style="font-size: 12px; color: #666;">
-    <a href="${siteUrl}" style="color: #2563eb;">Open BPM</a>
-  </p>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${escapeHtml(options.title)}</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f1f5f9; line-height: 1.6;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f1f5f9; padding: 32px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 520px; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1); overflow: hidden;">
+          <tr>
+            <td style="height: 4px; background: ${color};"></td>
+          </tr>
+          <tr>
+            <td style="padding: 24px 28px 16px 28px;">
+              <h1 style="margin: 0; font-size: 20px; font-weight: 700; color: #0f172a; letter-spacing: -0.025em;">${escapeHtml(options.title)}</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 0 28px 24px 28px;">
+              <p style="margin: 0 0 16px 0; font-size: 15px; color: #334155;">${escapeHtml(options.greeting)}</p>
+              <p style="margin: 0 0 20px 0; font-size: 15px; color: #475569;">${escapeHtml(options.intro)}</p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f8fafc; border-radius: 8px; padding: 4px;">
+                ${detailsRows}
+              </table>
+              <p style="margin: 24px 0 0 0;">
+                <a href="${options.ctaUrl}" style="display: inline-block; padding: 12px 24px; background: ${color}; color: #ffffff !important; font-size: 14px; font-weight: 600; text-decoration: none; border-radius: 8px;">${escapeHtml(options.ctaLabel)}</a>
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 20px 28px; border-top: 1px solid #e2e8f0;">
+              <p style="margin: 0; font-size: 12px; color: #94a3b8;">
+                <a href="${SITE_URL}" style="color: #0ea5e9; text-decoration: none;">Open BPM</a> · You received this notification from your BPM application.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>`;
 }
@@ -57,20 +116,21 @@ export type TaskAssignedPayload = {
 };
 
 export function buildTaskAssignedEmail(p: TaskAssignedPayload): { subject: string; html: string } {
-  const url = `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/process-instances/${p.instanceId}`;
-  const content = `
-    <h2 style="margin: 0 0 12px 0; font-size: 18px;">New task assigned</h2>
-    <p style="margin: 0 0 8px 0;">Hello ${escapeHtml(p.assigneeName)},</p>
-    <p style="margin: 0 0 8px 0;">You have been assigned to a task in the following process:</p>
-    <ul style="margin: 8px 0; padding-left: 20px;">
-      <li><strong>Process:</strong> ${escapeHtml(p.processName)}</li>
-      <li><strong>Task:</strong> ${escapeHtml(p.taskName)}</li>
-    </ul>
-    <p style="margin: 12px 0 0 0;"><a href="${url}" style="color: #2563eb;">View process &amp; task</a></p>
-  `;
+  const url = `${SITE_URL}/process-instances/${p.instanceId}`;
   return {
     subject: `[BPM] Task assigned: ${p.taskName} – ${p.processName}`,
-    html: emailLayout(content),
+    html: emailLayout({
+      title: "New task assigned",
+      accent: "assigned",
+      greeting: `Hello ${p.assigneeName},`,
+      intro: "You have been assigned to a task. Review the details below and open the process when you're ready.",
+      details: [
+        { label: "Process", value: p.processName },
+        { label: "Task", value: p.taskName },
+      ],
+      ctaUrl: url,
+      ctaLabel: "View process & task",
+    }),
   };
 }
 
@@ -84,21 +144,22 @@ export type TaskStartedPayload = {
 };
 
 export function buildTaskStartedEmail(p: TaskStartedPayload): { subject: string; html: string } {
-  const url = `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/process-instances/${p.instanceId}`;
-  const content = `
-    <h2 style="margin: 0 0 12px 0; font-size: 18px;">Task in progress</h2>
-    <p style="margin: 0 0 8px 0;">Hello ${escapeHtml(p.assigneeName)},</p>
-    <p style="margin: 0 0 8px 0;">A task you can act on has been started:</p>
-    <ul style="margin: 8px 0; padding-left: 20px;">
-      <li><strong>Process:</strong> ${escapeHtml(p.processName)}</li>
-      <li><strong>Task:</strong> ${escapeHtml(p.taskName)}</li>
-      <li><strong>Started by:</strong> ${escapeHtml(p.startedByName)}</li>
-    </ul>
-    <p style="margin: 12px 0 0 0;"><a href="${url}" style="color: #2563eb;">View process</a></p>
-  `;
+  const url = `${SITE_URL}/process-instances/${p.instanceId}`;
   return {
     subject: `[BPM] Task started: ${p.taskName} – ${p.processName}`,
-    html: emailLayout(content),
+    html: emailLayout({
+      title: "Task in progress",
+      accent: "started",
+      greeting: `Hello ${p.assigneeName},`,
+      intro: "A task you can act on has been started. See who started it and open the process below.",
+      details: [
+        { label: "Process", value: p.processName },
+        { label: "Task", value: p.taskName },
+        { label: "Started by", value: p.startedByName },
+      ],
+      ctaUrl: url,
+      ctaLabel: "View process",
+    }),
   };
 }
 
@@ -112,21 +173,22 @@ export type TaskApprovedPayload = {
 };
 
 export function buildTaskApprovedEmail(p: TaskApprovedPayload): { subject: string; html: string } {
-  const url = `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/process-instances/${p.instanceId}`;
-  const content = `
-    <h2 style="margin: 0 0 12px 0; font-size: 18px;">Task approved</h2>
-    <p style="margin: 0 0 8px 0;">Hello ${escapeHtml(p.toName)},</p>
-    <p style="margin: 0 0 8px 0;">A task in a process you are involved in has been approved:</p>
-    <ul style="margin: 8px 0; padding-left: 20px;">
-      <li><strong>Process:</strong> ${escapeHtml(p.processName)}</li>
-      <li><strong>Task:</strong> ${escapeHtml(p.taskName)}</li>
-      <li><strong>Approved by:</strong> ${escapeHtml(p.approvedByName)}</li>
-    </ul>
-    <p style="margin: 12px 0 0 0;"><a href="${url}" style="color: #2563eb;">View process</a></p>
-  `;
+  const url = `${SITE_URL}/process-instances/${p.instanceId}`;
   return {
     subject: `[BPM] Task approved: ${p.taskName} – ${p.processName}`,
-    html: emailLayout(content),
+    html: emailLayout({
+      title: "Task approved",
+      accent: "approved",
+      greeting: `Hello ${p.toName},`,
+      intro: "A task in a process you're involved in has been approved. Details below.",
+      details: [
+        { label: "Process", value: p.processName },
+        { label: "Task", value: p.taskName },
+        { label: "Approved by", value: p.approvedByName },
+      ],
+      ctaUrl: url,
+      ctaLabel: "View process",
+    }),
   };
 }
 
@@ -141,22 +203,24 @@ export type TaskRejectedPayload = {
 };
 
 export function buildTaskRejectedEmail(p: TaskRejectedPayload): { subject: string; html: string } {
-  const url = `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/process-instances/${p.instanceId}`;
-  const content = `
-    <h2 style="margin: 0 0 12px 0; font-size: 18px;">Task rejected</h2>
-    <p style="margin: 0 0 8px 0;">Hello ${escapeHtml(p.toName)},</p>
-    <p style="margin: 0 0 8px 0;">A task in a process you are involved in has been rejected:</p>
-    <ul style="margin: 8px 0; padding-left: 20px;">
-      <li><strong>Process:</strong> ${escapeHtml(p.processName)}</li>
-      <li><strong>Task:</strong> ${escapeHtml(p.taskName)}</li>
-      <li><strong>Rejected by:</strong> ${escapeHtml(p.rejectedByName)}</li>
-      ${p.comment ? `<li><strong>Comment:</strong> ${escapeHtml(p.comment)}</li>` : ""}
-    </ul>
-    <p style="margin: 12px 0 0 0;"><a href="${url}" style="color: #2563eb;">View process</a></p>
-  `;
+  const url = `${SITE_URL}/process-instances/${p.instanceId}`;
+  const details: Array<{ label: string; value: string }> = [
+    { label: "Process", value: p.processName },
+    { label: "Task", value: p.taskName },
+    { label: "Rejected by", value: p.rejectedByName },
+  ];
+  if (p.comment?.trim()) details.push({ label: "Comment", value: p.comment.trim() });
   return {
     subject: `[BPM] Task rejected: ${p.taskName} – ${p.processName}`,
-    html: emailLayout(content),
+    html: emailLayout({
+      title: "Task rejected",
+      accent: "rejected",
+      greeting: `Hello ${p.toName},`,
+      intro: "A task in a process you're involved in has been rejected. You can view the process and comment below.",
+      details,
+      ctaUrl: url,
+      ctaLabel: "View process",
+    }),
   };
 }
 
@@ -168,18 +232,32 @@ export type ProcessCompletedPayload = {
 };
 
 export function buildProcessCompletedEmail(p: ProcessCompletedPayload): { subject: string; html: string } {
-  const url = `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/process-instances/${p.instanceId}`;
-  const content = `
-    <h2 style="margin: 0 0 12px 0; font-size: 18px;">Process completed</h2>
-    <p style="margin: 0 0 8px 0;">Hello ${escapeHtml(p.toName)},</p>
-    <p style="margin: 0 0 8px 0;">The following process has been completed:</p>
-    <p style="margin: 8px 0;"><strong>${escapeHtml(p.processName)}</strong></p>
-    <p style="margin: 12px 0 0 0;"><a href="${url}" style="color: #2563eb;">View process</a></p>
-  `;
+  const url = `${SITE_URL}/process-instances/${p.instanceId}`;
   return {
     subject: `[BPM] Process completed: ${p.processName}`,
-    html: emailLayout(content),
+    html: emailLayout({
+      title: "Process completed",
+      accent: "completed",
+      greeting: `Hello ${p.toName},`,
+      intro: "The following process has been completed. You can open it to review the outcome.",
+      details: [{ label: "Process", value: p.processName }],
+      ctaUrl: url,
+      ctaLabel: "View process",
+    }),
   };
+}
+
+/** Test email HTML (e.g. for "Send test email" from License modal) */
+export function buildTestEmailHtml(): string {
+  return emailLayout({
+    title: "BPM email test",
+    accent: "assigned",
+    greeting: "Hello,",
+    intro: "This is a test email from your BPM application. If you received this, email sending (Office 365 or Resend) is configured correctly.",
+    details: [{ label: "Sent at", value: new Date().toISOString() }],
+    ctaUrl: SITE_URL,
+    ctaLabel: "Open BPM",
+  });
 }
 
 function escapeHtml(s: string): string {

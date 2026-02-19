@@ -8,6 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 export interface LicenseData {
   serialNumber: string;
@@ -25,6 +26,8 @@ export function LicenseDialog({ open, onOpenChange }: LicenseDialogProps) {
   const [data, setData] = useState<LicenseData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [testEmailStatus, setTestEmailStatus] = useState<"idle" | "sending" | "ok" | "err">("idle");
+  const [testEmailMessage, setTestEmailMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;

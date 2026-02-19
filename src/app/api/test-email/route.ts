@@ -1,15 +1,13 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { isEmailConfigured, sendEmail } from "@/lib/email";
+import { isEmailConfigured, sendEmail, buildTestEmailHtml } from "@/lib/email";
 
 async function sendTestEmail(to: string) {
-  const subject = "[BPM] Test email";
-  const html = `
-    <p>This is a test email from the BPM application.</p>
-    <p>If you received this, email sending (Office 365 or Resend) is working.</p>
-    <p><em>Sent at ${new Date().toISOString()}</em></p>
-  `;
-  return sendEmail({ to, subject, html });
+  return sendEmail({
+    to,
+    subject: "[BPM] Test email",
+    html: buildTestEmailHtml(),
+  });
 }
 
 /**
