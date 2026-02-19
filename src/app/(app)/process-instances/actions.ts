@@ -6,6 +6,15 @@ import { requireRole, hasPermission } from "@/lib/rbac";
 import { Role } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { uploadToBunny, isBunnyConfigured } from "@/lib/bunnycdn";
+import {
+  isEmailConfigured,
+  sendEmail,
+  buildTaskAssignedEmail,
+  buildTaskStartedEmail,
+  buildTaskApprovedEmail,
+  buildTaskRejectedEmail,
+  buildProcessCompletedEmail,
+} from "@/lib/email";
 
 export async function startProcessInstance(formData: FormData) {
   const session = await auth();
@@ -79,6 +88,24 @@ export async function startProcessInstance(formData: FormData) {
       await prisma.taskAssignmentAssignee.createMany({
         data: userIds.map((userId) => ({ taskId: assignment.id, userId })),
       });
+      if (isEmailConfigured()) {
+        const users = await prisma.user.findMany({
+          where: { id: { in: userIds } },
+          select: { id: true, email: true, firstName: true, lastName: true },
+        });
+        for (const u of users) {
+          const { subject, html } = buildTaskAssignedEmail({
+            assigneeEmail: u.email,
+            assigneeName: `${u.firstName} ${u.lastName}`.trim() || u.email,
+            processName: name,
+            taskName: taskTemplate.name,
+            instanceId: instance.id,
+          });
+          sendEmail({ to: u.email, subject, html }).catch((err) =>
+            console.error("[BPM] Task assigned email failed:", err)
+          );
+        }
+      }
     }
   }
 
@@ -113,6 +140,38 @@ export async function startTask(taskId: string) {
       data: { taskId, userId: session.user.id, action: "START" },
     }),
   ]);
+
+  if (isEmailConfigured()) {
+    const taskWithDetails = await prisma.processTaskAssignment.findUnique({
+      where: { id: taskId },
+      include: {
+        processInstance: { select: { name: true, id: true } },
+        templateTask: { select: { name: true } },
+        possibleAssignees: { include: { user: { select: { id: true, email: true, firstName: true, lastName: true } } } },
+      },
+    });
+    if (taskWithDetails) {
+      const startedByName = session.user.name ?? session.user.email ?? "A user";
+      const processName = taskWithDetails.processInstance.name;
+      const taskName = taskWithDetails.templateTask.name;
+      const instanceId = taskWithDetails.processInstance.id;
+      for (const pa of taskWithDetails.possibleAssignees) {
+        if (pa.user.id === session.user.id) continue;
+        const { subject, html } = buildTaskStartedEmail({
+          assigneeEmail: pa.user.email,
+          assigneeName: `${pa.user.firstName} ${pa.user.lastName}`.trim() || pa.user.email,
+          processName,
+          taskName,
+          startedByName,
+          instanceId,
+        });
+        sendEmail({ to: pa.user.email, subject, html }).catch((err) =>
+          console.error("[BPM] Task started email failed:", err)
+        );
+      }
+    }
+  }
+
   revalidatePath("/process-instances");
   revalidatePath("/my-tasks");
   revalidatePath("/dashboard");
@@ -161,6 +220,38 @@ export async function approveTask(taskId: string, comment?: string) {
     });
   }
 
+  if (isEmailConfigured()) {
+    const instanceWithStarter = await prisma.processInstance.findUnique({
+      where: { id: task.processInstanceId },
+      include: { startedBy: { select: { email: true, firstName: true, lastName: true } } },
+    });
+    if (instanceWithStarter?.startedBy) {
+      const toName = `${instanceWithStarter.startedBy.firstName} ${instanceWithStarter.startedBy.lastName}`.trim() || instanceWithStarter.startedBy.email;
+      const { subject, html } = buildTaskApprovedEmail({
+        toEmail: instanceWithStarter.startedBy.email,
+        toName,
+        processName: instanceWithStarter.name,
+        taskName: task.templateTask.name,
+        approvedByName: session.user.name ?? session.user.email ?? "A user",
+        instanceId: task.processInstanceId,
+      });
+      sendEmail({ to: instanceWithStarter.startedBy.email, subject, html }).catch((err) =>
+        console.error("[BPM] Task approved email failed:", err)
+      );
+      if (allMandatoryApproved) {
+        const completed = buildProcessCompletedEmail({
+          toEmail: instanceWithStarter.startedBy.email,
+          toName,
+          processName: instanceWithStarter.name,
+          instanceId: task.processInstanceId,
+        });
+        sendEmail({ to: instanceWithStarter.startedBy.email, subject: completed.subject, html: completed.html }).catch((err) =>
+          console.error("[BPM] Process completed email failed:", err)
+        );
+      }
+    }
+  }
+
   revalidatePath("/process-instances");
   revalidatePath(`/process-instances/${task.processInstanceId}`);
   revalidatePath("/my-tasks");
@@ -194,6 +285,35 @@ export async function rejectTask(taskId: string, comment: string) {
       data: { taskId, userId: session.user.id, action: "REJECT", message: comment },
     }),
   ]);
+
+  if (isEmailConfigured()) {
+    const taskWithInstance = await prisma.processTaskAssignment.findUnique({
+      where: { id: taskId },
+      include: {
+        processInstance: {
+          include: { startedBy: { select: { email: true, firstName: true, lastName: true } } },
+        },
+        templateTask: { select: { name: true } },
+      },
+    });
+    if (taskWithInstance?.processInstance?.startedBy) {
+      const starter = taskWithInstance.processInstance.startedBy;
+      const toName = `${starter.firstName} ${starter.lastName}`.trim() || starter.email;
+      const { subject, html } = buildTaskRejectedEmail({
+        toEmail: starter.email,
+        toName,
+        processName: taskWithInstance.processInstance.name,
+        taskName: taskWithInstance.templateTask.name,
+        rejectedByName: session.user.name ?? session.user.email ?? "A user",
+        comment,
+        instanceId: taskWithInstance.processInstanceId,
+      });
+      sendEmail({ to: starter.email, subject, html }).catch((err) =>
+        console.error("[BPM] Task rejected email failed:", err)
+      );
+    }
+  }
+
   revalidatePath("/process-instances");
   revalidatePath(`/process-instances/${task.processInstanceId}`);
   revalidatePath("/my-tasks");

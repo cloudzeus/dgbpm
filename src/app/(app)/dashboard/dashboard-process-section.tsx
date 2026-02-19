@@ -173,6 +173,56 @@ function DraggableKanbanCard({
   );
 }
 
+/** Static column for SSR/first paint to avoid @dnd-kit hydration mismatch (aria-describedby IDs differ server vs client). */
+function StaticKanbanColumn({
+  status,
+  tasks,
+  onTaskClick,
+}: {
+  status: KanbanStatus;
+  tasks: DashboardTask[];
+  onTaskClick?: (task: DashboardTask) => void;
+}) {
+  const seen = new Set<string>();
+  const uniqueTasks = tasks.filter((t) => {
+    if (seen.has(t.id)) return false;
+    seen.add(t.id);
+    return true;
+  });
+  return (
+    <div
+      className={cn(
+        "rounded-xl border-2 min-h-[200px] p-3 transition-colors",
+        COLUMN_COLORS[status]
+      )}
+    >
+      <h3 className="font-semibold text-sm mb-3 capitalize flex items-center justify-between text-zinc-200">
+        <span>{status.replace("_", " ")}</span>
+        <span className="text-zinc-400 font-normal">{tasks.length}</span>
+      </h3>
+      <div className="space-y-2">
+        {uniqueTasks.map((t) => (
+          <div
+            key={t.id}
+            role="button"
+            tabIndex={0}
+            onClick={() => onTaskClick?.(t)}
+            onKeyDown={(e) => {
+              if (onTaskClick && (e.key === "Enter" || e.key === " ")) {
+                e.preventDefault();
+                onTaskClick(t);
+              }
+            }}
+            className={cn(onTaskClick && "cursor-pointer")}
+          >
+            <KanbanCard task={t} status={status} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function DroppableColumn({
   status,
   tasks,
@@ -277,9 +327,14 @@ export function DashboardProcessSection({
   } | null>(null);
   const [uploadedTaskId, setUploadedTaskId] = useState<string | null>(null);
   const [selectedTask, setSelectedTask] = useState<DashboardTask | null>(null);
+  const [dndMounted, setDndMounted] = useState(false);
   const columnRefs = useRef<Record<KanbanStatus, HTMLDivElement | null>>({} as Record<KanbanStatus, HTMLDivElement | null>);
   const ghostRef = useRef<HTMLDivElement>(null);
   const lastDragEndTime = useRef(0);
+
+  useEffect(() => {
+    setDndMounted(true);
+  }, []);
 
   useEffect(() => {
     const init: Record<string, DashboardTask[]> = {
@@ -446,13 +501,14 @@ export function DashboardProcessSection({
 
   const handleFileUpload = async (taskId: string, e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const form = e.currentTarget;
     setUploading(true);
     setUploadError(null);
-    const formData = new FormData(e.currentTarget);
+    const formData = new FormData(form);
     try {
       const result = await uploadTaskFile(taskId, formData);
       if (result.ok) {
-        e.currentTarget.reset();
+        form?.reset();
         setUploadedTaskId(taskId);
         router.refresh();
       } else {
@@ -515,26 +571,39 @@ export function DashboardProcessSection({
 
       <section className="space-y-4">
         <h2 className="text-lg font-semibold text-zinc-200">Tasks by status</h2>
-        <DndContext
-          sensors={sensors}
-          collisionDetection={pointerWithin}
-          onDragEnd={handleDragEnd}
-        >
+        {!dndMounted ? (
           <div className="rounded-xl bg-zinc-900/95 border border-zinc-700 p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 overflow-x-auto pb-4">
             {KANBAN_COLUMNS.map((status) => (
-              <DroppableColumn
+              <StaticKanbanColumn
                 key={status}
                 status={status}
                 tasks={tasksByStatus[status] || []}
-                getCanAct={getCanAct}
-                columnRef={(el) => {
-                  columnRefs.current[status] = el;
-                }}
                 onTaskClick={handleTaskClick}
               />
             ))}
           </div>
-        </DndContext>
+        ) : (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={pointerWithin}
+            onDragEnd={handleDragEnd}
+          >
+            <div className="rounded-xl bg-zinc-900/95 border border-zinc-700 p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 overflow-x-auto pb-4">
+              {KANBAN_COLUMNS.map((status) => (
+                <DroppableColumn
+                  key={status}
+                  status={status}
+                  tasks={tasksByStatus[status] || []}
+                  getCanAct={getCanAct}
+                  columnRef={(el) => {
+                    columnRefs.current[status] = el;
+                  }}
+                  onTaskClick={handleTaskClick}
+                />
+              ))}
+            </div>
+          </DndContext>
+        )}
       </section>
 
       {snapBack &&

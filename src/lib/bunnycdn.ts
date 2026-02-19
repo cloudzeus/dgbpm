@@ -1,15 +1,23 @@
 /**
  * BunnyCDN Storage API – upload files and return public CDN URL.
- * Requires: BUNNY_STORAGE_ZONE, BUNNY_ACCESS_KEY, BUNNY_CDN_HOST in env.
- * Optional: BUNNY_STORAGE_REGION (e.g. "la", "sg", "syd"; empty = Falkenstein).
+ * Uses from env: BUNNY_STORAGE_ZONE, BUNNY_ACCESS_KEY, BUNNY_CDN_HOSTNAME, BUNNY_STORAGE_API_HOST.
+ * Optional: BUNNY_CDN_HOST (full URL override), BUNNY_STORAGE_REGION (e.g. "la", "sg", "syd"; empty = Falkenstein).
  */
 
 const STORAGE_REGION = process.env.BUNNY_STORAGE_REGION ?? "";
 const STORAGE_ZONE = process.env.BUNNY_STORAGE_ZONE;
 const ACCESS_KEY = process.env.BUNNY_ACCESS_KEY;
-const CDN_HOST = process.env.BUNNY_CDN_HOST?.replace(/\/$/, "");
+const STORAGE_API_HOST = process.env.BUNNY_STORAGE_API_HOST?.replace(/^https?:\/\//, "").replace(/\/$/, "");
+// CDN URL for public file links: BUNNY_CDN_HOST (full URL) or BUNNY_CDN_HOSTNAME (e.g. dgsmart.b-cdn.net)
+const CDN_HOST = (() => {
+  const host = process.env.BUNNY_CDN_HOST?.replace(/\/$/, "");
+  if (host) return host;
+  const hostname = process.env.BUNNY_CDN_HOSTNAME?.replace(/\/$/, "");
+  return hostname ? `https://${hostname}` : undefined;
+})();
 
 function getStorageHost(): string {
+  if (STORAGE_API_HOST) return `https://${STORAGE_API_HOST}`;
   const prefix = STORAGE_REGION ? `${STORAGE_REGION}.` : "";
   return `https://${prefix}storage.bunnycdn.com`;
 }
@@ -31,7 +39,7 @@ export async function uploadToBunny(
   contentType: string
 ): Promise<string> {
   if (!isBunnyConfigured()) {
-    throw new Error("BunnyCDN is not configured (BUNNY_STORAGE_ZONE, BUNNY_ACCESS_KEY, BUNNY_CDN_HOST)");
+    throw new Error("BunnyCDN is not configured (BUNNY_STORAGE_ZONE, BUNNY_ACCESS_KEY, and BUNNY_CDN_HOST or BUNNY_CDN_HOSTNAME)");
   }
 
   const host = getStorageHost();

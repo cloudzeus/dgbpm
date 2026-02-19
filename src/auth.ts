@@ -22,6 +22,8 @@ declare module "next-auth" {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  // Required in production when behind a reverse proxy (e.g. https://bpm.dgsmart.gr)
+  trustHost: true,
   // Auth.js v5 uses AUTH_SECRET; fallback to NEXTAUTH_SECRET for compatibility
   secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
   providers: [

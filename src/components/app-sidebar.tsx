@@ -1,26 +1,33 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { FiFileText } from "react-icons/fi";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { getNavItemsForRole } from "@/lib/nav-config";
+import { getNavItemsForRole, getReportNavItemsForRole } from "@/lib/nav-config";
+import { LicenseDialog } from "@/components/license-dialog";
 import type { Role } from "@prisma/client";
 
 export function AppSidebar({ role }: { role: Role | undefined }) {
   const pathname = usePathname();
   const { state } = useSidebar();
+  const [licenseOpen, setLicenseOpen] = useState(false);
   const items = getNavItemsForRole(role);
+  const reportItems = getReportNavItemsForRole(role);
   const isCollapsed = state === "collapsed";
 
   return (
@@ -75,7 +82,46 @@ export function AppSidebar({ role }: { role: Role | undefined }) {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+        {reportItems.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Reports</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {reportItems.map((item) => {
+                  const Icon = item.icon;
+                  const active =
+                    pathname === item.href ||
+                    (item.href !== "/reports" && pathname.startsWith(item.href));
+                  return (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton asChild isActive={active} tooltip={item.label}>
+                        <Link href={item.href}>
+                          <Icon className="size-4 shrink-0" />
+                          <span>{item.label}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              tooltip="License"
+              onClick={() => setLicenseOpen(true)}
+            >
+              <FiFileText className="size-4 shrink-0" />
+              <span>License</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
+      <LicenseDialog open={licenseOpen} onOpenChange={setLicenseOpen} />
     </Sidebar>
   );
 }

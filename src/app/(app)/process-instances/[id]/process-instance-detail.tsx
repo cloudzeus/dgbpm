@@ -121,7 +121,7 @@ export function ProcessInstanceDetail({
     try {
       const result = await uploadTaskFile(taskId, formData);
       if (result.ok) {
-        form.reset();
+        form?.reset();
         router.refresh();
       } else {
         setUploadError(result.error);

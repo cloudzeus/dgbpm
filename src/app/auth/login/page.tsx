@@ -4,13 +4,18 @@ import Image from "next/image";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { LoginForm } from "./login-form";
+import { LoginVideoBackground } from "./login-video-background";
 
 export default async function LoginPage() {
   const session = await auth();
   if (session?.user) redirect("/dashboard");
 
   return (
-    <div className="flex min-h-svh flex-col items-center justify-center gap-8 bg-muted/30 p-4">
+    <div className="relative flex min-h-svh flex-col items-center justify-center gap-8 overflow-hidden p-4">
+      <div className="fixed inset-0 z-0 min-h-full min-w-full bg-muted">
+        <LoginVideoBackground />
+      </div>
+      <div className="relative z-10 flex min-h-svh w-full flex-col items-center justify-center gap-8 p-4">
       <Image
         src="/HappyOnLineFullLogo.svg"
         alt="HappyOnLine"
@@ -39,6 +44,7 @@ export default async function LoginPage() {
           </p>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }

@@ -8,6 +8,10 @@ import {
   FiPlay,
   FiCheckSquare,
   FiFileText,
+  FiBarChart2,
+  FiUser,
+  FiCheckCircle,
+  FiLayers,
 } from "react-icons/fi";
 
 export interface NavItem {
@@ -28,7 +32,18 @@ export const navItems: NavItem[] = [
   { href: "/my-processes", label: "My Processes", icon: FiPlay, roles: ["SUPER_ADMIN", "ADMIN", "MANAGER", "EMPLOYEE"] },
 ];
 
+export const reportNavItems: NavItem[] = [
+  { href: "/reports/by-user", label: "By User", icon: FiUser, roles: ["SUPER_ADMIN", "ADMIN", "MANAGER"] },
+  { href: "/reports/by-task", label: "By Task", icon: FiCheckCircle, roles: ["SUPER_ADMIN", "ADMIN", "MANAGER"] },
+  { href: "/reports/summary", label: "Process Summary", icon: FiLayers, roles: ["SUPER_ADMIN", "ADMIN", "MANAGER"] },
+];
+
 export function getNavItemsForRole(role: Role | undefined): NavItem[] {
   if (!role) return [];
   return navItems.filter((item) => item.roles.includes(role));
+}
+
+export function getReportNavItemsForRole(role: Role | undefined): NavItem[] {
+  if (!role) return [];
+  return reportNavItems.filter((item) => item.roles.includes(role));
 }
