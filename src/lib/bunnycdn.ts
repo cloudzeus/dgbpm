@@ -1,0 +1,59 @@
+/**
+ * BunnyCDN Storage API – upload files and return public CDN URL.
+ * Requires: BUNNY_STORAGE_ZONE, BUNNY_ACCESS_KEY, BUNNY_CDN_HOST in env.
+ * Optional: BUNNY_STORAGE_REGION (e.g. "la", "sg", "syd"; empty = Falkenstein).
+ */
+
+const STORAGE_REGION = process.env.BUNNY_STORAGE_REGION ?? "";
+const STORAGE_ZONE = process.env.BUNNY_STORAGE_ZONE;
+const ACCESS_KEY = process.env.BUNNY_ACCESS_KEY;
+const CDN_HOST = process.env.BUNNY_CDN_HOST?.replace(/\/$/, "");
+
+function getStorageHost(): string {
+  const prefix = STORAGE_REGION ? `${STORAGE_REGION}.` : "";
+  return `https://${prefix}storage.bunnycdn.com`;
+}
+
+export function isBunnyConfigured(): boolean {
+  return !!(STORAGE_ZONE && ACCESS_KEY && CDN_HOST);
+}
+
+/**
+ * Upload file to BunnyCDN Storage and return the public CDN URL.
+ * @param buffer - File content (Buffer or Uint8Array)
+ * @param path - Path within storage, e.g. "bpm/tasks/{taskId}/{filename}"
+ * @param contentType - MIME type, e.g. "application/pdf"
+ * @returns Public URL (BUNNY_CDN_HOST + path) or throws
+ */
+export async function uploadToBunny(
+  buffer: Buffer | Uint8Array,
+  path: string,
+  contentType: string
+): Promise<string> {
+  if (!isBunnyConfigured()) {
+    throw new Error("BunnyCDN is not configured (BUNNY_STORAGE_ZONE, BUNNY_ACCESS_KEY, BUNNY_CDN_HOST)");
+  }
+
+  const host = getStorageHost();
+  const url = `${host}/${STORAGE_ZONE}/${path}`;
+
+  const body =
+    buffer instanceof Buffer
+      ? new Uint8Array(buffer.buffer, buffer.byteOffset, buffer.byteLength)
+      : buffer;
+  const res = await fetch(url, {
+    method: "PUT",
+    headers: {
+      AccessKey: ACCESS_KEY!,
+      "Content-Type": contentType,
+    },
+    body: body as BodyInit,
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`BunnyCDN upload failed: ${res.status} ${text}`);
+  }
+
+  return `${CDN_HOST}/${path}`;
+}

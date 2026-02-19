@@ -1,0 +1,300 @@
+// BPM Application - Prisma Schema (MySQL)
+// Use: npx prisma db push (never migrate per project rules)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ============== Auth.js required models ==============
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ============== Core: User and Role ==============
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  MANAGER
+  EMPLOYEE
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  firstName     String
+  lastName      String
+  phone         String?
+  mobile        String?
+  address       String?   @db.Text
+  hashedPassword String?  @db.VarChar(255)
+  role          Role      @default(EMPLOYEE)
+
+  // Auth.js relations
+  accounts Account[]
+  sessions Session[]
+
+  // App relations
+  positions       UserPosition[]
+  taskAssignments TaskAssignmentAssignee[]   @relation("TaskPossibleAssignees")
+  currentAssigneeTasks ProcessTaskAssignment[] @relation("TaskAssignee")
+  taskActions    TaskAction[]                 @relation("TaskActor")
+  processesStarted ProcessInstance[]         @relation("ProcessStarter")
+  managedPositions JobPosition[]             @relation("PositionManager")
+  processTemplatesCreated ProcessTemplate[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ============== Departments ==============
+model Department {
+  id          String       @id @default(cuid())
+  name        String
+  email       String?
+  phoneNumber String?
+  parentId    String?
+  color       String       @db.VarChar(7)
+
+  parent   Department?   @relation("DepartmentHierarchy", fields: [parentId], references: [id])
+  children Department[]  @relation("DepartmentHierarchy")
+  positions JobPosition[]
+  processTemplateAccess ProcessTemplateDepartment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ============== Job Positions ==============
+model JobPosition {
+  id           String   @id @default(cuid())
+  name         String
+  departmentId String
+  managerId    String?
+
+  department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  manager      User?      @relation("PositionManager", fields: [managerId], references: [id], onDelete: SetNull)
+  users        UserPosition[]
+  taskApproverRoles     TaskApproverRole[]
+  taskNotifyOnStart     TaskNotifyOnStart[]
+  taskNotifyOnComplete   TaskNotifyOnComplete[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model UserPosition {
+  id         String   @id @default(cuid())
+  userId     String
+  positionId String
+
+  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  position JobPosition @relation(fields: [positionId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, positionId])
+}
+
+// ============== Process Templates ==============
+model ProcessTemplate {
+  id          String    @id @default(cuid())
+  name        String
+  description String?   @db.Text
+  icon        String
+  createdById String?
+
+  createdBy   User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  allowedDepartments ProcessTemplateDepartment[]
+  tasks       ProcessTaskTemplate[]
+  instances   ProcessInstance[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ProcessTemplateDepartment {
+  id                 String @id @default(cuid())
+  processTemplateId  String
+  departmentId       String
+
+  processTemplate ProcessTemplate @relation(fields: [processTemplateId], references: [id], onDelete: Cascade)
+  department      Department      @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  @@unique([processTemplateId, departmentId])
+}
+
+model ProcessTaskTemplate {
+  id                 String  @id @default(cuid())
+  processTemplateId  String
+  name               String
+  order              Int
+  description        String? @db.Text
+  needFile           Boolean @default(false)
+  mandatory          Boolean @default(true)
+
+  // Rule-based: in addition to positions, include same department as assignee / assignee's department manager
+  approverSameDepartment    Boolean @default(false)
+  approverDepartmentManager Boolean @default(false)
+  notifyOnStartSameDepartment    Boolean @default(false)
+  notifyOnStartDepartmentManager Boolean @default(false)
+  notifyOnCompleteSameDepartment    Boolean @default(false)
+  notifyOnCompleteDepartmentManager Boolean @default(false)
+
+  processTemplate         ProcessTemplate         @relation(fields: [processTemplateId], references: [id], onDelete: Cascade)
+  approverRoles            TaskApproverRole[]
+  notifyOnStartPositions   TaskNotifyOnStart[]
+  notifyOnCompletePositions TaskNotifyOnComplete[]
+  taskAssignments ProcessTaskAssignment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TaskApproverRole {
+  id             String @id @default(cuid())
+  taskTemplateId String
+  jobPositionId  String
+
+  taskTemplate ProcessTaskTemplate @relation(fields: [taskTemplateId], references: [id], onDelete: Cascade)
+  jobPosition  JobPosition         @relation(fields: [jobPositionId], references: [id], onDelete: Cascade)
+
+  @@unique([taskTemplateId, jobPositionId])
+}
+
+model TaskNotifyOnStart {
+  id             String @id @default(cuid())
+  taskTemplateId String
+  jobPositionId  String
+
+  taskTemplate ProcessTaskTemplate @relation(fields: [taskTemplateId], references: [id], onDelete: Cascade)
+  jobPosition  JobPosition         @relation(fields: [jobPositionId], references: [id], onDelete: Cascade)
+
+  @@unique([taskTemplateId, jobPositionId])
+}
+
+model TaskNotifyOnComplete {
+  id             String @id @default(cuid())
+  taskTemplateId String
+  jobPositionId  String
+
+  taskTemplate ProcessTaskTemplate @relation(fields: [taskTemplateId], references: [id], onDelete: Cascade)
+  jobPosition  JobPosition        @relation(fields: [jobPositionId], references: [id], onDelete: Cascade)
+
+  @@unique([taskTemplateId, jobPositionId])
+}
+
+// ============== Process Execution ==============
+enum ProcessStatus {
+  DRAFT
+  RUNNING
+  COMPLETED
+  CANCELLED
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  APPROVED
+  REJECTED
+  SKIPPED
+}
+
+model ProcessInstance {
+  id                 String        @id @default(cuid())
+  name               String
+  processTemplateId  String
+  startedById        String
+  startDateTime      DateTime
+  endDateTime        DateTime?
+  status             ProcessStatus @default(RUNNING)
+  cancelReason       String?       @db.Text
+
+  processTemplate ProcessTemplate   @relation(fields: [processTemplateId], references: [id], onDelete: Restrict)
+  startedBy       User              @relation("ProcessStarter", fields: [startedById], references: [id], onDelete: Restrict)
+  tasks           ProcessTaskAssignment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ProcessTaskAssignment {
+  id                 String     @id @default(cuid())
+  processInstanceId  String
+  templateTaskId     String
+  status             TaskStatus @default(PENDING)
+  currentAssigneeId  String?
+  fileUrl            String?    @db.Text
+  startedAt         DateTime?
+  completedAt       DateTime?
+  comment           String?    @db.Text
+
+  processInstance ProcessInstance    @relation(fields: [processInstanceId], references: [id], onDelete: Cascade)
+  templateTask    ProcessTaskTemplate @relation(fields: [templateTaskId], references: [id], onDelete: Restrict)
+  currentAssignee User?               @relation("TaskAssignee", fields: [currentAssigneeId], references: [id], onDelete: SetNull)
+  possibleAssignees TaskAssignmentAssignee[]
+  actions         TaskAction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TaskAssignmentAssignee {
+  id     String @id @default(cuid())
+  taskId String
+  userId String
+
+  task ProcessTaskAssignment @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User                  @relation("TaskPossibleAssignees", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, userId])
+}
+
+model TaskAction {
+  id        String   @id @default(cuid())
+  taskId    String
+  userId    String
+  action    String
+  message   String?  @db.Text
+  createdAt DateTime @default(now())
+
+  task ProcessTaskAssignment @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User                  @relation("TaskActor", fields: [userId], references: [id], onDelete: Cascade)
+}
