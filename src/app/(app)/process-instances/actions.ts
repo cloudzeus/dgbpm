@@ -17,9 +17,26 @@ import {
   buildProcessCompletedEmail,
 } from "@/lib/email";
 
-export async function startProcessInstance(formData: FormData) {
+/**
+ * Επιστρέφει τη συνεδρία αφού επιβεβαιώσει ότι ο χρήστης υπάρχει ΑΚΟΜΗ στη βάση.
+ * Προστατεύει από stale JWT (π.χ. μετά από reseed) που θα προκαλούσε FK σφάλμα
+ * όταν γράφουμε currentAssigneeId/startedById/userId = session.user.id.
+ */
+async function requireActiveSession() {
   const session = await auth();
-  if (!session?.user) throw new Error("Μη εξουσιοδοτημένη πρόσβαση");
+  if (!session?.user?.id) throw new Error("Μη εξουσιοδοτημένη πρόσβαση");
+  const exists = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { id: true },
+  });
+  if (!exists) {
+    throw new Error("Η συνεδρία σας δεν είναι πλέον έγκυρη. Αποσυνδεθείτε και συνδεθείτε ξανά.");
+  }
+  return session;
+}
+
+export async function startProcessInstance(formData: FormData) {
+  const session = await requireActiveSession();
   if (!hasPermission(session.user.role, "processInstances.create")) throw new Error("Δεν επιτρέπεται");
 
   const processTemplateId = formData.get("processTemplateId") as string;
@@ -117,8 +134,7 @@ export async function startProcessInstance(formData: FormData) {
 }
 
 export async function startTask(taskId: string) {
-  const session = await auth();
-  if (!session?.user) throw new Error("Μη εξουσιοδοτημένη πρόσβαση");
+  const session = await requireActiveSession();
 
   const task = await prisma.processTaskAssignment.findUnique({
     where: { id: taskId },
@@ -225,8 +241,7 @@ async function fieldsForTask(taskId: string) {
 }
 
 export async function saveTaskFieldValues(taskId: string, values: Record<string, string>) {
-  const session = await auth();
-  if (!session?.user) throw new Error("Μη εξουσιοδοτημένη πρόσβαση");
+  const session = await requireActiveSession();
   const { task, fields } = await fieldsForTask(taskId);
 
   const canAct =
@@ -270,8 +285,7 @@ export async function assertRequiredFieldsFilled(taskId: string) {
 }
 
 export async function approveTask(taskId: string, comment?: string) {
-  const session = await auth();
-  if (!session?.user) throw new Error("Μη εξουσιοδοτημένη πρόσβαση");
+  const session = await requireActiveSession();
 
   await assertRequiredFieldsFilled(taskId);
 
@@ -355,8 +369,7 @@ export async function approveTask(taskId: string, comment?: string) {
 }
 
 export async function rejectTask(taskId: string, comment: string) {
-  const session = await auth();
-  if (!session?.user) throw new Error("Μη εξουσιοδοτημένη πρόσβαση");
+  const session = await requireActiveSession();
 
   const task = await prisma.processTaskAssignment.findUnique({
     where: { id: taskId },

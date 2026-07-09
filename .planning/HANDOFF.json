@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": "2026-07-09T10:25:28.110Z",
+  "timestamp": "2026-07-09T10:31:14.882Z",
   "source": "auto-postool",
   "partial": false,
   "phase": null,
@@ -22,29 +22,9 @@
     },
     {
       "status": "M",
-      "path": "prisma/schema.prisma"
-    },
-    {
-      "status": "M",
       "path": "src/app/(app)/process-instances/actions.ts"
-    },
-    {
-      "status": "M",
-      "path": "src/app/(app)/process-templates/actions.ts"
-    },
-    {
-      "status": "M",
-      "path": "src/app/(app)/process-templates/process-templates-client.tsx"
-    },
-    {
-      "status": "M",
-      "path": "src/app/(app)/process-templates/wizard/template-wizard.tsx"
-    },
-    {
-      "status": "M",
-      "path": "src/app/api/process-templates/[id]/tasks/route.ts"
     }
   ],
   "next_action": null,
-  "context_notes": "Recent commits:\na693319 feat(ui): AI process blueprint, sticky wizard footer, actions dropdown & row layout fix\ne8d3939 fix(ui): make field name the primary input; auto-generate Latin slug key\n05e8a85 fix(ui): redesign wizard process-flow, field editor & form density\n0a8e371 fix: authorize task field-value writes; harden pivot-view SQL\n60f144f feat(results): per-template results page with Excel/PDF/Word export"
+  "context_notes": "Recent commits:\n51ddba4 feat(notifications): per-step option to notify the process initiator\na693319 feat(ui): AI process blueprint, sticky wizard footer, actions dropdown & row layout fix\ne8d3939 fix(ui): make field name the primary input; auto-generate Latin slug key\n05e8a85 fix(ui): redesign wizard process-flow, field editor & form density\n0a8e371 fix: authorize task field-value writes; harden pivot-view SQL"
 }
