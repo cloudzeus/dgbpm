@@ -13,6 +13,7 @@ import {
   FiCheckCircle,
   FiLayers,
   FiPieChart,
+  FiShare2,
 } from "react-icons/fi";
 
 export interface NavItem {
@@ -26,6 +27,7 @@ export const navItems: NavItem[] = [
   { href: "/dashboard", label: "Πίνακας Ελέγχου", icon: FiLayout, roles: ["SUPER_ADMIN", "ADMIN", "MANAGER", "EMPLOYEE"] },
   { href: "/users", label: "Χρήστες", icon: FiUsers, roles: ["SUPER_ADMIN", "ADMIN"] },
   { href: "/departments", label: "Τμήματα", icon: FiFolder, roles: ["SUPER_ADMIN", "ADMIN"] },
+  { href: "/organization", label: "Οργανόγραμμα", icon: FiShare2, roles: ["SUPER_ADMIN", "ADMIN"] },
   { href: "/positions", label: "Θέσεις Εργασίας", icon: FiBriefcase, roles: ["SUPER_ADMIN", "ADMIN"] },
   { href: "/process-templates", label: "Πρότυπα Διαδικασιών", icon: FiFileText, roles: ["SUPER_ADMIN"] },
   { href: "/process-instances", label: "Διαδικασίες", icon: FiList, roles: ["SUPER_ADMIN", "ADMIN", "MANAGER", "EMPLOYEE"] },
