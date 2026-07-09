@@ -25,13 +25,22 @@ import {
 async function requireActiveSession() {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Μη εξουσιοδοτημένη πρόσβαση");
-  const exists = await prisma.user.findUnique({
+  let user = await prisma.user.findUnique({
     where: { id: session.user.id },
     select: { id: true },
   });
-  if (!exists) {
+  // Self-heal a stale JWT (e.g. after a DB reseed changed user ids): the email is
+  // stable, so resolve the real user by email and use its current id for FK writes.
+  if (!user && session.user.email) {
+    user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { id: true },
+    });
+  }
+  if (!user) {
     throw new Error("Η συνεδρία σας δεν είναι πλέον έγκυρη. Αποσυνδεθείτε και συνδεθείτε ξανά.");
   }
+  session.user.id = user.id;
   return session;
 }
 

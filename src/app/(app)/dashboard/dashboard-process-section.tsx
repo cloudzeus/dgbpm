@@ -672,7 +672,11 @@ export function DashboardProcessSection({
                 {taskInModal.templateTask.name} — {taskInModal.processInstance.name}
               </p>
               <div className="space-y-2">
-                <Label>Σχόλιο (υποχρεωτικό για Απόρριψη)</Label>
+                <Label>
+                  {actionModal?.toStatus === "APPROVED"
+                    ? "Σχόλιο (προαιρετικό)"
+                    : "Σχόλιο (υποχρεωτικό)"}
+                </Label>
                 <RichTextComment
                   key={taskInModal.id}
                   value={taskComment}

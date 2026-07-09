@@ -10,6 +10,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
@@ -789,6 +790,9 @@ export function ProcessTemplatesClient({
         <DialogContent className="flex max-h-[88vh] w-[90vw] flex-col gap-0 overflow-hidden p-0 sm:max-w-4xl">
           <DialogHeader className="shrink-0 border-b px-6 py-4">
             <DialogTitle>{editId ? "Επεξεργασία προτύπου διαδικασίας" : "Δημιουργία προτύπου διαδικασίας"}</DialogTitle>
+            <DialogDescription className="sr-only">
+              Οδηγός δημιουργίας προτύπου διαδικασίας σε βήματα.
+            </DialogDescription>
           </DialogHeader>
           {wizardInitial ? (
             <TemplateWizard
