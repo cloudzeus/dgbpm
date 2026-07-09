@@ -14,6 +14,7 @@ import {
   FiLayers,
   FiPieChart,
   FiShare2,
+  FiSliders,
 } from "react-icons/fi";
 
 export interface NavItem {
@@ -30,6 +31,7 @@ export const navItems: NavItem[] = [
   { href: "/organization", label: "Οργανόγραμμα", icon: FiShare2, roles: ["SUPER_ADMIN", "ADMIN"] },
   { href: "/positions", label: "Θέσεις Εργασίας", icon: FiBriefcase, roles: ["SUPER_ADMIN", "ADMIN"] },
   { href: "/process-templates", label: "Πρότυπα Διαδικασιών", icon: FiFileText, roles: ["SUPER_ADMIN"] },
+  { href: "/settings/lookup-lists", label: "Λίστες Τιμών", icon: FiSliders, roles: ["SUPER_ADMIN"] },
   { href: "/process-instances", label: "Διαδικασίες", icon: FiList, roles: ["SUPER_ADMIN", "ADMIN", "MANAGER", "EMPLOYEE"] },
   { href: "/my-tasks", label: "Οι Εργασίες μου", icon: FiCheckSquare, roles: ["SUPER_ADMIN", "ADMIN", "MANAGER", "EMPLOYEE"] },
   { href: "/my-processes", label: "Οι Διαδικασίες μου", icon: FiPlay, roles: ["SUPER_ADMIN", "ADMIN", "MANAGER", "EMPLOYEE"] },
