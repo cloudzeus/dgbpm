@@ -234,15 +234,43 @@ export async function generateBusinessProcesses(input: {
   const idea = input.description?.trim();
   if (!idea) return { ok: false, error: "Γράψτε πρώτα μια περιγραφή της επιχείρησης." };
 
+  // Εμπλούτισε το prompt με τα στοιχεία & τους ΚΑΔ της εταιρίας (αν έχουν καταχωρηθεί στις Ρυθμίσεις → Εταιρία).
+  const company = await prisma.company.findFirst({
+    include: { activities: { orderBy: [{ isPrimary: "desc" }, { code: "asc" }] } },
+  });
+  let companyContext = "";
+  if (company) {
+    const lines: string[] = [];
+    if (company.name) lines.push(`Επωνυμία: ${company.name}`);
+    if (company.legalStatus) lines.push(`Νομική μορφή: ${company.legalStatus}`);
+    if (company.activities.length > 0) {
+      lines.push(
+        "Δραστηριότητες (ΚΑΔ) — περιγράφουν το επαγγελματικό αντικείμενο:\n" +
+          company.activities
+            .map((a) => `  • ${a.code}${a.isPrimary ? " (κύρια)" : ""}: ${a.description ?? ""}`.trimEnd())
+            .join("\n"),
+      );
+    }
+    if (lines.length > 0) {
+      companyContext =
+        "\n\nΣτοιχεία της εταιρίας (λάβε τα ΟΠΩΣΔΗΠΟΤΕ υπόψη — ειδικά τους ΚΑΔ που ορίζουν το αντικείμενο):\n" +
+        lines.join("\n");
+    }
+  }
+
   const system =
     "Είσαι ειδικός σύμβουλος επιχειρησιακών διαδικασιών (BPM). Από την περιγραφή μιας ΕΠΙΧΕΙΡΗΣΗΣ " +
-    "προτείνεις 3 έως 6 ΞΕΧΩΡΙΣΤΕΣ εσωτερικές διαδικασίες που θα βοηθούσαν την οργάνωσή της και " +
+    "και τους ΚΑΔ που περιγράφουν το επαγγελματικό της αντικείμενο, " +
+    "προτείνεις ΠΕΡΙΠΟΥ 20 (τουλάχιστον 18) ΞΕΧΩΡΙΣΤΕΣ εσωτερικές διαδικασίες που θα βοηθούσαν την οργάνωσή της και " +
     "επιστρέφεις ΜΟΝΟ έγκυρο JSON (χωρίς markdown, χωρίς σχόλια) με αυτή ακριβώς τη δομή:\n" +
     '{"processes": [{"name": string, "description": string, "tasks": [{"name": string, ' +
     '"description": string, "mandatory": boolean, "needFile": boolean}], "fields": [{"name": string, ' +
     '"type": string, "captureTaskOrder": number, "required": boolean}]}]}\n' +
-    "Κανόνες: Όλα τα κείμενα στα Ελληνικά. 3 έως 6 διαδικασίες. Κάθε διαδικασία 2 έως 6 βήματα και " +
-    "έως 8 πεδία. " +
+    "Οι διαδικασίες πρέπει να είναι ΣΧΕΤΙΚΕΣ με το αντικείμενο των ΚΑΔ της εταιρίας και να καλύπτουν " +
+    "όλο το φάσμα (πωλήσεις, προμήθειες, παραγωγή/υπηρεσίες, ποιότητα, HR, οικονομικά, εξυπηρέτηση, συμμόρφωση κ.λπ.). " +
+    "Το πεδίο \"description\" κάθε διαδικασίας είναι μια ΚΑΘΑΡΗ ΕΠΕΞΗΓΗΣΗ (1-2 προτάσεις): τι κάνει η διαδικασία και γιατί ωφελεί την εταιρία. " +
+    "Κανόνες: Όλα τα κείμενα στα Ελληνικά. Περίπου 20 διαδικασίες (τουλάχιστον 18). Κάθε διαδικασία 2 έως 5 βήματα και " +
+    "έως 6 πεδία (κράτησε τα σύντομα ώστε να χωρέσουν όλες). " +
     'Το "type" κάθε πεδίου είναι ΕΝΑ από: "STRING","TEXT","NUMBER","DATE","FILE_URL","BOOLEAN". ' +
     'Το "captureTaskOrder" είναι ο δείκτης (0-based) του βήματος στο οποίο συμπληρώνεται το πεδίο, ' +
     "μέσα στα όρια των tasks της ίδιας διαδικασίας. Επίστρεψε ΜΟΝΟ το JSON object.";
@@ -252,9 +280,9 @@ export async function generateBusinessProcesses(input: {
     raw = await deepseekChat(
       [
         { role: "system", content: system },
-        { role: "user", content: `Περιγραφή επιχείρησης:\n"${idea}"\n\nΠρότεινε τις διαδικασίες ως JSON.` },
+        { role: "user", content: `Περιγραφή επιχείρησης:\n"${idea}"${companyContext}\n\nΠρότεινε τις διαδικασίες ως JSON.` },
       ],
-      { temperature: 0.5, maxTokens: 4000 },
+      { temperature: 0.5, maxTokens: 8000 },
     );
   } catch (err) {
     const message = err instanceof DeepSeekError ? err.message : "Αποτυχία δημιουργίας διαδικασιών.";
@@ -276,7 +304,7 @@ export async function generateBusinessProcesses(input: {
   const processes = rawProcesses
     .map((p) => normalizeBlueprint((p ?? {}) as Record<string, unknown>, 6, 8))
     .filter((p): p is ProcessBlueprint => p !== null)
-    .slice(0, 6);
+    .slice(0, 24);
 
   if (processes.length === 0) {
     return {

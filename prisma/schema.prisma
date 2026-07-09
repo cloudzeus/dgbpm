@@ -377,3 +377,64 @@ model LookupListItem {
   lookupList   LookupList          @relation(fields: [lookupListId], references: [id], onDelete: Cascade)
   usedByValues ProcessFieldValue[]
 }
+
+// ============== Connectors (διασυνδέσεις με τρίτες εφαρμογές) ==============
+enum ConnectorType {
+  SOFTONE
+  WOOCOMMERCE
+  MAGENTO
+  OPENCARD
+}
+
+model Connector {
+  id          String        @id @default(cuid())
+  type        ConnectorType @unique
+  enabled     Boolean       @default(false)
+  config      Json? // μη-ευαίσθητα πεδία (URLs, usernames, company/branch κλπ.)
+  secretsEnc  String?       @db.Text // AES-GCM κρυπτογραφημένο JSON των ευαίσθητων πεδίων
+  lastTestAt  DateTime?
+  lastTestOk  Boolean?
+  lastTestMsg String?       @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ============== Company (η δική μας εταιρία) ==============
+model Company {
+  id           String  @id @default(cuid())
+  afm          String? // ΑΦΜ
+  name         String? // Επωνυμία (onomasia)
+  commercialTitle String? // Διακριτικός τίτλος (commer_title)
+  legalStatus  String? // Νομική μορφή (legal_status_descr)
+  taxOffice    String? // ΔΟΥ (doy_descr)
+  gemi         String? // Αριθμός ΓΕΜΗ
+  address      String? // Οδός + αριθμός
+  city         String? // Πόλη
+  zip          String? // ΤΚ
+  country      String? @default("Ελλάδα")
+  phone        String?
+  email        String?
+  website      String?
+  registDate   String? // Ημ/νία έναρξης (ως string από ΑΑΔΕ)
+  isActive     Boolean @default(true) // Ενεργή στην ΑΑΔΕ
+  logo         String? @db.VarChar(500)
+
+  activities CompanyActivity[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CompanyActivity {
+  id          String  @id @default(cuid())
+  companyId   String
+  code        String  // ΚΑΔ (firm_act_code)
+  description String? @db.Text // firm_act_descr
+  kind        String? // Είδος (firm_act_kind_descr: ΚΥΡΙΑ/ΔΕΥΤΕΡΕΥΟΥΣΑ κλπ.)
+  isPrimary   Boolean @default(false) // firm_act_kind === "1"
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+}

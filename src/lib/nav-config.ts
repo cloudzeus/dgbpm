@@ -16,6 +16,8 @@ import {
   FiShare2,
   FiSliders,
   FiCpu,
+  FiHome,
+  FiLink,
 } from "react-icons/fi";
 
 export interface NavItem {
@@ -32,8 +34,6 @@ export const navItems: NavItem[] = [
   { href: "/organization", label: "Οργανόγραμμα", icon: FiShare2, roles: ["SUPER_ADMIN", "ADMIN"] },
   { href: "/positions", label: "Θέσεις Εργασίας", icon: FiBriefcase, roles: ["SUPER_ADMIN", "ADMIN"] },
   { href: "/process-templates", label: "Πρότυπα Διαδικασιών", icon: FiFileText, roles: ["SUPER_ADMIN"] },
-  { href: "/settings/lookup-lists", label: "Λίστες Τιμών", icon: FiSliders, roles: ["SUPER_ADMIN"] },
-  { href: "/settings/process-advisor", label: "AI Σύμβουλος", icon: FiCpu, roles: ["SUPER_ADMIN"] },
   { href: "/process-instances", label: "Διαδικασίες", icon: FiList, roles: ["SUPER_ADMIN", "ADMIN", "MANAGER", "EMPLOYEE"] },
   { href: "/my-tasks", label: "Οι Εργασίες μου", icon: FiCheckSquare, roles: ["SUPER_ADMIN", "ADMIN", "MANAGER", "EMPLOYEE"] },
   { href: "/my-processes", label: "Οι Διαδικασίες μου", icon: FiPlay, roles: ["SUPER_ADMIN", "ADMIN", "MANAGER", "EMPLOYEE"] },
@@ -46,6 +46,13 @@ export const reportNavItems: NavItem[] = [
   { href: "/reports/summary", label: "Σύνοψη Διαδικασιών", icon: FiLayers, roles: ["SUPER_ADMIN", "ADMIN", "MANAGER"] },
 ];
 
+export const settingsNavItems: NavItem[] = [
+  { href: "/settings/company", label: "Εταιρία", icon: FiHome, roles: ["SUPER_ADMIN"] },
+  { href: "/settings/lookup-lists", label: "Λίστες Τιμών", icon: FiSliders, roles: ["SUPER_ADMIN"] },
+  { href: "/settings/connectors", label: "Connectors", icon: FiLink, roles: ["SUPER_ADMIN"] },
+  { href: "/settings/process-advisor", label: "AI Σύμβουλος", icon: FiCpu, roles: ["SUPER_ADMIN"] },
+];
+
 export function getNavItemsForRole(role: Role | undefined): NavItem[] {
   if (!role) return [];
   return navItems.filter((item) => item.roles.includes(role));
@@ -54,4 +61,9 @@ export function getNavItemsForRole(role: Role | undefined): NavItem[] {
 export function getReportNavItemsForRole(role: Role | undefined): NavItem[] {
   if (!role) return [];
   return reportNavItems.filter((item) => item.roles.includes(role));
+}
+
+export function getSettingsNavItemsForRole(role: Role | undefined): NavItem[] {
+  if (!role) return [];
+  return settingsNavItems.filter((item) => item.roles.includes(role));
 }

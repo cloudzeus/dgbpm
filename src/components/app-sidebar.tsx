@@ -18,7 +18,11 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { getNavItemsForRole, getReportNavItemsForRole } from "@/lib/nav-config";
+import {
+  getNavItemsForRole,
+  getReportNavItemsForRole,
+  getSettingsNavItemsForRole,
+} from "@/lib/nav-config";
 import { LicenseDialog } from "@/components/license-dialog";
 import type { Role } from "@prisma/client";
 
@@ -28,6 +32,7 @@ export function AppSidebar({ role }: { role: Role | undefined }) {
   const [licenseOpen, setLicenseOpen] = useState(false);
   const items = getNavItemsForRole(role);
   const reportItems = getReportNavItemsForRole(role);
+  const settingsItems = getSettingsNavItemsForRole(role);
   const isCollapsed = state === "collapsed";
 
   return (
@@ -92,6 +97,31 @@ export function AppSidebar({ role }: { role: Role | undefined }) {
                   const active =
                     pathname === item.href ||
                     (item.href !== "/reports" && pathname.startsWith(item.href));
+                  return (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton asChild isActive={active} tooltip={item.label}>
+                        <Link href={item.href}>
+                          <Icon className="size-4 shrink-0" />
+                          <span>{item.label}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+        {settingsItems.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Ρυθμίσεις</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {settingsItems.map((item) => {
+                  const Icon = item.icon;
+                  const active =
+                    pathname === item.href ||
+                    (item.href !== "/settings" && pathname.startsWith(item.href));
                   return (
                     <SidebarMenuItem key={item.href}>
                       <SidebarMenuButton asChild isActive={active} tooltip={item.label}>
