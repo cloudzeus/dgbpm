@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { Role } from "@prisma/client";
 import { FiUsers, FiFolder, FiBriefcase, FiList, FiCheckSquare } from "react-icons/fi";
 import { DashboardProcessSection } from "./dashboard-process-section";
+import { DashboardOverview } from "./dashboard-overview";
+import { getOverviewData } from "../reports/overview-data";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -71,66 +73,44 @@ export default async function DashboardPage() {
   }));
 
   if (role === Role.SUPER_ADMIN || role === Role.ADMIN) {
-    const [userCount, deptCount, positionCount, templateCount, instanceCount] = await Promise.all([
+    const [userCount, deptCount, positionCount, templateCount, instanceCount, overview] = await Promise.all([
       prisma.user.count(),
       prisma.department.count(),
       prisma.jobPosition.count(),
       prisma.processTemplate.count(),
       prisma.processInstance.count(),
+      getOverviewData(),
     ]);
 
+    const entityStats = [
+      { label: "Χρήστες", value: userCount, icon: FiUsers },
+      { label: "Τμήματα", value: deptCount, icon: FiFolder },
+      { label: "Θέσεις Εργασίας", value: positionCount, icon: FiBriefcase },
+      { label: "Πρότυπα", value: templateCount, icon: FiList },
+      { label: "Διαδικασίες (σύνολο)", value: instanceCount, icon: FiCheckSquare },
+    ];
+
     return (
-      <div className="space-y-8">
+      <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold">Πίνακας Ελέγχου</h1>
-          <p className="text-muted-foreground">Επισκόπηση χρηστών, τμημάτων, θέσεων εργασίας και διαδικασιών.</p>
+          <p className="text-muted-foreground">Ζωντανή επισκόπηση ροών εργασίας, εργασιών και απόδοσης διαδικασιών.</p>
         </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Χρήστες</CardTitle>
-              <FiUsers className="size-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{userCount}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Τμήματα</CardTitle>
-              <FiFolder className="size-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{deptCount}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Θέσεις Εργασίας</CardTitle>
-              <FiBriefcase className="size-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{positionCount}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Πρότυπα Διαδικασιών</CardTitle>
-              <FiList className="size-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{templateCount}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Διαδικασίες</CardTitle>
-              <FiCheckSquare className="size-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{instanceCount}</div>
-            </CardContent>
-          </Card>
+
+        <DashboardOverview data={overview} />
+
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          {entityStats.map((s) => (
+            <Card key={s.label} className="shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
+                <CardTitle className="text-xs font-medium text-muted-foreground">{s.label}</CardTitle>
+                <s.icon className="size-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-xl font-bold">{s.value}</div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         <DashboardProcessSection
