@@ -29,14 +29,14 @@ export function LoginForm() {
         redirect: false,
       });
       if (result?.error) {
-        setError("Invalid email or password.");
+        setError("Λάθος email ή κωδικός.");
         setLoading(false);
         return;
       }
       router.push(callbackUrl);
       router.refresh();
     } catch {
-      setError("Something went wrong.");
+      setError("Κάτι πήγε στραβά.");
       setLoading(false);
     }
   }
@@ -58,7 +58,7 @@ export function LoginForm() {
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
+        <Label htmlFor="password">Κωδικός</Label>
         <Input
           id="password"
           name="password"
@@ -68,7 +68,7 @@ export function LoginForm() {
         />
       </div>
       <Button type="submit" className="w-full" disabled={loading}>
-        {loading ? "Signing in..." : "Sign in"}
+        {loading ? "Σύνδεση..." : "Σύνδεση"}
       </Button>
     </form>
   );

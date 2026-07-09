@@ -23,6 +23,7 @@ export default async function ProcessTemplatesPage() {
           description: true,
           needFile: true,
           mandatory: true,
+          slaDays: true,
         },
       },
     },
@@ -42,8 +43,8 @@ export default async function ProcessTemplatesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Process Templates</h1>
-        <p className="text-muted-foreground">Define reusable process templates with tasks and approvers.</p>
+        <h1 className="text-2xl font-bold">Πρότυπα Διαδικασιών</h1>
+        <p className="text-muted-foreground">Ορίστε επαναχρησιμοποιήσιμα πρότυπα διαδικασιών με εργασίες και εγκρίνοντες.</p>
       </div>
       <ProcessTemplatesClient
         templates={templates}

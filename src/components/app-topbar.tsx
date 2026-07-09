@@ -1,4 +1,5 @@
 "use client";
+import { roleLabel } from "@/lib/role-labels";
 
 import { signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
@@ -36,7 +37,7 @@ export function AppTopbar({ user }: AppTopbarProps) {
             <span className="hidden text-sm sm:inline-block">{user.name ?? user.email}</span>
             {user.role && (
               <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
-                {user.role.replace("_", " ")}
+                {roleLabel(user.role)}
               </span>
             )}
           </Button>
@@ -50,10 +51,10 @@ export function AppTopbar({ user }: AppTopbarProps) {
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild>
-            <a href="/dashboard">Dashboard</a>
+            <a href="/dashboard">Πίνακας Ελέγχου</a>
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/auth/login" })}>
-            Sign out
+            Αποσύνδεση
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

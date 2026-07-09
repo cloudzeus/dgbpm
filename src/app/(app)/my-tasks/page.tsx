@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ProcessIcon } from "@/lib/process-icons";
+import { taskStatusMeta } from "@/lib/process-status";
 
 export default async function MyTasksPage() {
   const session = await auth();
@@ -38,18 +39,18 @@ export default async function MyTasksPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">My Tasks</h1>
-        <p className="text-muted-foreground">Tasks assigned to you (current and overdue).</p>
+        <h1 className="text-2xl font-bold">Οι Εργασίες μου</h1>
+        <p className="text-muted-foreground">Εργασίες που σας έχουν ανατεθεί (τρέχουσες και εκπρόθεσμες).</p>
       </div>
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Process</TableHead>
-              <TableHead>Task</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Started by</TableHead>
-              <TableHead className="w-[100px]">Actions</TableHead>
+              <TableHead>Διαδικασία</TableHead>
+              <TableHead>Εργασία</TableHead>
+              <TableHead>Κατάσταση</TableHead>
+              <TableHead>Εκκίνηση από</TableHead>
+              <TableHead className="w-[100px]">Ενέργειες</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -62,7 +63,7 @@ export default async function MyTasksPage() {
                 <TableCell>
                   {t.templateTask.name}
                   {t.templateTask.mandatory && (
-                    <Badge variant="success" className="ml-1 text-xs">Mandatory</Badge>
+                    <Badge variant="success" className="ml-1 text-xs">Υποχρεωτικό</Badge>
                   )}
                 </TableCell>
                 <TableCell>
@@ -77,7 +78,7 @@ export default async function MyTasksPage() {
                             : "warning"
                     }
                   >
-                    {t.status}
+                    {taskStatusMeta(t.status).label}
                   </Badge>
                 </TableCell>
                 <TableCell>
@@ -85,7 +86,7 @@ export default async function MyTasksPage() {
                 </TableCell>
                 <TableCell>
                   <Button variant="outline" size="sm" asChild>
-                    <Link href={`/process-instances/${t.processInstanceId}`}>Open</Link>
+                    <Link href={`/process-instances/${t.processInstanceId}`}>Άνοιγμα</Link>
                   </Button>
                 </TableCell>
               </TableRow>
@@ -94,7 +95,7 @@ export default async function MyTasksPage() {
         </Table>
       </div>
       {tasks.length === 0 && (
-        <p className="text-muted-foreground text-center py-8">No pending tasks assigned to you.</p>
+        <p className="text-muted-foreground text-center py-8">Δεν υπάρχουν εκκρεμείς εργασίες που σας έχουν ανατεθεί.</p>
       )}
     </div>
   );

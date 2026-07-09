@@ -61,8 +61,13 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ProcessIcon, PROCESS_ICON_OPTIONS } from "@/lib/process-icons";
-import { createProcessTemplate, updateProcessTemplate, deleteProcessTemplate } from "./actions";
-import { GripVertical, ChevronRight } from "lucide-react";
+import {
+  createProcessTemplate,
+  updateProcessTemplate,
+  deleteProcessTemplate,
+  generateTaskDescription,
+} from "./actions";
+import { GripVertical, ChevronRight, Sparkles, Loader2 } from "lucide-react";
 
 type TemplateTask = {
   id: string;
@@ -71,6 +76,7 @@ type TemplateTask = {
   description: string | null;
   needFile: boolean;
   mandatory: boolean;
+  slaDays: number | null;
 };
 
 type Template = {
@@ -90,6 +96,7 @@ type TaskInput = {
   description: string;
   needFile: boolean;
   mandatory: boolean;
+  slaDays: number | null;
   approverPositionIds: string[];
   notifyOnStartPositionIds: string[];
   notifyOnCompletePositionIds: string[];
@@ -105,7 +112,7 @@ function PositionMultiSelect({
   positions,
   selectedIds,
   onChange,
-  placeholder = "Select positions...",
+  placeholder = "Επιλέξτε θέσεις εργασίας...",
 }: {
   positions: { id: string; name: string; department: { name: string } }[];
   selectedIds: string[];
@@ -124,7 +131,7 @@ function PositionMultiSelect({
           <span className="truncate">
             {selectedIds.length === 0
               ? placeholder
-              : `${selectedIds.length} position${selectedIds.length === 1 ? "" : "s"} selected`}
+              : `${selectedIds.length} ${selectedIds.length === 1 ? "θέση επιλέχθηκε" : "θέσεις επιλέχθηκαν"}`}
           </span>
           <span className="text-muted-foreground shrink-0 ml-2">▼</span>
         </Button>
@@ -172,7 +179,7 @@ function TaskTimelineModal({ tasks }: { tasks: TaskInput[] }) {
   if (tasks.length === 0) return null;
   return (
     <div className="mb-6 rounded-lg border bg-muted/30 p-4">
-      <h3 className="text-sm font-semibold text-foreground mb-3">Process timeline</h3>
+      <h3 className="text-sm font-semibold text-foreground mb-3">Χρονοδιάγραμμα διαδικασίας</h3>
       <div className="relative pl-6">
         <div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-gradient-to-b from-indigo-500 via-cyan-500 to-rose-500 rounded-full" />
         {tasks.map((task, i) => {
@@ -181,8 +188,8 @@ function TaskTimelineModal({ tasks }: { tasks: TaskInput[] }) {
             <div key={task.id} className="relative flex items-start gap-3 pb-4 last:pb-0">
               <div className={`absolute left-0 size-6 rounded-full border-2 border-background shadow-sm -translate-x-1/2 translate-y-0.5 shrink-0 ${dotClass}`} />
               <div className="flex-1 min-w-0 pt-0.5">
-                <span className="text-xs font-medium text-muted-foreground">Step {i + 1}</span>
-                <p className="font-medium text-sm text-foreground">{task.name.trim() || "Unnamed step"}</p>
+                <span className="text-xs font-medium text-muted-foreground">Βήμα {i + 1}</span>
+                <p className="font-medium text-sm text-foreground">{task.name.trim() || "Βήμα χωρίς όνομα"}</p>
               </div>
             </div>
           );
@@ -195,7 +202,7 @@ function TaskTimelineModal({ tasks }: { tasks: TaskInput[] }) {
 function TaskFlowVisual({ tasks }: { tasks: TemplateTask[] }) {
   if (tasks.length === 0) {
     return (
-      <p className="text-muted-foreground text-sm py-4 text-center">No steps defined yet.</p>
+      <p className="text-muted-foreground text-sm py-4 text-center">Δεν έχουν οριστεί βήματα ακόμη.</p>
     );
   }
   const gradientClasses = [
@@ -215,8 +222,8 @@ function TaskFlowVisual({ tasks }: { tasks: TemplateTask[] }) {
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className={`flex flex-col items-center gap-1 rounded-xl border-2 bg-gradient-to-br ${gradient} px-4 py-3 min-w-[120px] hover:scale-[1.02] hover:shadow-xl transition-all duration-200 cursor-default`}>
-                  <span className="text-xs font-semibold text-white/80 uppercase tracking-wider">Step {task.order + 1}</span>
-                  <span className="font-semibold text-sm text-center leading-tight text-white drop-shadow-sm">{task.name || "Unnamed"}</span>
+                  <span className="text-xs font-semibold text-white/80 uppercase tracking-wider">Βήμα {task.order + 1}</span>
+                  <span className="font-semibold text-sm text-center leading-tight text-white drop-shadow-sm">{task.name || "Χωρίς όνομα"}</span>
                   {(task.needFile || task.mandatory) && (
                     <span className="flex gap-1 mt-0.5 text-white/90">
                       {task.needFile && <span className="text-[10px]">📎</span>}
@@ -226,15 +233,15 @@ function TaskFlowVisual({ tasks }: { tasks: TemplateTask[] }) {
                 </div>
               </TooltipTrigger>
               <TooltipContent side="top" className="max-w-xs text-left space-y-2 p-3 bg-foreground text-white border-0">
-                <div className="font-semibold text-white">{task.name || "Unnamed step"}</div>
+                <div className="font-semibold text-white">{task.name || "Βήμα χωρίς όνομα"}</div>
                 {task.description ? (
                   <p className="text-white/90 text-xs leading-relaxed">{task.description}</p>
                 ) : (
-                  <p className="text-white/70 text-xs italic">No description</p>
+                  <p className="text-white/70 text-xs italic">Χωρίς περιγραφή</p>
                 )}
                 <div className="flex flex-wrap gap-2 pt-1 border-t border-white/20">
-                  {task.needFile && <span className="text-xs text-white/90">Requires file</span>}
-                  {task.mandatory && <span className="text-xs text-white/90">Mandatory</span>}
+                  {task.needFile && <span className="text-xs text-white/90">Απαιτείται αρχείο</span>}
+                  {task.mandatory && <span className="text-xs text-white/90">Υποχρεωτικό</span>}
                 </div>
               </TooltipContent>
             </Tooltip>
@@ -252,15 +259,40 @@ function SortableTaskItem({
   task,
   index,
   positions,
+  processName,
   onUpdate,
   onRemove,
 }: {
   task: TaskInput;
   index: number;
   positions: { id: string; name: string; department: { name: string } }[];
+  processName: string;
   onUpdate: (index: number, updates: Partial<TaskInput>) => void;
   onRemove: (index: number) => void;
 }) {
+  const [generating, setGenerating] = useState(false);
+  const [genError, setGenError] = useState<string | null>(null);
+
+  async function handleGenerate() {
+    setGenError(null);
+    setGenerating(true);
+    try {
+      const res = await generateTaskDescription({
+        shortDescription: task.description,
+        taskName: task.name,
+        processName,
+      });
+      if (res.ok) {
+        onUpdate(index, { description: res.text });
+      } else {
+        setGenError(res.error);
+      }
+    } catch {
+      setGenError("Αποτυχία δημιουργίας περιγραφής.");
+    } finally {
+      setGenerating(false);
+    }
+  }
   const {
     attributes,
     listeners,
@@ -293,7 +325,7 @@ function SortableTaskItem({
           <GripVertical className="size-4 text-muted-foreground" />
         </span>
         <AccordionTrigger asChildHeader className="flex-1 hover:no-underline [&[data-state=open]>svg]:rotate-180 py-2">
-          {task.name.trim() ? task.name : `Task ${index + 1}`}
+          {task.name.trim() ? task.name : `Εργασία ${index + 1}`}
         </AccordionTrigger>
         <Button
           type="button"
@@ -302,28 +334,48 @@ function SortableTaskItem({
           className="shrink-0"
           onClick={() => onRemove(index)}
         >
-          Remove
+          Αφαίρεση
         </Button>
       </AccordionHeader>
       <AccordionContent>
         <div className="space-y-6 px-6 pt-2 pb-4">
           <section className="space-y-3">
-            <h4 className="text-sm font-semibold text-foreground border-b pb-1">Step details</h4>
+            <h4 className="text-sm font-semibold text-foreground border-b pb-1">Λεπτομέρειες βήματος</h4>
             <div className="space-y-2">
-              <Label>Task name</Label>
+              <Label>Όνομα εργασίας</Label>
               <Input
-                placeholder="Task name"
+                placeholder="Όνομα εργασίας"
                 value={task.name}
                 onChange={(e) => onUpdate(index, { name: e.target.value })}
               />
             </div>
             <div className="space-y-2">
-              <Label>Description</Label>
-              <Input
-                placeholder="Description"
+              <div className="flex items-center justify-between gap-2">
+                <Label>Περιγραφή</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 gap-1.5 text-xs"
+                  onClick={handleGenerate}
+                  disabled={generating || !task.description.trim()}
+                  title="Γράψτε μια σύντομη ιδέα και το AI θα τη μετατρέψει σε αναλυτικές οδηγίες"
+                >
+                  {generating ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <Sparkles className="size-3.5" />
+                  )}
+                  {generating ? "Δημιουργία..." : "Δημιουργία με AI"}
+                </Button>
+              </div>
+              <Textarea
+                placeholder="Γράψτε μια σύντομη ιδέα (π.χ. «έλεγχος τιμολογίου») και πατήστε «Δημιουργία με AI» για αναλυτικές οδηγίες."
                 value={task.description}
+                rows={task.description.length > 120 ? 8 : 3}
                 onChange={(e) => onUpdate(index, { description: e.target.value })}
               />
+              {genError && <p className="text-xs text-destructive">{genError}</p>}
             </div>
             <div className="flex flex-wrap gap-3 pt-1">
               <label className="flex items-center gap-2 text-sm">
@@ -332,7 +384,7 @@ function SortableTaskItem({
                   checked={task.needFile}
                   onChange={(e) => onUpdate(index, { needFile: e.target.checked })}
                 />
-                Need file
+                Απαιτείται αρχείο
               </label>
               <label className="flex items-center gap-2 text-sm">
                 <input
@@ -340,19 +392,34 @@ function SortableTaskItem({
                   checked={task.mandatory}
                   onChange={(e) => onUpdate(index, { mandatory: e.target.checked })}
                 />
-                Mandatory
+                Υποχρεωτικό
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <span>Προθεσμία (μέρες)</span>
+                <Input
+                  type="number"
+                  min={1}
+                  placeholder="προεπιλογή"
+                  className="h-8 w-24"
+                  value={task.slaDays ?? ""}
+                  onChange={(e) =>
+                    onUpdate(index, {
+                      slaDays: e.target.value === "" ? null : Math.max(1, Number(e.target.value)),
+                    })
+                  }
+                />
               </label>
             </div>
           </section>
           <section className="space-y-3">
-            <h4 className="text-sm font-semibold text-foreground border-b pb-1">Approvers</h4>
+            <h4 className="text-sm font-semibold text-foreground border-b pb-1">Εγκρίνοντες</h4>
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Who can approve this task</Label>
+            <Label className="text-sm font-medium">Ποιος μπορεί να εγκρίνει αυτή την εργασία</Label>
             <PositionMultiSelect
               positions={positions}
               selectedIds={task.approverPositionIds}
               onChange={(ids) => onUpdate(index, { approverPositionIds: ids })}
-              placeholder="Select positions..."
+              placeholder="Επιλέξτε θέσεις εργασίας..."
             />
             <div className="flex flex-wrap gap-4 pt-1">
               <label className="flex items-center gap-2 text-sm cursor-pointer">
@@ -360,28 +427,28 @@ function SortableTaskItem({
                   checked={task.approverSameDepartment}
                   onCheckedChange={(c) => onUpdate(index, { approverSameDepartment: !!c })}
                 />
-                Same department as assignee (anyone in assignee&apos;s department)
+                Ίδιο τμήμα με τον υπεύθυνο (οποιοσδήποτε στο τμήμα του υπευθύνου)
               </label>
               <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <Checkbox
                   checked={task.approverDepartmentManager}
                   onCheckedChange={(c) => onUpdate(index, { approverDepartmentManager: !!c })}
                 />
-                Department manager of assignee
+                Προϊστάμενος τμήματος του υπευθύνου
               </label>
             </div>
           </div>
           </section>
           <section className="space-y-3">
-            <h4 className="text-sm font-semibold text-foreground border-b pb-1">Notifications</h4>
+            <h4 className="text-sm font-semibold text-foreground border-b pb-1">Ειδοποιήσεις</h4>
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Notify when task starts</Label>
-            <p className="text-muted-foreground text-xs">Job positions and/or rules to notify when this task is started</p>
+            <Label className="text-sm font-medium">Ειδοποίηση όταν ξεκινά η εργασία</Label>
+            <p className="text-muted-foreground text-xs">Θέσεις εργασίας ή/και κανόνες προς ειδοποίηση όταν ξεκινά αυτή η εργασία</p>
             <PositionMultiSelect
               positions={positions}
               selectedIds={task.notifyOnStartPositionIds}
               onChange={(ids) => onUpdate(index, { notifyOnStartPositionIds: ids })}
-              placeholder="Select positions..."
+              placeholder="Επιλέξτε θέσεις εργασίας..."
             />
             <div className="flex flex-wrap gap-4 pt-1">
               <label className="flex items-center gap-2 text-sm cursor-pointer">
@@ -389,25 +456,25 @@ function SortableTaskItem({
                   checked={task.notifyOnStartSameDepartment}
                   onCheckedChange={(c) => onUpdate(index, { notifyOnStartSameDepartment: !!c })}
                 />
-                Same department as assignee
+                Ίδιο τμήμα με τον υπεύθυνο
               </label>
               <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <Checkbox
                   checked={task.notifyOnStartDepartmentManager}
                   onCheckedChange={(c) => onUpdate(index, { notifyOnStartDepartmentManager: !!c })}
                 />
-                Department manager of assignee
+                Προϊστάμενος τμήματος του υπευθύνου
               </label>
             </div>
           </div>
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Notify when task completed</Label>
-            <p className="text-muted-foreground text-xs">Job positions and/or rules to notify when this task is approved or rejected</p>
+            <Label className="text-sm font-medium">Ειδοποίηση όταν ολοκληρωθεί η εργασία</Label>
+            <p className="text-muted-foreground text-xs">Θέσεις εργασίας ή/και κανόνες προς ειδοποίηση όταν αυτή η εργασία εγκριθεί ή απορριφθεί</p>
             <PositionMultiSelect
               positions={positions}
               selectedIds={task.notifyOnCompletePositionIds}
               onChange={(ids) => onUpdate(index, { notifyOnCompletePositionIds: ids })}
-              placeholder="Select positions..."
+              placeholder="Επιλέξτε θέσεις εργασίας..."
             />
             <div className="flex flex-wrap gap-4 pt-1">
               <label className="flex items-center gap-2 text-sm cursor-pointer">
@@ -415,14 +482,14 @@ function SortableTaskItem({
                   checked={task.notifyOnCompleteSameDepartment}
                   onCheckedChange={(c) => onUpdate(index, { notifyOnCompleteSameDepartment: !!c })}
                 />
-                Same department as assignee
+                Ίδιο τμήμα με τον υπεύθυνο
               </label>
               <label className="flex items-center gap-2 text-sm cursor-pointer">
                 <Checkbox
                   checked={task.notifyOnCompleteDepartmentManager}
                   onCheckedChange={(c) => onUpdate(index, { notifyOnCompleteDepartmentManager: !!c })}
                 />
-                Department manager of assignee
+                Προϊστάμενος τμήματος του υπευθύνου
               </label>
             </div>
           </div>
@@ -487,6 +554,7 @@ export function ProcessTemplatesClient({
               description: string | null;
               needFile: boolean;
               mandatory: boolean;
+              slaDays?: number | null;
               approverRoles: { jobPositionId: string }[];
               notifyOnStartPositionIds?: string[];
               notifyOnCompletePositionIds?: string[];
@@ -505,6 +573,7 @@ export function ProcessTemplatesClient({
             description: task.description ?? "",
             needFile: task.needFile,
             mandatory: task.mandatory,
+            slaDays: task.slaDays ?? null,
             approverPositionIds: task.approverRoles?.map((r: { jobPositionId: string }) => r.jobPositionId) ?? [],
             notifyOnStartPositionIds: task.notifyOnStartPositionIds ?? [],
             notifyOnCompletePositionIds: task.notifyOnCompletePositionIds ?? [],
@@ -530,6 +599,7 @@ export function ProcessTemplatesClient({
         description: t.description || undefined,
         needFile: t.needFile,
         mandatory: t.mandatory,
+        slaDays: t.slaDays,
         approverPositionIds: t.approverPositionIds,
         notifyOnStartPositionIds: t.notifyOnStartPositionIds,
         notifyOnCompletePositionIds: t.notifyOnCompletePositionIds,
@@ -589,6 +659,7 @@ export function ProcessTemplatesClient({
         description: "",
         needFile: false,
         mandatory: true,
+        slaDays: null,
         approverPositionIds: [],
         notifyOnStartPositionIds: [],
         notifyOnCompletePositionIds: [],
@@ -660,7 +731,7 @@ export function ProcessTemplatesClient({
                           ? t.allowedDepartments.map((d) => d.department.name).join(", ")
                           : "—"}
                       </div>
-                      <span className="text-muted-foreground text-sm shrink-0">{t._count.tasks} steps</span>
+                      <span className="text-muted-foreground text-sm shrink-0">{t._count.tasks} βήματα</span>
                     </div>
                   </AccordionTrigger>
                   <div className="flex gap-2 shrink-0">
@@ -672,17 +743,17 @@ export function ProcessTemplatesClient({
                         await loadTemplateTasks(t.id);
                       }}
                     >
-                      Edit
+                      Επεξεργασία
                     </Button>
                     <Button variant="destructive" size="sm" onClick={() => setDeleteId(t.id)}>
-                      Delete
+                      Διαγραφή
                     </Button>
                   </div>
                 </div>
               </AccordionHeader>
               <AccordionContent>
                 <div className="pb-4">
-                  <p className="text-muted-foreground text-sm mb-2">Process flow (hover a step for details)</p>
+                  <p className="text-muted-foreground text-sm mb-2">Ροή διαδικασίας (περάστε τον δείκτη πάνω από ένα βήμα για λεπτομέρειες)</p>
                   <TaskFlowVisual tasks={t.tasks} />
                 </div>
               </AccordionContent>
@@ -705,35 +776,35 @@ export function ProcessTemplatesClient({
               setOpen(true);
             }}
           >
-            Create template
+            Δημιουργία προτύπου
           </Button>
         </DialogTrigger>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editId ? "Edit process template" : "Create process template"}</DialogTitle>
+            <DialogTitle>{editId ? "Επεξεργασία προτύπου διαδικασίας" : "Δημιουργία προτύπου διαδικασίας"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="min-w-0 flex-1 flex flex-col">
             <Tabs defaultValue="basic" className="min-w-0 flex-1 flex flex-col">
               <TabsList>
-                <TabsTrigger value="basic">Basic</TabsTrigger>
-                <TabsTrigger value="access">Access</TabsTrigger>
-                <TabsTrigger value="tasks">Tasks</TabsTrigger>
+                <TabsTrigger value="basic">Βασικά</TabsTrigger>
+                <TabsTrigger value="access">Πρόσβαση</TabsTrigger>
+                <TabsTrigger value="tasks">Εργασίες</TabsTrigger>
               </TabsList>
               <TabsContent value="basic" className="space-y-6 pt-4">
                 <section className="space-y-3">
-                  <h3 className="text-sm font-semibold text-foreground border-b pb-1">General</h3>
+                  <h3 className="text-sm font-semibold text-foreground border-b pb-1">Γενικά</h3>
                   <div className="space-y-2">
-                    <Label>Name</Label>
-                    <Input value={name} onChange={(e) => setName(e.target.value)} name="name" required placeholder="e.g. Leave request" />
+                    <Label>Όνομα</Label>
+                    <Input value={name} onChange={(e) => setName(e.target.value)} name="name" required placeholder="π.χ. Αίτηση άδειας" />
                   </div>
                   <div className="space-y-2">
-                    <Label>Description</Label>
-                    <Textarea value={description} onChange={(e) => setDescription(e.target.value)} name="description" placeholder="Brief description of this process" rows={3} />
+                    <Label>Περιγραφή</Label>
+                    <Textarea value={description} onChange={(e) => setDescription(e.target.value)} name="description" placeholder="Σύντομη περιγραφή αυτής της διαδικασίας" rows={3} />
                   </div>
                 </section>
                 <section className="space-y-3">
-                  <h3 className="text-sm font-semibold text-foreground border-b pb-1">Icon</h3>
-                  <p className="text-muted-foreground text-sm">Choose an icon for this process</p>
+                  <h3 className="text-sm font-semibold text-foreground border-b pb-1">Εικονίδιο</h3>
+                  <p className="text-muted-foreground text-sm">Επιλέξτε ένα εικονίδιο για αυτή τη διαδικασία</p>
                   <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2 py-1">
                     {PROCESS_ICON_OPTIONS.map((opt) => {
                       const label = opt.replace(/^Fi/, "").replace(/([A-Z])/g, " $1").trim();
@@ -758,8 +829,8 @@ export function ProcessTemplatesClient({
               </TabsContent>
               <TabsContent value="access" className="space-y-4 pt-4">
                 <section className="space-y-3">
-                  <h3 className="text-sm font-semibold text-foreground border-b pb-1">Who can start this process</h3>
-                  <p className="text-muted-foreground text-sm">Select departments that are allowed to start instances of this process.</p>
+                  <h3 className="text-sm font-semibold text-foreground border-b pb-1">Ποιος μπορεί να ξεκινήσει αυτή τη διαδικασία</h3>
+                  <p className="text-muted-foreground text-sm">Επιλέξτε τα τμήματα που επιτρέπεται να ξεκινούν διαδικασίες αυτού του τύπου.</p>
                 <div className="space-y-2 rounded-lg border bg-muted/20 p-3">
                   {departments.map((d) => (
                     <label key={d.id} className="flex items-center gap-2 cursor-pointer">
@@ -778,14 +849,14 @@ export function ProcessTemplatesClient({
                 <TaskTimelineModal tasks={tasks} />
                 <section>
                   <div className="flex justify-between items-center mb-3">
-                    <h3 className="text-sm font-semibold text-foreground">Task list</h3>
+                    <h3 className="text-sm font-semibold text-foreground">Λίστα εργασιών</h3>
                     <Button type="button" variant="outline" size="sm" onClick={addTask}>
-                      Add task
+                      Προσθήκη εργασίας
                     </Button>
                   </div>
                 <div className="rounded-md border">
                   {tasks.length === 0 ? (
-                    <p className="text-muted-foreground text-sm p-4">No tasks yet. Click &quot;Add task&quot; to add one.</p>
+                    <p className="text-muted-foreground text-sm p-4">Καμία εργασία ακόμη. Κάντε κλικ στο &quot;Προσθήκη εργασίας&quot; για να προσθέσετε μία.</p>
                   ) : (
                     <DndContext
                       sensors={sensors}
@@ -803,6 +874,7 @@ export function ProcessTemplatesClient({
                               task={task}
                               index={index}
                               positions={positions}
+                              processName={name}
                               onUpdate={updateTask}
                               onRemove={removeTask}
                             />
@@ -817,10 +889,10 @@ export function ProcessTemplatesClient({
             </Tabs>
             <DialogFooter className="mt-4">
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                Cancel
+                Άκυρο
               </Button>
               <Button type="submit" disabled={loading}>
-                {loading ? "Saving..." : editId ? "Update" : "Create"}
+                {loading ? "Αποθήκευση..." : editId ? "Ενημέρωση" : "Δημιουργία"}
               </Button>
             </DialogFooter>
           </form>
@@ -830,15 +902,15 @@ export function ProcessTemplatesClient({
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete process template?</AlertDialogTitle>
+            <AlertDialogTitle>Διαγραφή προτύπου διαδικασίας;</AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove the template. Existing process instances are not affected.
+              Αυτό θα αφαιρέσει το πρότυπο. Οι υπάρχουσες διαδικασίες δεν επηρεάζονται.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Άκυρο</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} disabled={loading}>
-              Delete
+              Διαγραφή
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

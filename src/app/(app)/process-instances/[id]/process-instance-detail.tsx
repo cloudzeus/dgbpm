@@ -2,16 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { taskStatusMeta } from "@/lib/process-status";
+import { formatDateTime } from "@/lib/format";
+import { Paperclip } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -20,7 +15,6 @@ import {
 } from "@/components/ui/dialog";
 import { RichTextComment, CommentDisplay } from "@/components/rich-text-comment";
 import { startTask, approveTask, rejectTask, uploadTaskFile } from "../actions";
-import { ProcessIcon } from "@/lib/process-icons";
 
 type Task = {
   id: string;
@@ -135,73 +129,88 @@ export function ProcessInstanceDetail({
 
   return (
     <>
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Order</TableHead>
-              <TableHead>Task</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Assignee</TableHead>
-              <TableHead>Last action</TableHead>
-              <TableHead className="w-[100px]">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {instance.tasks.map((t) => (
-              <TableRow key={t.id}>
-                <TableCell>{t.templateTask.order + 1}</TableCell>
-                <TableCell>
-                  <div className="font-medium">{t.templateTask.name}</div>
-                  {t.templateTask.mandatory && (
-                    <Badge variant="success" className="mr-1 text-xs">Mandatory</Badge>
-                  )}
-                  {t.templateTask.needFile && (
-                    <Badge variant="info" className="text-xs">File required</Badge>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <Badge
-                    variant={
-                      t.status === "APPROVED"
-                        ? "success"
-                        : t.status === "REJECTED"
-                          ? "destructive"
-                          : t.status === "IN_PROGRESS"
-                            ? "info"
-                            : "warning"
-                    }
-                  >
-                    {t.status}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  {t.currentAssignee
-                    ? `${t.currentAssignee.firstName} ${t.currentAssignee.lastName}`
-                    : "—"}
-                </TableCell>
-                <TableCell>
-                  {t.actions[0]
-                    ? `${t.actions[0].action} by ${t.actions[0].user.firstName} ${t.actions[0].user.lastName}`
-                    : "—"}
-                </TableCell>
-                <TableCell>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setTaskModalId(t.id);
-                      setTaskComment("");
-                    }}
-                  >
-                    Open task
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      <ol className="relative">
+        {[...instance.tasks]
+          .sort((a, b) => a.templateTask.order - b.templateTask.order)
+          .map((t, idx, arr) => {
+            const meta = taskStatusMeta(t.status);
+            const isLast = idx === arr.length - 1;
+            const Icon = meta.Icon;
+            return (
+              <li key={t.id} className="relative flex gap-4 pb-4 last:pb-0">
+                {/* connector line */}
+                {!isLast && (
+                  <span
+                    className="absolute left-[15px] top-8 bottom-0 w-px bg-border"
+                    aria-hidden
+                  />
+                )}
+                {/* status node */}
+                <div
+                  className={`relative z-10 flex size-8 shrink-0 items-center justify-center rounded-full border ${meta.node} ${
+                    t.status === "IN_PROGRESS" ? "ring-4 ring-blue-500/15" : ""
+                  }`}
+                >
+                  <Icon className="size-4" />
+                </div>
+
+                {/* card */}
+                <div className="flex-1 min-w-0 rounded-lg border bg-card p-3 hover:border-primary/40 transition-colors">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs text-muted-foreground tabular-nums">
+                          Βήμα {t.templateTask.order + 1}
+                        </span>
+                        <span className="font-medium">{t.templateTask.name}</span>
+                      </div>
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${meta.badge}`}
+                        >
+                          {meta.label}
+                        </span>
+                        {t.templateTask.mandatory && (
+                          <Badge variant="outline" className="text-xs">Υποχρεωτικό</Badge>
+                        )}
+                        {t.templateTask.needFile && (
+                          <Badge variant="outline" className="text-xs gap-1">
+                            <Paperclip className="size-3" /> Αρχείο
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setTaskModalId(t.id);
+                        setTaskComment("");
+                      }}
+                    >
+                      Άνοιγμα
+                    </Button>
+                  </div>
+
+                  <div className="mt-2 grid gap-x-6 gap-y-1 text-xs text-muted-foreground sm:grid-cols-2">
+                    <div className="truncate">
+                      <span className="text-muted-foreground/70">Υπεύθυνος: </span>
+                      {t.currentAssignee
+                        ? `${t.currentAssignee.firstName} ${t.currentAssignee.lastName}`
+                        : "—"}
+                    </div>
+                    <div className="truncate">
+                      <span className="text-muted-foreground/70">Τελευταία ενέργεια: </span>
+                      {t.actions[0]
+                        ? `${t.actions[0].action} · ${t.actions[0].user.firstName} ${t.actions[0].user.lastName}`
+                        : "—"}
+                    </div>
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+      </ol>
 
       <Dialog open={!!taskModalId} onOpenChange={() => setTaskModalId(null)}>
         <DialogContent>
@@ -215,22 +224,22 @@ export function ProcessInstanceDetail({
               )}
               <div className="flex flex-wrap gap-2">
                 {task.templateTask.mandatory && (
-                  <Badge variant="success">Mandatory</Badge>
+                  <Badge variant="success">Υποχρεωτικό</Badge>
                 )}
                 {task.templateTask.needFile && (
-                  <Badge variant="info">File required</Badge>
+                  <Badge variant="info">Απαιτείται αρχείο</Badge>
                 )}
               </div>
 
               {(task.status === "REJECTED" && task.comment) && (
                 <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
-                  <h4 className="text-sm font-semibold text-destructive mb-1">Rejection reason</h4>
+                  <h4 className="text-sm font-semibold text-destructive mb-1">Λόγος απόρριψης</h4>
                   <CommentDisplay content={task.comment} />
                 </div>
               )}
               {(task.status === "APPROVED" && task.comment) && (
                 <div className="rounded-lg border bg-muted/50 p-3">
-                  <h4 className="text-sm font-semibold text-foreground mb-1">Approval comment</h4>
+                  <h4 className="text-sm font-semibold text-foreground mb-1">Σχόλιο έγκρισης</h4>
                   <CommentDisplay content={task.comment} />
                 </div>
               )}
@@ -239,8 +248,8 @@ export function ProcessInstanceDetail({
                 task.status !== "APPROVED" &&
                 task.status !== "REJECTED" && (
                   <div className="space-y-2">
-                    <h4 className="text-sm font-medium">Comment</h4>
-                    <p className="text-muted-foreground text-xs">Add a comment (required when rejecting). Optional when approving.</p>
+                    <h4 className="text-sm font-medium">Σχόλιο</h4>
+                    <p className="text-muted-foreground text-xs">Προσθέστε σχόλιο (υποχρεωτικό στην απόρριψη, προαιρετικό στην έγκριση).</p>
                     <RichTextComment
                       key={taskModalId ?? "modal"}
                       value={taskComment}
@@ -252,7 +261,7 @@ export function ProcessInstanceDetail({
 
               {task.templateTask.needFile && (
                 <div className="space-y-2">
-                  <h4 className="text-sm font-medium">Attached file</h4>
+                  <h4 className="text-sm font-medium">Συνημμένο αρχείο</h4>
                   {task.fileUrl ? (
                     <p className="text-sm">
                       <a
@@ -261,11 +270,11 @@ export function ProcessInstanceDetail({
                         rel="noopener noreferrer"
                         className="text-primary underline"
                       >
-                        View file
+                        Προβολή αρχείου
                       </a>
                     </p>
                   ) : (
-                    <p className="text-sm text-muted-foreground">No file uploaded yet.</p>
+                    <p className="text-sm text-muted-foreground">Δεν έχει μεταφορτωθεί αρχείο ακόμη.</p>
                   )}
                   {(isSuperOrAdmin || task.possibleAssignees.some((u) => u.id === currentUserId)) &&
                     task.status !== "APPROVED" &&
@@ -280,7 +289,7 @@ export function ProcessInstanceDetail({
                           className="text-sm file:mr-2 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-primary-foreground file:text-sm"
                         />
                         <Button type="submit" variant="outline" size="sm" disabled={uploading}>
-                          {uploading ? "Uploading..." : "Upload"}
+                          {uploading ? "Μεταφόρτωση..." : "Μεταφόρτωση"}
                         </Button>
                         {uploadError && (
                           <p className="w-full text-sm text-destructive">{uploadError}</p>
@@ -291,20 +300,20 @@ export function ProcessInstanceDetail({
               )}
 
               <div>
-                <h4 className="text-sm font-medium mb-2">History</h4>
+                <h4 className="text-sm font-medium mb-2">Ιστορικό</h4>
                 <ul className="space-y-1 text-sm">
                   {task.actions.map((a) => (
                     <li key={a.createdAt.toString()}>
-                      {a.action} by {a.user.firstName} {a.user.lastName}
+                      {a.action} από {a.user.firstName} {a.user.lastName}
                       {a.message && (
                         <>
                           : <CommentDisplay content={a.message} inline />
                         </>
                       )}{" "}
-                      — {new Date(a.createdAt).toLocaleString()}
+                      — {formatDateTime(a.createdAt)}
                     </li>
                   ))}
-                  {task.actions.length === 0 && <li className="text-muted-foreground">No actions yet</li>}
+                  {task.actions.length === 0 && <li className="text-muted-foreground">Καμία ενέργεια ακόμη</li>}
                 </ul>
               </div>
 
@@ -315,7 +324,7 @@ export function ProcessInstanceDetail({
                       onClick={() => handleStart(task.id)}
                       disabled={loading}
                     >
-                      Start task
+                      Έναρξη εργασίας
                     </Button>
                   )}
                   {(task.status === "PENDING" || task.status === "IN_PROGRESS") && (
@@ -326,14 +335,14 @@ export function ProcessInstanceDetail({
                           onClick={() => handleApprove(task.id)}
                           disabled={loading}
                         >
-                          Approve
+                          Έγκριση
                         </Button>
                         <Button
                           variant="destructive"
                           onClick={() => handleReject(task.id)}
                           disabled={loading || !taskComment.trim() || taskComment.replace(/<[^>]*>/g, "").trim() === ""}
                         >
-                          Reject (comment required)
+                          Απόρριψη (απαιτείται σχόλιο)
                         </Button>
                       </div>
                     </div>

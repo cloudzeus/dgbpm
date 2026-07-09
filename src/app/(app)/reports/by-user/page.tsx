@@ -11,7 +11,7 @@ export default async function ReportByUserPage() {
   const data = await getReportByUserData();
   return (
     <div className="space-y-6 p-4">
-      <h1 className="text-2xl font-semibold text-zinc-200">Reports</h1>
+      <h1 className="text-2xl font-semibold text-zinc-200">Αναφορές</h1>
       <Suspense fallback={<ReportByUserSkeleton />}>
         <ReportByUserClient data={data} />
       </Suspense>

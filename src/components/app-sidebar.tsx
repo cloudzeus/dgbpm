@@ -84,7 +84,7 @@ export function AppSidebar({ role }: { role: Role | undefined }) {
         </SidebarGroup>
         {reportItems.length > 0 && (
           <SidebarGroup>
-            <SidebarGroupLabel>Reports</SidebarGroupLabel>
+            <SidebarGroupLabel>Αναφορές</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {reportItems.map((item) => {
@@ -112,11 +112,11 @@ export function AppSidebar({ role }: { role: Role | undefined }) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
-              tooltip="License"
+              tooltip="Άδεια Χρήσης"
               onClick={() => setLicenseOpen(true)}
             >
               <FiFileText className="size-4 shrink-0" />
-              <span>License</span>
+              <span>Άδεια Χρήσης</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

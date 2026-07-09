@@ -21,15 +21,15 @@ export default async function RegisterPage() {
       />
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Create an account</CardTitle>
-          <CardDescription>Register for the BPM application. An admin must assign your role and positions.</CardDescription>
+          <CardTitle>Δημιουργία λογαριασμού</CardTitle>
+          <CardDescription>Εγγραφείτε στην εφαρμογή BPM. Ένας διαχειριστής πρέπει να αναθέσει τον ρόλο και τις θέσεις εργασίας σας.</CardDescription>
         </CardHeader>
         <CardContent>
           <RegisterForm />
           <p className="mt-4 text-center text-sm text-muted-foreground">
-            Already have an account?{" "}
+            Έχετε ήδη λογαριασμό;{" "}
             <Link href="/auth/login" className="text-primary underline">
-              Sign in
+              Σύνδεση
             </Link>
           </p>
         </CardContent>

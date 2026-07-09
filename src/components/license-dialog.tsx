@@ -39,7 +39,7 @@ export function LicenseDialog({ open, onOpenChange }: LicenseDialogProps) {
         return res.json();
       })
       .then(setData)
-      .catch(() => setError("Could not load license information."))
+      .catch(() => setError("Δεν ήταν δυνατή η φόρτωση των στοιχείων άδειας χρήσης."))
       .finally(() => setLoading(false));
   }, [open]);
 
@@ -61,14 +61,14 @@ export function LicenseDialog({ open, onOpenChange }: LicenseDialogProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>License Agreement</DialogTitle>
+          <DialogTitle>Άδεια Χρήσης Λογισμικού</DialogTitle>
           <DialogDescription>
-            Software license and activation details for this installation.
+            Στοιχεία άδειας χρήσης και ενεργοποίησης λογισμικού για αυτήν την εγκατάσταση.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
           {loading && (
-            <div className="text-muted-foreground text-sm">Loading…</div>
+            <div className="text-muted-foreground text-sm">Φόρτωση…</div>
           )}
           {error && (
             <div className="text-destructive text-sm">{error}</div>
@@ -77,13 +77,13 @@ export function LicenseDialog({ open, onOpenChange }: LicenseDialogProps) {
             <dl className="grid gap-3 text-sm">
               <div>
                 <dt className="font-medium text-muted-foreground">
-                  Serial number
+                  Σειριακός αριθμός
                 </dt>
                 <dd className="mt-0.5 font-mono">{data.serialNumber || "—"}</dd>
               </div>
               <div>
                 <dt className="font-medium text-muted-foreground">
-                  Activation date
+                  Ημερομηνία ενεργοποίησης
                 </dt>
                 <dd className="mt-0.5">
                   {formatDate(data.licenseDate)}
@@ -91,13 +91,13 @@ export function LicenseDialog({ open, onOpenChange }: LicenseDialogProps) {
               </div>
               <div>
                 <dt className="font-medium text-muted-foreground">
-                  Licensor (seller)
+                  Χορηγός άδειας (πωλητής)
                 </dt>
                 <dd className="mt-0.5">{data.licenseCompany || "—"}</dd>
               </div>
               <div>
                 <dt className="font-medium text-muted-foreground">
-                  Licensee (customer)
+                  Κάτοχος άδειας (πελάτης)
                 </dt>
                 <dd className="mt-0.5">{data.licenseCustomer || "—"}</dd>
               </div>

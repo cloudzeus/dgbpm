@@ -5,6 +5,62 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/rbac";
 import { Role } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+import { deepseekChat, DeepSeekError } from "@/lib/deepseek";
+
+/**
+ * Δημιουργεί αναλυτική περιγραφή βήματος από μια σύντομη ιδέα, μέσω DeepSeek.
+ * Επιστρέφει { ok, text } ή { ok:false, error }.
+ */
+export async function generateTaskDescription(input: {
+  shortDescription: string;
+  taskName?: string;
+  processName?: string;
+}): Promise<{ ok: true; text: string } | { ok: false; error: string }> {
+  const session = await auth();
+  if (!session?.user) return { ok: false, error: "Μη εξουσιοδοτημένη πρόσβαση" };
+  try {
+    requireRole(session.user.role, [Role.SUPER_ADMIN]);
+  } catch {
+    return { ok: false, error: "Δεν έχετε δικαίωμα για αυτή την ενέργεια." };
+  }
+
+  const idea = input.shortDescription?.trim();
+  if (!idea) return { ok: false, error: "Γράψτε πρώτα μια σύντομη περιγραφή." };
+
+  const context = [
+    input.processName ? `Διαδικασία: ${input.processName}` : null,
+    input.taskName ? `Βήμα/Εργασία: ${input.taskName}` : null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  try {
+    const text = await deepseekChat(
+      [
+        {
+          role: "system",
+          content:
+            "Είσαι ειδικός σε επιχειρησιακές διαδικασίες (BPM). Γράφεις αναλυτικές, επαγγελματικές οδηγίες " +
+            "για ένα βήμα εργασίας, ώστε ο υπεύθυνος να ξέρει ακριβώς τι πρέπει να κάνει. " +
+            "Γράφε ΠΑΝΤΑ στα Ελληνικά. Δομή: μια σύντομη εισαγωγική πρόταση για τον σκοπό του βήματος, " +
+            "και μετά αριθμημένα βήμα-βήμα βήματα ενεργειών. Πρόσθεσε, όπου βοηθά, σημεία προσοχής, " +
+            "απαιτούμενα στοιχεία/έγγραφα και κριτήρια ολοκλήρωσης. Μην προσθέτεις εισαγωγικά σχόλια όπως " +
+            "«Ορίστε η περιγραφή». Επίστρεψε μόνο το κείμενο της περιγραφής, σε απλό κείμενο (όχι Markdown σύμβολα).",
+        },
+        {
+          role: "user",
+          content: `${context ? context + "\n\n" : ""}Σύντομη ιδέα από τον χρήστη:\n"${idea}"\n\nΓράψε την αναλυτική περιγραφή του βήματος.`,
+        },
+      ],
+      { temperature: 0.5, maxTokens: 1200 },
+    );
+    return { ok: true, text };
+  } catch (err) {
+    const message = err instanceof DeepSeekError ? err.message : "Αποτυχία δημιουργίας περιγραφής.";
+    console.error("generateTaskDescription", err);
+    return { ok: false, error: message };
+  }
+}
 
 export async function createProcessTemplate(data: {
   name: string;
@@ -17,6 +73,7 @@ export async function createProcessTemplate(data: {
     description?: string;
     needFile: boolean;
     mandatory: boolean;
+    slaDays?: number | null;
     approverPositionIds: string[];
     notifyOnStartPositionIds?: string[];
     notifyOnCompletePositionIds?: string[];
@@ -29,7 +86,7 @@ export async function createProcessTemplate(data: {
   }[];
 }) {
   const session = await auth();
-  if (!session?.user) throw new Error("Unauthorized");
+  if (!session?.user) throw new Error("Μη εξουσιοδοτημένη πρόσβαση");
   requireRole(session.user.role, [Role.SUPER_ADMIN]);
 
   await prisma.processTemplate.create({
@@ -48,6 +105,7 @@ export async function createProcessTemplate(data: {
           description: t.description ?? undefined,
           needFile: t.needFile,
           mandatory: t.mandatory,
+          slaDays: t.slaDays ?? null,
           approverRoles: {
             create: (t.approverPositionIds ?? []).map((jobPositionId) => ({ jobPositionId })),
           },
@@ -85,6 +143,7 @@ export async function updateProcessTemplate(
     description?: string;
     needFile: boolean;
     mandatory: boolean;
+    slaDays?: number | null;
     approverPositionIds: string[];
     notifyOnStartPositionIds?: string[];
     notifyOnCompletePositionIds?: string[];
@@ -98,7 +157,7 @@ export async function updateProcessTemplate(
 }
 ) {
   const session = await auth();
-  if (!session?.user) throw new Error("Unauthorized");
+  if (!session?.user) throw new Error("Μη εξουσιοδοτημένη πρόσβαση");
   requireRole(session.user.role, [Role.SUPER_ADMIN]);
 
   await prisma.$transaction(async (tx) => {
@@ -133,6 +192,7 @@ export async function updateProcessTemplate(
           description: t.description ?? undefined,
           needFile: t.needFile,
           mandatory: t.mandatory,
+          slaDays: t.slaDays ?? null,
           approverRoles: {
             create: (t.approverPositionIds ?? []).map((jobPositionId) => ({ jobPositionId })),
           },
@@ -159,7 +219,7 @@ export async function updateProcessTemplate(
 
 export async function deleteProcessTemplate(id: string) {
   const session = await auth();
-  if (!session?.user) throw new Error("Unauthorized");
+  if (!session?.user) throw new Error("Μη εξουσιοδοτημένη πρόσβαση");
   requireRole(session.user.role, [Role.SUPER_ADMIN]);
 
   await prisma.processTemplate.delete({ where: { id } });

@@ -69,21 +69,21 @@ export function ProcessInstancesClient({
       {allowedTemplates.length > 0 && (
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button>New process</Button>
+            <Button>Νέα διαδικασία</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Start process</DialogTitle>
+              <DialogTitle>Έναρξη διαδικασίας</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label>Template</Label>
+                <Label>Πρότυπο</Label>
                 <select
                   name="processTemplateId"
                   className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
                   required
                 >
-                  <option value="">Select template</option>
+                  <option value="">Επιλέξτε πρότυπο</option>
                   {allowedTemplates.map((t) => (
                     <option key={t.id} value={t.id}>
                       {t.name}
@@ -92,16 +92,16 @@ export function ProcessInstancesClient({
                 </select>
               </div>
               <div className="space-y-2">
-                <Label>Instance name</Label>
+                <Label>Όνομα διαδικασίας</Label>
                 <Input
                   name="name"
                   defaultValue={defaultName}
-                  placeholder="e.g. Leave Request – 2025-02-18"
+                  placeholder="π.χ. Αίτημα Άδειας – 2025-02-18"
                   required
                 />
               </div>
               <div className="space-y-2">
-                <Label>Start date & time</Label>
+                <Label>Ημ/νία & ώρα έναρξης</Label>
                 <Input
                   name="startDateTime"
                   type="datetime-local"
@@ -110,10 +110,10 @@ export function ProcessInstancesClient({
               </div>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                  Cancel
+                  Άκυρο
                 </Button>
                 <Button type="submit" disabled={loading}>
-                  {loading ? "Starting..." : "Start"}
+                  {loading ? "Έναρξη..." : "Έναρξη"}
                 </Button>
               </DialogFooter>
             </form>

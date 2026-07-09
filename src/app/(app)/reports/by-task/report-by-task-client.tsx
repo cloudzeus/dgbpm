@@ -18,7 +18,7 @@ import {
 } from "@/lib/report-export";
 import { FiDownload, FiFileText } from "react-icons/fi";
 
-const TITLE = "Tasks by Task";
+const TITLE = "Εργασίες ανά Εργασία";
 
 export function ReportByTaskClient({ data }: { data: ReportByTaskRow[] }) {
   const handlePdf = () => exportReportByTaskToPdf(data, TITLE);
@@ -30,17 +30,17 @@ export function ReportByTaskClient({ data }: { data: ReportByTaskRow[] }) {
         <div>
           <CardTitle>{TITLE}</CardTitle>
           <CardDescription>
-            Task template usage: counts by status (pending, in progress, approved, rejected, skipped).
+            Χρήση προτύπων εργασιών: πλήθος ανά κατάσταση (σε αναμονή, σε εξέλιξη, εγκρίθηκε, απορρίφθηκε, παραλείφθηκε).
           </CardDescription>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={handlePdf}>
             <FiFileText className="size-4" />
-            Export PDF
+            Εξαγωγή PDF
           </Button>
           <Button variant="outline" size="sm" onClick={handleExcel}>
             <FiDownload className="size-4" />
-            Export Excel
+            Εξαγωγή Excel
           </Button>
         </div>
       </CardHeader>
@@ -48,21 +48,21 @@ export function ReportByTaskClient({ data }: { data: ReportByTaskRow[] }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Task</TableHead>
-              <TableHead>Process template</TableHead>
-              <TableHead className="text-right">Total</TableHead>
-              <TableHead className="text-right">Pending</TableHead>
-              <TableHead className="text-right">In progress</TableHead>
-              <TableHead className="text-right">Approved</TableHead>
-              <TableHead className="text-right">Rejected</TableHead>
-              <TableHead className="text-right">Skipped</TableHead>
+              <TableHead>Εργασία</TableHead>
+              <TableHead>Πρότυπο Διαδικασίας</TableHead>
+              <TableHead className="text-right">Σύνολο</TableHead>
+              <TableHead className="text-right">Σε αναμονή</TableHead>
+              <TableHead className="text-right">Σε εξέλιξη</TableHead>
+              <TableHead className="text-right">Εγκρίθηκε</TableHead>
+              <TableHead className="text-right">Απορρίφθηκε</TableHead>
+              <TableHead className="text-right">Παραλείφθηκε</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {data.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="text-center text-muted-foreground">
-                  No data
+                  Χωρίς δεδομένα
                 </TableCell>
               </TableRow>
             ) : (

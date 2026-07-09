@@ -16,16 +16,16 @@ export default function ForgotPasswordPage() {
       />
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Forgot password</CardTitle>
+          <CardTitle>Ξεχάσατε τον κωδικό</CardTitle>
           <CardDescription>
-            Enter your email and we&apos;ll send you a link to reset your password. (Reset flow can be implemented later.)
+            Εισάγετε το email σας και θα σας στείλουμε έναν σύνδεσμο για την επαναφορά του κωδικού σας. (Η διαδικασία επαναφοράς μπορεί να υλοποιηθεί αργότερα.)
           </CardDescription>
         </CardHeader>
         <CardContent>
           <ForgotPasswordForm />
           <p className="mt-4 text-center text-sm text-muted-foreground">
             <Link href="/auth/login" className="text-primary underline">
-              Back to sign in
+              Επιστροφή στη σύνδεση
             </Link>
           </p>
         </CardContent>

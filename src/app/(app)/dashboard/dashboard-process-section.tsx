@@ -25,6 +25,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ProcessIcon } from "@/lib/process-icons";
+import { taskStatusMeta } from "@/lib/process-status";
 import {
   Tooltip,
   TooltipContent,
@@ -196,8 +197,8 @@ function StaticKanbanColumn({
         COLUMN_COLORS[status]
       )}
     >
-      <h3 className="font-semibold text-sm mb-3 capitalize flex items-center justify-between text-zinc-200">
-        <span>{status.replace("_", " ")}</span>
+      <h3 className="font-semibold text-sm mb-3 flex items-center justify-between text-zinc-200">
+        <span>{taskStatusMeta(status).label}</span>
         <span className="text-zinc-400 font-normal">{tasks.length}</span>
       </h3>
       <div className="space-y-2">
@@ -250,8 +251,8 @@ function DroppableColumn({
         isOver && "ring-2 ring-white/50"
       )}
     >
-      <h3 className="font-semibold text-sm mb-3 capitalize flex items-center justify-between text-zinc-200">
-        <span>{status.replace("_", " ")}</span>
+      <h3 className="font-semibold text-sm mb-3 flex items-center justify-between text-zinc-200">
+        <span>{taskStatusMeta(status).label}</span>
         <span className="text-zinc-400 font-normal">{tasks.length}</span>
       </h3>
       <div className="space-y-2">
@@ -450,7 +451,7 @@ export function DashboardProcessSection({
       const task = taskInModal;
       if (action === "REJECTED" && (!taskComment.trim() || taskComment.replace(/<[^>]*>/g, "").trim() === "")) return;
       if (task.templateTask.needFile && !task.fileUrl && uploadedTaskId !== task.id) {
-        setUploadError("File is required for this task.");
+        setUploadError("Απαιτείται αρχείο για αυτήν την εργασία.");
         return;
       }
       setActionLoading(true);
@@ -515,7 +516,7 @@ export function DashboardProcessSection({
         setUploadError(result.error);
       }
     } catch (err) {
-      setUploadError(err instanceof Error ? err.message : "Upload failed");
+      setUploadError(err instanceof Error ? err.message : "Η μεταφόρτωση απέτυχε");
     } finally {
       setUploading(false);
     }
@@ -525,7 +526,7 @@ export function DashboardProcessSection({
     <>
       {allowedTemplates.length > 0 && (
         <section className="space-y-4">
-          <h2 className="text-lg font-semibold">Start a process</h2>
+          <h2 className="text-lg font-semibold">Έναρξη διαδικασίας</h2>
           <TooltipProvider>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {allowedTemplates.map((t, i) => {
@@ -570,7 +571,7 @@ export function DashboardProcessSection({
       )}
 
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold text-zinc-200">Tasks by status</h2>
+        <h2 className="text-lg font-semibold text-zinc-200">Εργασίες ανά κατάσταση</h2>
         {!dndMounted ? (
           <div className="rounded-xl bg-zinc-900/95 border border-zinc-700 p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 overflow-x-auto pb-4">
             {KANBAN_COLUMNS.map((status) => (
@@ -628,12 +629,12 @@ export function DashboardProcessSection({
       <Dialog open={startDialog.open} onOpenChange={(o) => !startLoading && setStartDialog((p) => ({ ...p, open: o }))}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Start process: {startDialog.templateName}</DialogTitle>
+            <DialogTitle>Έναρξη διαδικασίας: {startDialog.templateName}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleStartSubmit} className="space-y-4">
             <input type="hidden" name="processTemplateId" value={startDialog.templateId} />
             <div className="space-y-2">
-              <Label>Instance name</Label>
+              <Label>Όνομα διαδικασίας</Label>
               <Input
                 name="name"
                 defaultValue={`${startDialog.templateName} – ${new Date().toISOString().slice(0, 16)}`}
@@ -641,14 +642,14 @@ export function DashboardProcessSection({
               />
             </div>
             <div className="space-y-2">
-              <Label>Start date & time</Label>
+              <Label>Ημ/νία & ώρα έναρξης</Label>
               <Input name="startDateTime" type="datetime-local" defaultValue={new Date().toISOString().slice(0, 16)} />
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setStartDialog((p) => ({ ...p, open: false }))}>
-                Cancel
+                Άκυρο
               </Button>
-              <Button type="submit" disabled={startLoading}>{startLoading ? "Starting..." : "Start"}</Button>
+              <Button type="submit" disabled={startLoading}>{startLoading ? "Έναρξη..." : "Έναρξη"}</Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -660,9 +661,9 @@ export function DashboardProcessSection({
             <DialogTitle>
               {actionModal
                 ? actionModal.toStatus === "APPROVED"
-                  ? "Approve task"
-                  : "Reject task"
-                : "Task"}
+                  ? "Έγκριση εργασίας"
+                  : "Απόρριψη εργασίας"
+                : "Εργασία"}
             </DialogTitle>
           </DialogHeader>
           {taskInModal && (
@@ -671,7 +672,7 @@ export function DashboardProcessSection({
                 {taskInModal.templateTask.name} — {taskInModal.processInstance.name}
               </p>
               <div className="space-y-2">
-                <Label>Comment (required for Reject)</Label>
+                <Label>Σχόλιο (υποχρεωτικό για Απόρριψη)</Label>
                 <RichTextComment
                   key={taskInModal.id}
                   value={taskComment}
@@ -681,16 +682,16 @@ export function DashboardProcessSection({
               </div>
               {taskInModal.templateTask.needFile && (
                 <div className="space-y-2">
-                  <Label>File {taskInModal.fileUrl ? "(uploaded)" : "(required)"}</Label>
+                  <Label>Αρχείο {taskInModal.fileUrl ? "(μεταφορτώθηκε)" : "(απαιτείται)"}</Label>
                   {taskInModal.fileUrl ? (
                     <a href={taskInModal.fileUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary underline">
-                      View file
+                      Προβολή αρχείου
                     </a>
                   ) : (
                     <form onSubmit={(e) => handleFileUpload(taskInModal.id, e)} className="flex gap-2">
                       <input type="file" name="file" className="text-sm" required />
                       <Button type="submit" size="sm" disabled={uploading}>
-                        {uploading ? "Uploading..." : "Upload"}
+                        {uploading ? "Μεταφόρτωση..." : "Μεταφόρτωση"}
                       </Button>
                     </form>
                   )}
@@ -701,7 +702,7 @@ export function DashboardProcessSection({
           )}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={handleActionCancel}>
-              Cancel
+              Άκυρο
             </Button>
             <Button
               variant="default"
@@ -713,7 +714,7 @@ export function DashboardProcessSection({
                   uploadedTaskId !== taskInModal?.id)
               }
             >
-              {actionLoading ? "Saving..." : "Approve"}
+              {actionLoading ? "Αποθήκευση..." : "Έγκριση"}
             </Button>
             <Button
               variant="destructive"
@@ -727,7 +728,7 @@ export function DashboardProcessSection({
                   uploadedTaskId !== taskInModal?.id)
               }
             >
-              Reject
+              Απόρριψη
             </Button>
           </DialogFooter>
         </DialogContent>

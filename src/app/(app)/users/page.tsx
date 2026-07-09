@@ -29,8 +29,8 @@ export default async function UsersPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Users</h1>
-        <p className="text-muted-foreground">Manage users, roles, and position assignments.</p>
+        <h1 className="text-2xl font-bold">Χρήστες</h1>
+        <p className="text-muted-foreground">Διαχείριση χρηστών, ρόλων και αναθέσεων θέσεων εργασίας.</p>
       </div>
       <UsersClient users={users} positions={positions} currentRole={session.user.role} />
     </div>

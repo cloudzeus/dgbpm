@@ -169,6 +169,7 @@ model ProcessTaskTemplate {
   description        String? @db.Text
   needFile           Boolean @default(false)
   mandatory          Boolean @default(true)
+  slaDays            Int?    // αναμενόμενη προθεσμία ολοκλήρωσης βήματος σε μέρες (για καθυστερήσεις)
 
   // Rule-based: in addition to positions, include same department as assignee / assignee's department manager
   approverSameDepartment    Boolean @default(false)

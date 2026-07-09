@@ -96,10 +96,10 @@ export function PositionsClient({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Department</TableHead>
-              <TableHead>Manager</TableHead>
-              <TableHead className="w-[120px]">Actions</TableHead>
+              <TableHead>Όνομα</TableHead>
+              <TableHead>Τμήμα</TableHead>
+              <TableHead>Προϊστάμενος</TableHead>
+              <TableHead className="w-[120px]">Ενέργειες</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -122,14 +122,14 @@ export function PositionsClient({
                         setOpen(true);
                       }}
                     >
-                      Edit
+                      Επεξεργασία
                     </Button>
                     <Button
                       variant="destructive"
                       size="sm"
                       onClick={() => setDeleteId(p.id)}
                     >
-                      Delete
+                      Διαγραφή
                     </Button>
                   </div>
                 </TableCell>
@@ -147,15 +147,15 @@ export function PositionsClient({
         }}
       >
         <DialogTrigger asChild>
-          <Button onClick={() => setOpen(true)}>Create position</Button>
+          <Button onClick={() => setOpen(true)}>Δημιουργία θέσης εργασίας</Button>
         </DialogTrigger>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editId ? "Edit position" : "Create position"}</DialogTitle>
+            <DialogTitle>{editId ? "Επεξεργασία θέσης εργασίας" : "Δημιουργία θέσης εργασίας"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
+              <Label htmlFor="name">Όνομα</Label>
               <Input
                 id="name"
                 name="name"
@@ -164,14 +164,14 @@ export function PositionsClient({
               />
             </div>
             <div className="space-y-2">
-              <Label>Department</Label>
+              <Label>Τμήμα</Label>
               <select
                 name="departmentId"
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
                 defaultValue={editing?.departmentId}
                 required
               >
-                <option value="">Select department</option>
+                <option value="">Επιλέξτε τμήμα</option>
                 {departments.map((d) => (
                   <option key={d.id} value={d.id}>
                     {d.name}
@@ -180,13 +180,13 @@ export function PositionsClient({
               </select>
             </div>
             <div className="space-y-2">
-              <Label>Manager</Label>
+              <Label>Προϊστάμενος</Label>
               <select
                 name="managerId"
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
                 defaultValue={editing?.managerId ?? ""}
               >
-                <option value="">None</option>
+                <option value="">Κανένας</option>
                 {users.map((u) => (
                   <option key={u.id} value={u.id}>
                     {u.firstName} {u.lastName} ({u.email})
@@ -200,10 +200,10 @@ export function PositionsClient({
                 variant="outline"
                 onClick={() => setOpen(false)}
               >
-                Cancel
+                Άκυρο
               </Button>
               <Button type="submit" disabled={loading}>
-                {loading ? "Saving..." : editId ? "Update" : "Create"}
+                {loading ? "Αποθήκευση..." : editId ? "Ενημέρωση" : "Δημιουργία"}
               </Button>
             </DialogFooter>
           </form>
@@ -213,15 +213,15 @@ export function PositionsClient({
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete position?</AlertDialogTitle>
+            <AlertDialogTitle>Διαγραφή θέσης εργασίας;</AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove the job position. Users assigned to it may be affected.
+              Αυτό θα αφαιρέσει τη θέση εργασίας. Οι χρήστες που έχουν ανατεθεί σε αυτήν ενδέχεται να επηρεαστούν.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Άκυρο</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} disabled={loading}>
-              Delete
+              Διαγραφή
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -18,8 +18,8 @@ import {
 
 export async function startProcessInstance(formData: FormData) {
   const session = await auth();
-  if (!session?.user) throw new Error("Unauthorized");
-  if (!hasPermission(session.user.role, "processInstances.create")) throw new Error("Forbidden");
+  if (!session?.user) throw new Error("Μη εξουσιοδοτημένη πρόσβαση");
+  if (!hasPermission(session.user.role, "processInstances.create")) throw new Error("Δεν επιτρέπεται");
 
   const processTemplateId = formData.get("processTemplateId") as string;
   const name = formData.get("name") as string;
@@ -32,7 +32,7 @@ export async function startProcessInstance(formData: FormData) {
       tasks: { include: { approverRoles: { select: { jobPositionId: true } } }, orderBy: { order: "asc" } },
     },
   });
-  if (!template) throw new Error("Template not found");
+  if (!template) throw new Error("Το πρότυπο δεν βρέθηκε");
 
   const allowedDeptIds = template.allowedDepartments.map((d) => d.departmentId);
   const userPositionIds = (
@@ -52,7 +52,7 @@ export async function startProcessInstance(formData: FormData) {
     session.user.role === Role.SUPER_ADMIN ||
     session.user.role === Role.ADMIN ||
     userDeptIds.some((d) => allowedDeptIds.includes(d));
-  if (!canStart) throw new Error("You are not allowed to start this process");
+  if (!canStart) throw new Error("Δεν επιτρέπεται να ξεκινήσετε αυτή τη διαδικασία");
 
   const startDate = startDateTime ? new Date(startDateTime) : new Date();
 
@@ -117,19 +117,19 @@ export async function startProcessInstance(formData: FormData) {
 
 export async function startTask(taskId: string) {
   const session = await auth();
-  if (!session?.user) throw new Error("Unauthorized");
+  if (!session?.user) throw new Error("Μη εξουσιοδοτημένη πρόσβαση");
 
   const task = await prisma.processTaskAssignment.findUnique({
     where: { id: taskId },
     include: { possibleAssignees: { select: { id: true } } },
   });
-  if (!task) throw new Error("Task not found");
+  if (!task) throw new Error("Η εργασία δεν βρέθηκε");
 
   const canAct =
     session.user.role === Role.SUPER_ADMIN ||
     session.user.role === Role.ADMIN ||
     task.possibleAssignees.some((u) => u.id === session.user!.id);
-  if (!canAct) throw new Error("Forbidden");
+  if (!canAct) throw new Error("Δεν επιτρέπεται");
 
   await prisma.$transaction([
     prisma.processTaskAssignment.update({
@@ -151,7 +151,7 @@ export async function startTask(taskId: string) {
       },
     });
     if (taskWithDetails) {
-      const startedByName = session.user.name ?? session.user.email ?? "A user";
+      const startedByName = session.user.name ?? session.user.email ?? "Ένας χρήστης";
       const processName = taskWithDetails.processInstance.name;
       const taskName = taskWithDetails.templateTask.name;
       const instanceId = taskWithDetails.processInstance.id;
@@ -179,19 +179,19 @@ export async function startTask(taskId: string) {
 
 export async function approveTask(taskId: string, comment?: string) {
   const session = await auth();
-  if (!session?.user) throw new Error("Unauthorized");
+  if (!session?.user) throw new Error("Μη εξουσιοδοτημένη πρόσβαση");
 
   const task = await prisma.processTaskAssignment.findUnique({
     where: { id: taskId },
     include: { possibleAssignees: { select: { id: true } }, processInstance: true, templateTask: true },
   });
-  if (!task) throw new Error("Task not found");
+  if (!task) throw new Error("Η εργασία δεν βρέθηκε");
 
   const canAct =
     session.user.role === Role.SUPER_ADMIN ||
     session.user.role === Role.ADMIN ||
     task.possibleAssignees.some((u) => u.id === session.user!.id);
-  if (!canAct) throw new Error("Forbidden");
+  if (!canAct) throw new Error("Δεν επιτρέπεται");
 
   await prisma.$transaction([
     prisma.processTaskAssignment.update({
@@ -232,7 +232,7 @@ export async function approveTask(taskId: string, comment?: string) {
         toName,
         processName: instanceWithStarter.name,
         taskName: task.templateTask.name,
-        approvedByName: session.user.name ?? session.user.email ?? "A user",
+        approvedByName: session.user.name ?? session.user.email ?? "Ένας χρήστης",
         instanceId: task.processInstanceId,
       });
       sendEmail({ to: instanceWithStarter.startedBy.email, subject, html }).catch((err) =>
@@ -260,21 +260,21 @@ export async function approveTask(taskId: string, comment?: string) {
 
 export async function rejectTask(taskId: string, comment: string) {
   const session = await auth();
-  if (!session?.user) throw new Error("Unauthorized");
+  if (!session?.user) throw new Error("Μη εξουσιοδοτημένη πρόσβαση");
 
   const task = await prisma.processTaskAssignment.findUnique({
     where: { id: taskId },
     include: { possibleAssignees: { select: { id: true } } },
   });
-  if (!task) throw new Error("Task not found");
+  if (!task) throw new Error("Η εργασία δεν βρέθηκε");
 
   const canAct =
     session.user.role === Role.SUPER_ADMIN ||
     session.user.role === Role.ADMIN ||
     task.possibleAssignees.some((u) => u.id === session.user!.id);
-  if (!canAct) throw new Error("Forbidden");
+  if (!canAct) throw new Error("Δεν επιτρέπεται");
 
-  if (!comment?.trim()) throw new Error("Comment required for rejection");
+  if (!comment?.trim()) throw new Error("Απαιτείται σχόλιο για την απόρριψη");
 
   await prisma.$transaction([
     prisma.processTaskAssignment.update({
@@ -304,7 +304,7 @@ export async function rejectTask(taskId: string, comment: string) {
         toName,
         processName: taskWithInstance.processInstance.name,
         taskName: taskWithInstance.templateTask.name,
-        rejectedByName: session.user.name ?? session.user.email ?? "A user",
+        rejectedByName: session.user.name ?? session.user.email ?? "Ένας χρήστης",
         comment,
         instanceId: taskWithInstance.processInstanceId,
       });
@@ -325,7 +325,7 @@ export async function uploadTaskFile(
   formData: FormData
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const session = await auth();
-  if (!session?.user) return { ok: false, error: "Unauthorized" };
+  if (!session?.user) return { ok: false, error: "Μη εξουσιοδοτημένη πρόσβαση" };
 
   const task = await prisma.processTaskAssignment.findUnique({
     where: { id: taskId },
@@ -334,24 +334,24 @@ export async function uploadTaskFile(
       templateTask: { select: { needFile: true } },
     },
   });
-  if (!task) return { ok: false, error: "Task not found" };
-  if (!task.templateTask.needFile) return { ok: false, error: "This task does not require a file" };
+  if (!task) return { ok: false, error: "Η εργασία δεν βρέθηκε" };
+  if (!task.templateTask.needFile) return { ok: false, error: "Αυτή η εργασία δεν απαιτεί αρχείο" };
 
   const canAct =
     session.user.role === Role.SUPER_ADMIN ||
     session.user.role === Role.ADMIN ||
     task.possibleAssignees.some((u) => u.id === session.user!.id);
-  if (!canAct) return { ok: false, error: "Forbidden" };
+  if (!canAct) return { ok: false, error: "Δεν επιτρέπεται" };
 
   if (!isBunnyConfigured()) {
     return {
       ok: false,
-      error: "File upload is not configured. Set BUNNY_STORAGE_ZONE, BUNNY_ACCESS_KEY, and BUNNY_CDN_HOST in environment.",
+      error: "Η μεταφόρτωση αρχείων δεν έχει ρυθμιστεί. Ορίστε τα BUNNY_STORAGE_ZONE, BUNNY_ACCESS_KEY και BUNNY_CDN_HOST στο περιβάλλον.",
     };
   }
 
   const file = formData.get("file") as File | null;
-  if (!file?.size) return { ok: false, error: "No file provided" };
+  if (!file?.size) return { ok: false, error: "Δεν δόθηκε αρχείο" };
 
   const rawName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 200) || "file";
   const ext = rawName.includes(".") ? rawName.slice(rawName.lastIndexOf(".")) : "";
@@ -382,7 +382,7 @@ export async function uploadTaskFile(
   } catch (err) {
     return {
       ok: false,
-      error: err instanceof Error ? err.message : "Upload failed",
+      error: err instanceof Error ? err.message : "Η μεταφόρτωση απέτυχε",
     };
   }
 }

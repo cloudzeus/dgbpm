@@ -10,6 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { roleLabel } from "@/lib/role-labels";
 import {
   Dialog,
   DialogContent,
@@ -115,11 +116,11 @@ export function UsersClient({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
+              <TableHead>Όνομα</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Positions</TableHead>
-              <TableHead className="w-[120px]">Actions</TableHead>
+              <TableHead>Ρόλος</TableHead>
+              <TableHead>Θέσεις Εργασίας</TableHead>
+              <TableHead className="w-[120px]">Ενέργειες</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -139,7 +140,7 @@ export function UsersClient({
                             : "secondary"
                     }
                   >
-                    {u.role.replace("_", " ")}
+                    {roleLabel(u.role)}
                   </Badge>
                 </TableCell>
                 <TableCell>
@@ -157,14 +158,14 @@ export function UsersClient({
                         setOpen(true);
                       }}
                     >
-                      Edit
+                      Επεξεργασία
                     </Button>
                     <Button
                       variant="destructive"
                       size="sm"
                       onClick={() => setDeleteId(u.id)}
                     >
-                      Delete
+                      Διαγραφή
                     </Button>
                   </div>
                 </TableCell>
@@ -182,20 +183,20 @@ export function UsersClient({
         }}
       >
         <DialogTrigger asChild>
-          <Button onClick={() => setOpen(true)}>Create user</Button>
+          <Button onClick={() => setOpen(true)}>Δημιουργία χρήστη</Button>
         </DialogTrigger>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editId ? "Edit user" : "Create user"}</DialogTitle>
+            <DialogTitle>{editId ? "Επεξεργασία χρήστη" : "Δημιουργία χρήστη"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="firstName">First name</Label>
+                <Label htmlFor="firstName">Όνομα</Label>
                 <Input id="firstName" name="firstName" defaultValue={editing?.firstName} required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="lastName">Last name</Label>
+                <Label htmlFor="lastName">Επώνυμο</Label>
                 <Input id="lastName" name="lastName" defaultValue={editing?.lastName} required />
               </div>
             </div>
@@ -210,25 +211,25 @@ export function UsersClient({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">{editId ? "New password (leave blank to keep)" : "Password"}</Label>
+              <Label htmlFor="password">{editId ? "Νέος κωδικός (αφήστε κενό για διατήρηση)" : "Κωδικός"}</Label>
               <Input id="password" name="password" type="password" minLength={editId ? 0 : 8} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
+                <Label htmlFor="phone">Τηλέφωνο</Label>
                 <Input id="phone" name="phone" defaultValue={editing?.phone ?? ""} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="mobile">Mobile</Label>
+                <Label htmlFor="mobile">Κινητό</Label>
                 <Input id="mobile" name="mobile" defaultValue={editing?.mobile ?? ""} />
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
+              <Label htmlFor="address">Διεύθυνση</Label>
               <Input id="address" name="address" defaultValue={editing?.address ?? ""} />
             </div>
             <div className="space-y-2">
-              <Label>Role</Label>
+              <Label>Ρόλος</Label>
               <select
                 name="role"
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
@@ -242,7 +243,7 @@ export function UsersClient({
               </select>
             </div>
             <div className="space-y-2">
-              <Label>Positions</Label>
+              <Label>Θέσεις Εργασίας</Label>
               <div className="max-h-40 overflow-y-auto rounded-md border p-2 space-y-2">
                 {positions.map((p) => (
                   <label key={p.id} className="flex items-center gap-2 cursor-pointer">
@@ -262,10 +263,10 @@ export function UsersClient({
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                Cancel
+                Άκυρο
               </Button>
               <Button type="submit" disabled={loading}>
-                {loading ? "Saving..." : editId ? "Update" : "Create"}
+                {loading ? "Αποθήκευση..." : editId ? "Ενημέρωση" : "Δημιουργία"}
               </Button>
             </DialogFooter>
           </form>
@@ -275,15 +276,15 @@ export function UsersClient({
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete user?</AlertDialogTitle>
+            <AlertDialogTitle>Διαγραφή χρήστη;</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently remove the user and their position assignments.
+              Αυτό θα αφαιρέσει οριστικά τον χρήστη και τις αναθέσεις θέσεων εργασίας του.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Άκυρο</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} disabled={loading}>
-              Delete
+              Διαγραφή
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -17,7 +17,7 @@ export function ForgotPasswordForm() {
   if (submitted) {
     return (
       <p className="text-sm text-muted-foreground">
-        If an account exists for that email, you would receive a reset link. For this internal app, contact your administrator to reset your password.
+        Αν υπάρχει λογαριασμός για αυτό το email, θα λάβετε έναν σύνδεσμο επαναφοράς. Για αυτήν την εσωτερική εφαρμογή, επικοινωνήστε με τον διαχειριστή σας για επαναφορά του κωδικού σας.
       </p>
     );
   }
@@ -36,7 +36,7 @@ export function ForgotPasswordForm() {
         />
       </div>
       <Button type="submit" className="w-full">
-        Send reset link
+        Αποστολή συνδέσμου επαναφοράς
       </Button>
     </form>
   );

@@ -82,13 +82,13 @@ export default async function DashboardPage() {
     return (
       <div className="space-y-8">
         <div>
-          <h1 className="text-2xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">Overview of users, departments, positions, and processes.</p>
+          <h1 className="text-2xl font-bold">Πίνακας Ελέγχου</h1>
+          <p className="text-muted-foreground">Επισκόπηση χρηστών, τμημάτων, θέσεων εργασίας και διαδικασιών.</p>
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Users</CardTitle>
+              <CardTitle className="text-sm font-medium">Χρήστες</CardTitle>
               <FiUsers className="size-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -97,7 +97,7 @@ export default async function DashboardPage() {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Departments</CardTitle>
+              <CardTitle className="text-sm font-medium">Τμήματα</CardTitle>
               <FiFolder className="size-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -106,7 +106,7 @@ export default async function DashboardPage() {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Job Positions</CardTitle>
+              <CardTitle className="text-sm font-medium">Θέσεις Εργασίας</CardTitle>
               <FiBriefcase className="size-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -115,7 +115,7 @@ export default async function DashboardPage() {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Process Templates</CardTitle>
+              <CardTitle className="text-sm font-medium">Πρότυπα Διαδικασιών</CardTitle>
               <FiList className="size-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -124,7 +124,7 @@ export default async function DashboardPage() {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Process Instances</CardTitle>
+              <CardTitle className="text-sm font-medium">Διαδικασίες</CardTitle>
               <FiCheckSquare className="size-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -173,31 +173,31 @@ export default async function DashboardPage() {
     return (
       <div className="space-y-8">
         <div>
-          <h1 className="text-2xl font-bold">Manager Dashboard</h1>
-          <p className="text-muted-foreground">My department processes and team tasks.</p>
+          <h1 className="text-2xl font-bold">Πίνακας Ελέγχου Προϊσταμένου</h1>
+          <p className="text-muted-foreground">Οι διαδικασίες του τμήματός μου και οι εργασίες της ομάδας.</p>
         </div>
         <div className="grid gap-4 md:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle>My Department Processes</CardTitle>
-              <CardDescription>Running, delayed, and completed processes</CardDescription>
+              <CardTitle>Διαδικασίες του Τμήματός μου</CardTitle>
+              <CardDescription>Διαδικασίες σε εξέλιξη, σε καθυστέρηση και ολοκληρωμένες</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{myDeptProcesses}</div>
               <a href="/process-instances" className="text-sm text-primary underline">
-                View all
+                Προβολή όλων
               </a>
             </CardContent>
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle>My Team Tasks</CardTitle>
-              <CardDescription>Tasks where your positions can approve</CardDescription>
+              <CardTitle>Εργασίες της Ομάδας μου</CardTitle>
+              <CardDescription>Εργασίες που μπορούν να εγκρίνουν οι θέσεις σας</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{myTeamTasks}</div>
               <a href="/my-tasks" className="text-sm text-primary underline">
-                View tasks
+                Προβολή εργασιών
               </a>
             </CardContent>
           </Card>
@@ -226,31 +226,31 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold">Employee Dashboard</h1>
-        <p className="text-muted-foreground">My tasks and processes.</p>
+        <h1 className="text-2xl font-bold">Πίνακας Ελέγχου Υπαλλήλου</h1>
+        <p className="text-muted-foreground">Οι εργασίες και οι διαδικασίες μου.</p>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>My Tasks</CardTitle>
-            <CardDescription>Current and overdue tasks</CardDescription>
+            <CardTitle>Οι Εργασίες μου</CardTitle>
+            <CardDescription>Τρέχουσες και εκπρόθεσμες εργασίες</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{myTasks}</div>
             <a href="/my-tasks" className="text-sm text-primary underline">
-              View tasks
+              Προβολή εργασιών
             </a>
           </CardContent>
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>My Processes</CardTitle>
-            <CardDescription>Processes I started</CardDescription>
+            <CardTitle>Οι Διαδικασίες μου</CardTitle>
+            <CardDescription>Διαδικασίες που ξεκίνησα</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{myProcesses}</div>
             <a href="/my-processes" className="text-sm text-primary underline">
-              View processes
+              Προβολή διαδικασιών
             </a>
           </CardContent>
         </Card>

@@ -18,7 +18,7 @@ import {
 } from "@/lib/report-export";
 import { FiDownload, FiFileText } from "react-icons/fi";
 
-const TITLE = "Processes by User";
+const TITLE = "Διαδικασίες ανά Χρήστη";
 
 export function ReportByUserClient({ data }: { data: ReportByUserRow[] }) {
   const handlePdf = () => exportReportByUserToPdf(data, TITLE);
@@ -29,16 +29,16 @@ export function ReportByUserClient({ data }: { data: ReportByUserRow[] }) {
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div>
           <CardTitle>{TITLE}</CardTitle>
-          <CardDescription>Activity per user: processes started, tasks assigned, approved, rejected.</CardDescription>
+          <CardDescription>Δραστηριότητα ανά χρήστη: διαδικασίες που ξεκίνησαν, εργασίες που ανατέθηκαν, εγκρίθηκαν, απορρίφθηκαν.</CardDescription>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={handlePdf}>
             <FiFileText className="size-4" />
-            Export PDF
+            Εξαγωγή PDF
           </Button>
           <Button variant="outline" size="sm" onClick={handleExcel}>
             <FiDownload className="size-4" />
-            Export Excel
+            Εξαγωγή Excel
           </Button>
         </div>
       </CardHeader>
@@ -46,22 +46,22 @@ export function ReportByUserClient({ data }: { data: ReportByUserRow[] }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>User</TableHead>
+              <TableHead>Χρήστης</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead className="text-right">Processes started</TableHead>
-              <TableHead className="text-right">Tasks assigned</TableHead>
-              <TableHead className="text-right">Approved</TableHead>
-              <TableHead className="text-right">Rejected</TableHead>
-              <TableHead className="text-right">In progress</TableHead>
-              <TableHead className="text-right">Pending</TableHead>
+              <TableHead>Ρόλος</TableHead>
+              <TableHead className="text-right">Διαδικασίες που ξεκίνησαν</TableHead>
+              <TableHead className="text-right">Εργασίες που ανατέθηκαν</TableHead>
+              <TableHead className="text-right">Εγκρίθηκαν</TableHead>
+              <TableHead className="text-right">Απορρίφθηκαν</TableHead>
+              <TableHead className="text-right">Σε εξέλιξη</TableHead>
+              <TableHead className="text-right">Σε αναμονή</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {data.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={9} className="text-center text-muted-foreground">
-                  No data
+                  Χωρίς δεδομένα
                 </TableCell>
               </TableRow>
             ) : (

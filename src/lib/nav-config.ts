@@ -12,6 +12,7 @@ import {
   FiUser,
   FiCheckCircle,
   FiLayers,
+  FiPieChart,
 } from "react-icons/fi";
 
 export interface NavItem {
@@ -22,20 +23,21 @@ export interface NavItem {
 }
 
 export const navItems: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: FiLayout, roles: ["SUPER_ADMIN", "ADMIN", "MANAGER", "EMPLOYEE"] },
-  { href: "/users", label: "Users", icon: FiUsers, roles: ["SUPER_ADMIN", "ADMIN"] },
-  { href: "/departments", label: "Departments", icon: FiFolder, roles: ["SUPER_ADMIN", "ADMIN"] },
-  { href: "/positions", label: "Job Positions", icon: FiBriefcase, roles: ["SUPER_ADMIN", "ADMIN"] },
-  { href: "/process-templates", label: "Process Templates", icon: FiFileText, roles: ["SUPER_ADMIN"] },
-  { href: "/process-instances", label: "Process Instances", icon: FiList, roles: ["SUPER_ADMIN", "ADMIN", "MANAGER", "EMPLOYEE"] },
-  { href: "/my-tasks", label: "My Tasks", icon: FiCheckSquare, roles: ["SUPER_ADMIN", "ADMIN", "MANAGER", "EMPLOYEE"] },
-  { href: "/my-processes", label: "My Processes", icon: FiPlay, roles: ["SUPER_ADMIN", "ADMIN", "MANAGER", "EMPLOYEE"] },
+  { href: "/dashboard", label: "Πίνακας Ελέγχου", icon: FiLayout, roles: ["SUPER_ADMIN", "ADMIN", "MANAGER", "EMPLOYEE"] },
+  { href: "/users", label: "Χρήστες", icon: FiUsers, roles: ["SUPER_ADMIN", "ADMIN"] },
+  { href: "/departments", label: "Τμήματα", icon: FiFolder, roles: ["SUPER_ADMIN", "ADMIN"] },
+  { href: "/positions", label: "Θέσεις Εργασίας", icon: FiBriefcase, roles: ["SUPER_ADMIN", "ADMIN"] },
+  { href: "/process-templates", label: "Πρότυπα Διαδικασιών", icon: FiFileText, roles: ["SUPER_ADMIN"] },
+  { href: "/process-instances", label: "Διαδικασίες", icon: FiList, roles: ["SUPER_ADMIN", "ADMIN", "MANAGER", "EMPLOYEE"] },
+  { href: "/my-tasks", label: "Οι Εργασίες μου", icon: FiCheckSquare, roles: ["SUPER_ADMIN", "ADMIN", "MANAGER", "EMPLOYEE"] },
+  { href: "/my-processes", label: "Οι Διαδικασίες μου", icon: FiPlay, roles: ["SUPER_ADMIN", "ADMIN", "MANAGER", "EMPLOYEE"] },
 ];
 
 export const reportNavItems: NavItem[] = [
-  { href: "/reports/by-user", label: "By User", icon: FiUser, roles: ["SUPER_ADMIN", "ADMIN", "MANAGER"] },
-  { href: "/reports/by-task", label: "By Task", icon: FiCheckCircle, roles: ["SUPER_ADMIN", "ADMIN", "MANAGER"] },
-  { href: "/reports/summary", label: "Process Summary", icon: FiLayers, roles: ["SUPER_ADMIN", "ADMIN", "MANAGER"] },
+  { href: "/reports/overview", label: "Επισκόπηση", icon: FiPieChart, roles: ["SUPER_ADMIN", "ADMIN", "MANAGER"] },
+  { href: "/reports/by-user", label: "Ανά Χρήστη", icon: FiUser, roles: ["SUPER_ADMIN", "ADMIN", "MANAGER"] },
+  { href: "/reports/by-task", label: "Ανά Εργασία", icon: FiCheckCircle, roles: ["SUPER_ADMIN", "ADMIN", "MANAGER"] },
+  { href: "/reports/summary", label: "Σύνοψη Διαδικασιών", icon: FiLayers, roles: ["SUPER_ADMIN", "ADMIN", "MANAGER"] },
 ];
 
 export function getNavItemsForRole(role: Role | undefined): NavItem[] {

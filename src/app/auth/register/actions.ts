@@ -12,11 +12,11 @@ export async function register(formData: FormData) {
   const lastName = formData.get("lastName") as string;
 
   if (!email || !password || !firstName || !lastName) {
-    return { error: "All fields are required." };
+    return { error: "Όλα τα πεδία είναι υποχρεωτικά." };
   }
 
   const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) return { error: "An account with this email already exists." };
+  if (existing) return { error: "Υπάρχει ήδη λογαριασμός με αυτό το email." };
 
   const hashedPassword = await hash(password, 12);
   await prisma.user.create({

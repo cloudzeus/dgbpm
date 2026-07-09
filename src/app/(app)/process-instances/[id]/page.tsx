@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ProcessIcon } from "@/lib/process-icons";
+import { instanceStatusMeta } from "@/lib/process-status";
+import { formatDateTime } from "@/lib/format";
 import { ProcessInstanceDetail } from "./process-instance-detail";
 
 export default async function ProcessInstancePage({
@@ -45,7 +47,7 @@ export default async function ProcessInstancePage({
         <div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" asChild>
-              <Link href="/process-instances">← Back</Link>
+              <Link href="/process-instances">← Πίσω</Link>
             </Button>
           </div>
           <h1 className="text-2xl font-bold mt-2">{instance.name}</h1>
@@ -54,34 +56,24 @@ export default async function ProcessInstancePage({
             {instance.processTemplate.name}
           </p>
         </div>
-        <Badge
-          variant={
-            instance.status === "COMPLETED"
-              ? "success"
-              : instance.status === "CANCELLED"
-                ? "destructive"
-                : instance.status === "RUNNING"
-                  ? "info"
-                  : "secondary"
-          }
-        >
-          {instance.status}
+        <Badge variant={instanceStatusMeta(instance.status).variant}>
+          {instanceStatusMeta(instance.status).label}
         </Badge>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 text-sm">
         <div>
-          <span className="text-muted-foreground">Started by:</span>{" "}
+          <span className="text-muted-foreground">Εκκίνηση από:</span>{" "}
           {instance.startedBy.firstName} {instance.startedBy.lastName}
         </div>
         <div>
-          <span className="text-muted-foreground">Start:</span>{" "}
-          {new Date(instance.startDateTime).toLocaleString()}
+          <span className="text-muted-foreground">Έναρξη:</span>{" "}
+          {formatDateTime(instance.startDateTime)}
         </div>
         {instance.endDateTime && (
           <div>
-            <span className="text-muted-foreground">End:</span>{" "}
-            {new Date(instance.endDateTime).toLocaleString()}
+            <span className="text-muted-foreground">Λήξη:</span>{" "}
+            {formatDateTime(instance.endDateTime)}
           </div>
         )}
       </div>

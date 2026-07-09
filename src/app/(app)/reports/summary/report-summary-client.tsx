@@ -18,7 +18,7 @@ import {
 } from "@/lib/report-export";
 import { FiDownload, FiFileText } from "react-icons/fi";
 
-const TITLE = "Process Summary";
+const TITLE = "Σύνοψη Διαδικασιών";
 
 export function ReportSummaryClient({ data }: { data: ReportSummaryRow[] }) {
   const handlePdf = () => exportReportSummaryToPdf(data, TITLE);
@@ -29,16 +29,16 @@ export function ReportSummaryClient({ data }: { data: ReportSummaryRow[] }) {
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div>
           <CardTitle>{TITLE}</CardTitle>
-          <CardDescription>Process instances: template, status, started by, dates, and task completion.</CardDescription>
+          <CardDescription>Διαδικασίες: πρότυπο, κατάσταση, εκκίνηση από, ημερομηνίες και ολοκλήρωση εργασιών.</CardDescription>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={handlePdf}>
             <FiFileText className="size-4" />
-            Export PDF
+            Εξαγωγή PDF
           </Button>
           <Button variant="outline" size="sm" onClick={handleExcel}>
             <FiDownload className="size-4" />
-            Export Excel
+            Εξαγωγή Excel
           </Button>
         </div>
       </CardHeader>
@@ -46,21 +46,21 @@ export function ReportSummaryClient({ data }: { data: ReportSummaryRow[] }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Instance</TableHead>
-              <TableHead>Template</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Started by</TableHead>
-              <TableHead>Start date</TableHead>
-              <TableHead>End date</TableHead>
-              <TableHead className="text-right">Tasks</TableHead>
-              <TableHead className="text-right">Completed</TableHead>
+              <TableHead>Διαδικασία</TableHead>
+              <TableHead>Πρότυπο</TableHead>
+              <TableHead>Κατάσταση</TableHead>
+              <TableHead>Εκκίνηση από</TableHead>
+              <TableHead>Ημερομηνία έναρξης</TableHead>
+              <TableHead>Ημερομηνία λήξης</TableHead>
+              <TableHead className="text-right">Εργασίες</TableHead>
+              <TableHead className="text-right">Ολοκληρώθηκαν</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {data.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={8} className="text-center text-muted-foreground">
-                  No data
+                  Χωρίς δεδομένα
                 </TableCell>
               </TableRow>
             ) : (

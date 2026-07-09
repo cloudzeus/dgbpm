@@ -25,11 +25,11 @@ export function RegisterForm() {
       )}
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="firstName">First name</Label>
+          <Label htmlFor="firstName">Όνομα</Label>
           <Input id="firstName" name="firstName" required autoComplete="given-name" />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="lastName">Last name</Label>
+          <Label htmlFor="lastName">Επώνυμο</Label>
           <Input id="lastName" name="lastName" required autoComplete="family-name" />
         </div>
       </div>
@@ -45,7 +45,7 @@ export function RegisterForm() {
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
+        <Label htmlFor="password">Κωδικός</Label>
         <Input
           id="password"
           name="password"
@@ -56,7 +56,7 @@ export function RegisterForm() {
         />
       </div>
       <Button type="submit" className="w-full">
-        Register
+        Εγγραφή
       </Button>
     </form>
   );

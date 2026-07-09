@@ -26,20 +26,20 @@ export default async function LoginPage() {
       />
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Sign in</CardTitle>
-          <CardDescription>Enter your email and password to access the BPM application.</CardDescription>
+          <CardTitle>Σύνδεση</CardTitle>
+          <CardDescription>Εισάγετε το email και τον κωδικό σας για πρόσβαση στην εφαρμογή BPM.</CardDescription>
         </CardHeader>
         <CardContent>
           <LoginForm />
           <p className="mt-4 text-center text-sm text-muted-foreground">
-            Don&apos;t have an account?{" "}
+            Δεν έχετε λογαριασμό;{" "}
             <Link href="/auth/register" className="text-primary underline">
-              Register
+              Εγγραφή
             </Link>
           </p>
           <p className="mt-2 text-center text-sm text-muted-foreground">
             <Link href="/auth/forgot-password" className="text-primary underline">
-              Forgot password?
+              Ξεχάσατε τον κωδικό;
             </Link>
           </p>
         </CardContent>

@@ -110,12 +110,12 @@ export function DepartmentsClient({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Parent</TableHead>
+              <TableHead>Όνομα</TableHead>
+              <TableHead>Γονικό</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead>Positions</TableHead>
-              <TableHead className="w-[120px]">Actions</TableHead>
+              <TableHead>Τηλέφωνο</TableHead>
+              <TableHead>Θέσεις Εργασίας</TableHead>
+              <TableHead className="w-[120px]">Ενέργειες</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -142,14 +142,14 @@ export function DepartmentsClient({
                         setOpen(true);
                       }}
                     >
-                      Edit
+                      Επεξεργασία
                     </Button>
                     <Button
                       variant="destructive"
                       size="sm"
                       onClick={() => setDeleteId(d.id)}
                     >
-                      Delete
+                      Διαγραφή
                     </Button>
                   </div>
                 </TableCell>
@@ -167,15 +167,15 @@ export function DepartmentsClient({
         }}
       >
         <DialogTrigger asChild>
-          <Button onClick={() => setOpen(true)}>Create department</Button>
+          <Button onClick={() => setOpen(true)}>Δημιουργία τμήματος</Button>
         </DialogTrigger>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editId ? "Edit department" : "Create department"}</DialogTitle>
+            <DialogTitle>{editId ? "Επεξεργασία τμήματος" : "Δημιουργία τμήματος"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Name</Label>
+              <Label htmlFor="name">Όνομα</Label>
               <Input
                 id="name"
                 name="name"
@@ -193,7 +193,7 @@ export function DepartmentsClient({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phoneNumber">Phone</Label>
+              <Label htmlFor="phoneNumber">Τηλέφωνο</Label>
               <Input
                 id="phoneNumber"
                 name="phoneNumber"
@@ -201,13 +201,13 @@ export function DepartmentsClient({
               />
             </div>
             <div className="space-y-2">
-              <Label>Parent department</Label>
+              <Label>Γονικό τμήμα</Label>
               <select
                 name="parentId"
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
                 defaultValue={editing?.parentId ?? ""}
               >
-                <option value="">None</option>
+                <option value="">Κανένα</option>
                 {parentOptions
                   .filter((p) => p.id !== editId)
                   .map((p) => (
@@ -218,7 +218,7 @@ export function DepartmentsClient({
               </select>
             </div>
             <div className="space-y-2">
-              <Label>Color</Label>
+              <Label>Χρώμα</Label>
               <input type="hidden" name="color" id="dept-color" defaultValue={editing?.color ?? COLOR_SWATCHES[0]} />
               <div className="flex gap-2 flex-wrap">
                 {COLOR_SWATCHES.map((c) => (
@@ -242,10 +242,10 @@ export function DepartmentsClient({
                 variant="outline"
                 onClick={() => setOpen(false)}
               >
-                Cancel
+                Άκυρο
               </Button>
               <Button type="submit" disabled={loading}>
-                {loading ? "Saving..." : editId ? "Update" : "Create"}
+                {loading ? "Αποθήκευση..." : editId ? "Ενημέρωση" : "Δημιουργία"}
               </Button>
             </DialogFooter>
           </form>
@@ -255,15 +255,15 @@ export function DepartmentsClient({
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete department?</AlertDialogTitle>
+            <AlertDialogTitle>Διαγραφή τμήματος;</AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove the department. Positions under it may be affected.
+              Αυτό θα αφαιρέσει το τμήμα. Οι θέσεις εργασίας που ανήκουν σε αυτό ενδέχεται να επηρεαστούν.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>Άκυρο</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} disabled={loading}>
-              Delete
+              Διαγραφή
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

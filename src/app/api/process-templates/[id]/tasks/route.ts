@@ -27,6 +27,7 @@ export async function GET(
       description: t.description,
       needFile: t.needFile,
       mandatory: t.mandatory,
+      slaDays: t.slaDays,
       approverRoles: t.approverRoles,
       notifyOnStartPositionIds: t.notifyOnStartPositions.map((p) => p.jobPositionId),
       notifyOnCompletePositionIds: t.notifyOnCompletePositions.map((p) => p.jobPositionId),

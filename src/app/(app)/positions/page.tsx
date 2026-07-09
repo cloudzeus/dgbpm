@@ -31,8 +31,8 @@ export default async function PositionsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Job Positions</h1>
-        <p className="text-muted-foreground">Manage job positions and managers.</p>
+        <h1 className="text-2xl font-bold">Θέσεις Εργασίας</h1>
+        <p className="text-muted-foreground">Διαχείριση θέσεων εργασίας και προϊσταμένων.</p>
       </div>
       <PositionsClient
         positions={positions}

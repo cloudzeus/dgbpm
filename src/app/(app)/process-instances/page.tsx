@@ -60,8 +60,8 @@ export default async function ProcessInstancesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Process Instances</h1>
-        <p className="text-muted-foreground">View and manage running and completed processes.</p>
+        <h1 className="text-2xl font-bold">Διαδικασίες</h1>
+        <p className="text-muted-foreground">Προβολή και διαχείριση διαδικασιών σε εξέλιξη και ολοκληρωμένων.</p>
       </div>
       <ProcessInstancesClient
         instances={instances}

@@ -14,7 +14,7 @@ export function MyProcessesClient({
   if (instances.length === 0) {
     return (
       <p className="text-muted-foreground text-center py-8">
-        You have not started any processes yet.
+        Δεν έχετε ξεκινήσει καμία διαδικασία ακόμη.
       </p>
     );
   }
