@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": "2026-07-09T07:24:36.411Z",
+  "timestamp": "2026-07-09T07:35:58.004Z",
   "source": "auto-postool",
   "partial": false,
   "phase": null,
@@ -18,9 +18,13 @@
   "uncommitted_files": [
     {
       "status": "M",
-      "path": "src/app/(app)/organization/organization-client.tsx"
+      "path": ".planning/HANDOFF.json"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/organization/org-pdf.ts"
     }
   ],
   "next_action": null,
-  "context_notes": "Recent commits:\nd1190f1 feat: embed Roboto font in org chart PDF for correct Greek rendering\n0fad5ee Merge org chart extras (avatar photos, PDF export, position reorder)\n7ece43e feat: org chart extras — avatar photos, PDF export, position reorder\n7264081 Merge org chart enhancements (dept edit/delete, drag-to-root, shadcn dialogs)\n56bce36 feat: org chart enhancements — dept edit/delete menu, drag-to-root, shadcn dialogs"
+  "context_notes": "Recent commits:\nf5e3905 fix: org chart duplicate 'none' dialog keys + dnd-kit hydration mismatch\nd1190f1 feat: embed Roboto font in org chart PDF for correct Greek rendering\n0fad5ee Merge org chart extras (avatar photos, PDF export, position reorder)\n7ece43e feat: org chart extras — avatar photos, PDF export, position reorder\n7264081 Merge org chart enhancements (dept edit/delete, drag-to-root, shadcn dialogs)"
 }
