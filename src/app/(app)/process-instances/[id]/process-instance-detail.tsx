@@ -15,6 +15,11 @@ import {
 } from "@/components/ui/dialog";
 import { RichTextComment, CommentDisplay } from "@/components/rich-text-comment";
 import { startTask, approveTask, rejectTask, uploadTaskFile } from "../actions";
+import {
+  TaskFieldsForm,
+  type EditableField,
+  type PriorField,
+} from "@/components/process-fields/task-fields-form";
 
 type Task = {
   id: string;
@@ -50,10 +55,12 @@ export function ProcessInstanceDetail({
   instance,
   currentUserId,
   isSuperOrAdmin,
+  taskFields = {},
 }: {
   instance: Instance;
   currentUserId: string;
   isSuperOrAdmin: boolean;
+  taskFields?: Record<string, { editable: EditableField[]; readOnly: PriorField[] }>;
 }) {
   const [taskModalId, setTaskModalId] = useState<string | null>(null);
   const [taskComment, setTaskComment] = useState("");
@@ -230,6 +237,24 @@ export function ProcessInstanceDetail({
                   <Badge variant="info">Απαιτείται αρχείο</Badge>
                 )}
               </div>
+
+              {taskFields[task.id] &&
+                (taskFields[task.id].editable.length > 0 ||
+                  taskFields[task.id].readOnly.length > 0) && (
+                  <div className="rounded-lg border bg-muted/30 p-3">
+                    <TaskFieldsForm
+                      taskId={task.id}
+                      editable={taskFields[task.id].editable}
+                      readOnly={taskFields[task.id].readOnly}
+                      canEdit={
+                        (isSuperOrAdmin ||
+                          task.possibleAssignees.some((u) => u.id === currentUserId)) &&
+                        task.status !== "APPROVED" &&
+                        task.status !== "REJECTED"
+                      }
+                    />
+                  </div>
+                )}
 
               {(task.status === "REJECTED" && task.comment) && (
                 <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">

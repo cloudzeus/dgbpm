@@ -8,6 +8,7 @@ import { ProcessIcon } from "@/lib/process-icons";
 import { instanceStatusMeta } from "@/lib/process-status";
 import { formatDateTime } from "@/lib/format";
 import { ProcessInstanceDetail } from "./process-instance-detail";
+import type { EditableField, PriorField } from "@/components/process-fields/task-fields-form";
 
 export default async function ProcessInstancePage({
   params,
@@ -40,6 +41,42 @@ export default async function ProcessInstancePage({
 
   const isSuperOrAdmin =
     session.user!.role === "SUPER_ADMIN" || session.user!.role === "ADMIN";
+
+  // Custom data fields: definitions for this template + captured values for this instance.
+  const fieldDefs = await prisma.processFieldDefinition.findMany({
+    where: { processTemplateId: instance.processTemplateId, deletedAt: null },
+    orderBy: { order: "asc" },
+    include: { lookupList: { include: { items: { orderBy: { order: "asc" } } } } },
+  });
+  const fieldValues = await prisma.processFieldValue.findMany({
+    where: { processInstanceId: instance.id },
+    include: { listItem: { select: { label: true } } },
+  });
+  const valueByField = new Map(fieldValues.map((v) => [v.fieldDefinitionId, v]));
+
+  const taskFields: Record<string, { editable: EditableField[]; readOnly: PriorField[] }> = {};
+  for (const t of instance.tasks) {
+    const order = t.templateTask.order;
+    const editable: EditableField[] = fieldDefs
+      .filter((f) => f.captureTaskOrder === order)
+      .map((f) => ({
+        id: f.id,
+        name: f.name,
+        type: f.type,
+        required: f.required,
+        options: f.lookupList?.items.map((it) => ({ id: it.id, label: it.label })) ?? [],
+        value: valueByField.get(f.id) ?? null,
+      }));
+    const readOnly: PriorField[] = fieldDefs
+      .filter((f) => f.captureTaskOrder != null && f.captureTaskOrder < order)
+      .map((f) => ({
+        id: f.id,
+        name: f.name,
+        type: f.type,
+        value: valueByField.get(f.id) ?? null,
+      }));
+    taskFields[t.id] = { editable, readOnly };
+  }
 
   return (
     <div className="space-y-6">
@@ -82,6 +119,7 @@ export default async function ProcessInstancePage({
         instance={instance}
         currentUserId={session.user.id}
         isSuperOrAdmin={isSuperOrAdmin}
+        taskFields={taskFields}
       />
     </div>
   );

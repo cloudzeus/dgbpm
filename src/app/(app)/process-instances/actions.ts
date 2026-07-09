@@ -6,6 +6,7 @@ import { requireRole, hasPermission } from "@/lib/rbac";
 import { Role } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { uploadToBunny, isBunnyConfigured } from "@/lib/bunnycdn";
+import { coerceFieldValue } from "@/lib/process-fields/coerce";
 import {
   isEmailConfigured,
   sendEmail,
@@ -177,9 +178,64 @@ export async function startTask(taskId: string) {
   revalidatePath("/dashboard");
 }
 
+/** Fields whose captureTaskOrder matches this task's template order. */
+async function fieldsForTask(taskId: string) {
+  const task = await prisma.processTaskAssignment.findUnique({
+    where: { id: taskId },
+    include: { templateTask: true, processInstance: true },
+  });
+  if (!task) throw new Error("Δεν βρέθηκε η εργασία.");
+  const fields = await prisma.processFieldDefinition.findMany({
+    where: {
+      processTemplateId: task.processInstance.processTemplateId,
+      deletedAt: null,
+      captureTaskOrder: task.templateTask.order,
+    },
+    orderBy: { order: "asc" },
+  });
+  return { task, fields };
+}
+
+export async function saveTaskFieldValues(taskId: string, values: Record<string, string>) {
+  const session = await auth();
+  if (!session?.user) throw new Error("Μη εξουσιοδοτημένη πρόσβαση");
+  const { task, fields } = await fieldsForTask(taskId);
+  const instanceId = task.processInstanceId;
+  await prisma.$transaction(async (tx) => {
+    for (const f of fields) {
+      const res = coerceFieldValue(f.type, values[f.id], false); // required checked separately on complete
+      if (!res.ok) throw new Error(`${f.name}: ${res.error}`);
+      const existing = await tx.processFieldValue.findUnique({
+        where: { processInstanceId_fieldDefinitionId: { processInstanceId: instanceId, fieldDefinitionId: f.id } },
+      });
+      if (existing) await tx.processFieldValue.update({ where: { id: existing.id }, data: res.columns });
+      else await tx.processFieldValue.create({ data: { processInstanceId: instanceId, fieldDefinitionId: f.id, ...res.columns } });
+    }
+  });
+  revalidatePath(`/process-instances/${instanceId}`);
+}
+
+/** Throws if any required field for this task is still empty. Call at the start of approveTask. */
+export async function assertRequiredFieldsFilled(taskId: string) {
+  const { task, fields } = await fieldsForTask(taskId);
+  const required = fields.filter((f) => f.required);
+  if (required.length === 0) return;
+  const values = await prisma.processFieldValue.findMany({
+    where: { processInstanceId: task.processInstanceId, fieldDefinitionId: { in: required.map((f) => f.id) } },
+  });
+  const byField = new Map(values.map((v) => [v.fieldDefinitionId, v]));
+  for (const f of required) {
+    const v = byField.get(f.id);
+    const empty = !v || (v.valueString == null && v.valueNumber == null && v.valueDate == null && v.valueBool == null && v.valueListItemId == null);
+    if (empty) throw new Error(`Συμπληρώστε το υποχρεωτικό πεδίο «${f.name}» πριν ολοκληρώσετε το βήμα.`);
+  }
+}
+
 export async function approveTask(taskId: string, comment?: string) {
   const session = await auth();
   if (!session?.user) throw new Error("Μη εξουσιοδοτημένη πρόσβαση");
+
+  await assertRequiredFieldsFilled(taskId);
 
   const task = await prisma.processTaskAssignment.findUnique({
     where: { id: taskId },
