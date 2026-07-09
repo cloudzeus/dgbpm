@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": "2026-07-09T09:23:16.222Z",
+  "timestamp": "2026-07-09T09:38:23.341Z",
   "source": "auto-postool",
   "partial": false,
   "phase": null,
@@ -22,17 +22,17 @@
     },
     {
       "status": "M",
-      "path": "src/app/(app)/process-instances/actions.ts"
+      "path": "src/app/(app)/process-templates/process-templates-client.tsx"
     },
     {
       "status": "M",
-      "path": "src/lib/process-fields/pivot-view.test.ts"
+      "path": "src/app/(app)/process-templates/wizard/step-fields.tsx"
     },
     {
       "status": "M",
-      "path": "src/lib/process-fields/pivot-view.ts"
+      "path": "src/app/(app)/process-templates/wizard/template-wizard.tsx"
     }
   ],
   "next_action": null,
-  "context_notes": "Recent commits:\n60f144f feat(results): per-template results page with Excel/PDF/Word export\nc8949ad feat(execution): capture custom field values per step with required gating\n30e4c3d feat(templates): 5-step creation wizard with data-fields editor\n90c8a26 feat(templates): persist field definitions and refresh pivot view\nc9abcde feat(lookup): lookup lists management page with Excel import"
+  "context_notes": "Recent commits:\n0a8e371 fix: authorize task field-value writes; harden pivot-view SQL\n60f144f feat(results): per-template results page with Excel/PDF/Word export\nc8949ad feat(execution): capture custom field values per step with required gating\n30e4c3d feat(templates): 5-step creation wizard with data-fields editor\n90c8a26 feat(templates): persist field definitions and refresh pivot view"
 }

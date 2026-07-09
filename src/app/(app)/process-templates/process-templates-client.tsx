@@ -38,6 +38,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import {
   Tooltip,
   TooltipContent,
@@ -153,31 +155,57 @@ const STEP_BORDER_CLASSES = [
   "border-l-rose-500",
 ];
 
-const TIMELINE_DOT_CLASSES = [
-  "bg-indigo-500 border-indigo-600",
-  "bg-cyan-500 border-cyan-600",
-  "bg-fuchsia-500 border-fuchsia-600",
-  "bg-amber-500 border-amber-600",
-  "bg-emerald-500 border-emerald-600",
-  "bg-rose-500 border-rose-600",
-];
 
 export function TaskTimelineModal({ tasks }: { tasks: TaskInput[] }) {
   if (tasks.length === 0) return null;
   return (
-    <div className="mb-6 rounded-lg border bg-muted/30 p-4">
-      <h3 className="text-sm font-semibold text-foreground mb-3">Χρονοδιάγραμμα διαδικασίας</h3>
-      <div className="relative pl-6">
-        <div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-gradient-to-b from-indigo-500 via-cyan-500 to-rose-500 rounded-full" />
+    <div className="mb-6 rounded-xl border bg-card p-4 shadow-sm">
+      <div className="mb-4 flex items-center gap-2">
+        <h3 className="text-sm font-semibold text-foreground">Ροή διαδικασίας</h3>
+        <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+          {tasks.length} {tasks.length === 1 ? "βήμα" : "βήματα"}
+        </span>
+      </div>
+      <div className="flex items-start overflow-x-auto pb-2">
         {tasks.map((task, i) => {
-          const dotClass = TIMELINE_DOT_CLASSES[i % TIMELINE_DOT_CLASSES.length];
+          const named = task.name.trim();
           return (
-            <div key={task.id} className="relative flex items-start gap-3 pb-4 last:pb-0">
-              <div className={`absolute left-0 size-6 rounded-full border-2 border-background shadow-sm -translate-x-1/2 translate-y-0.5 shrink-0 ${dotClass}`} />
-              <div className="flex-1 min-w-0 pt-0.5">
-                <span className="text-xs font-medium text-muted-foreground">Βήμα {i + 1}</span>
-                <p className="font-medium text-sm text-foreground">{task.name.trim() || "Βήμα χωρίς όνομα"}</p>
+            <div key={task.id} className="flex shrink-0 items-start">
+              <div className="flex w-[132px] flex-col items-center gap-2 px-1 text-center">
+                <span
+                  className={cn(
+                    "flex size-9 items-center justify-center rounded-full border-2 text-sm font-semibold transition-colors",
+                    named
+                      ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                      : "border-dashed border-muted-foreground/40 bg-background text-muted-foreground",
+                  )}
+                >
+                  {i + 1}
+                </span>
+                <span
+                  className={cn(
+                    "line-clamp-2 text-xs font-medium leading-tight",
+                    named ? "text-foreground" : "italic text-muted-foreground",
+                  )}
+                >
+                  {named || "Χωρίς όνομα"}
+                </span>
+                <div className="flex min-h-[18px] flex-wrap justify-center gap-1">
+                  {task.mandatory && (
+                    <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-medium">
+                      Υποχρ.
+                    </Badge>
+                  )}
+                  {task.needFile && (
+                    <Badge variant="outline" className="px-1.5 py-0 text-[10px] font-medium">
+                      Αρχείο
+                    </Badge>
+                  )}
+                </div>
               </div>
+              {i < tasks.length - 1 && (
+                <div className="mt-[18px] h-0.5 w-6 shrink-0 rounded-full bg-border" />
+              )}
             </div>
           );
         })}
@@ -325,20 +353,21 @@ export function SortableTaskItem({
         </Button>
       </AccordionHeader>
       <AccordionContent>
-        <div className="space-y-6 px-6 pt-2 pb-4">
+        <div className="space-y-5 px-4 pt-1 pb-4">
           <section className="space-y-3">
-            <h4 className="text-sm font-semibold text-foreground border-b pb-1">Λεπτομέρειες βήματος</h4>
-            <div className="space-y-2">
-              <Label>Όνομα εργασίας</Label>
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Λεπτομέρειες βήματος</h4>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Όνομα εργασίας</Label>
               <Input
+                className="h-9"
                 placeholder="Όνομα εργασίας"
                 value={task.name}
                 onChange={(e) => onUpdate(index, { name: e.target.value })}
               />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <div className="flex items-center justify-between gap-2">
-                <Label>Περιγραφή</Label>
+                <Label className="text-xs text-muted-foreground">Περιγραφή</Label>
                 <Button
                   type="button"
                   variant="outline"
@@ -364,25 +393,23 @@ export function SortableTaskItem({
               />
               {genError && <p className="text-xs text-destructive">{genError}</p>}
             </div>
-            <div className="flex flex-wrap gap-3 pt-1">
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-1">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <Checkbox
                   checked={task.needFile}
-                  onChange={(e) => onUpdate(index, { needFile: e.target.checked })}
+                  onCheckedChange={(c) => onUpdate(index, { needFile: !!c })}
                 />
                 Απαιτείται αρχείο
               </label>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <Checkbox
                   checked={task.mandatory}
-                  onChange={(e) => onUpdate(index, { mandatory: e.target.checked })}
+                  onCheckedChange={(c) => onUpdate(index, { mandatory: !!c })}
                 />
                 Υποχρεωτικό
               </label>
               <label className="flex items-center gap-2 text-sm">
-                <span>Προθεσμία (μέρες)</span>
+                <span className="text-muted-foreground">Προθεσμία (μέρες)</span>
                 <Input
                   type="number"
                   min={1}
@@ -399,9 +426,9 @@ export function SortableTaskItem({
             </div>
           </section>
           <section className="space-y-3">
-            <h4 className="text-sm font-semibold text-foreground border-b pb-1">Εγκρίνοντες</h4>
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Εγκρίνοντες</h4>
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Ποιος μπορεί να εγκρίνει αυτή την εργασία</Label>
+            <Label className="text-xs text-muted-foreground">Ποιος μπορεί να εγκρίνει αυτή την εργασία</Label>
             <PositionMultiSelect
               positions={positions}
               selectedIds={task.approverPositionIds}
@@ -427,9 +454,9 @@ export function SortableTaskItem({
           </div>
           </section>
           <section className="space-y-3">
-            <h4 className="text-sm font-semibold text-foreground border-b pb-1">Ειδοποιήσεις</h4>
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Ειδοποιήσεις</h4>
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Ειδοποίηση όταν ξεκινά η εργασία</Label>
+            <Label className="text-xs text-muted-foreground">Ειδοποίηση όταν ξεκινά η εργασία</Label>
             <p className="text-muted-foreground text-xs">Θέσεις εργασίας ή/και κανόνες προς ειδοποίηση όταν ξεκινά αυτή η εργασία</p>
             <PositionMultiSelect
               positions={positions}
@@ -455,7 +482,7 @@ export function SortableTaskItem({
             </div>
           </div>
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Ειδοποίηση όταν ολοκληρωθεί η εργασία</Label>
+            <Label className="text-xs text-muted-foreground">Ειδοποίηση όταν ολοκληρωθεί η εργασία</Label>
             <p className="text-muted-foreground text-xs">Θέσεις εργασίας ή/και κανόνες προς ειδοποίηση όταν αυτή η εργασία εγκριθεί ή απορριφθεί</p>
             <PositionMultiSelect
               positions={positions}

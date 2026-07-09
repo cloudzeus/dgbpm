@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Accordion } from "@/components/ui/accordion";
 import { ProcessIcon, PROCESS_ICON_OPTIONS } from "@/lib/process-icons";
 import { fieldTypeLabel } from "@/lib/process-fields/field-types";
@@ -271,17 +272,18 @@ export function TemplateWizard(props: {
           <div className="space-y-6">
             <section className="space-y-3">
               <h3 className="text-sm font-semibold text-foreground border-b pb-1">Γενικά</h3>
-              <div className="space-y-2">
-                <Label>Όνομα</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Όνομα</Label>
                 <Input
+                  className="h-9"
                   value={state.name}
                   onChange={(e) => patch({ name: e.target.value })}
                   required
                   placeholder="π.χ. Αίτηση άδειας"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Περιγραφή</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Περιγραφή</Label>
                 <Textarea
                   value={state.description}
                   onChange={(e) => patch({ description: e.target.value })}
@@ -325,17 +327,29 @@ export function TemplateWizard(props: {
             <p className="text-muted-foreground text-sm">
               Επιλέξτε τα τμήματα που επιτρέπεται να ξεκινούν διαδικασίες αυτού του τύπου.
             </p>
-            <div className="space-y-2 rounded-lg border bg-muted/20 p-3">
-              {props.departments.map((d) => (
-                <label key={d.id} className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={state.allowedDepartmentIds.includes(d.id)}
-                    onChange={() => toggleDepartment(d.id)}
-                  />
-                  {d.name}
-                </label>
-              ))}
+            <div className="grid gap-2 sm:grid-cols-2">
+              {props.departments.map((d) => {
+                const checked = state.allowedDepartmentIds.includes(d.id);
+                return (
+                  <label
+                    key={d.id}
+                    className={`flex cursor-pointer select-none items-center gap-2.5 rounded-lg border px-3 py-2.5 text-sm transition-colors ${
+                      checked
+                        ? "border-primary/40 bg-primary/5 text-foreground"
+                        : "border-border hover:bg-muted/50"
+                    }`}
+                  >
+                    <Checkbox
+                      checked={checked}
+                      onCheckedChange={() => toggleDepartment(d.id)}
+                    />
+                    {d.name}
+                  </label>
+                );
+              })}
+              {props.departments.length === 0 && (
+                <p className="text-sm text-muted-foreground">Δεν υπάρχουν διαθέσιμα τμήματα.</p>
+              )}
             </div>
           </section>
         )}
