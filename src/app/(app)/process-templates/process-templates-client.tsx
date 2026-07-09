@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
@@ -663,6 +664,9 @@ export function ProcessTemplatesClient({
                     </div>
                   </AccordionTrigger>
                   <div className="flex gap-2 shrink-0">
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={`/process-templates/${t.id}/results`}>Αποτελέσματα</Link>
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"
