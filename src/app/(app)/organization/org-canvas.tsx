@@ -104,7 +104,7 @@ export function OrgCanvas({
       <div className="pointer-events-none absolute bottom-2 left-3 z-10 text-[10px] text-muted-foreground">
         Σύρε κουτί πάνω σε άλλο για αλλαγή γονέα · σε κενό χώρο για μεταφορά σε ρίζα
       </div>
-      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+      <DndContext id="org-canvas-dnd" sensors={sensors} onDragEnd={handleDragEnd}>
         <div className="min-h-[400px] w-max min-w-full origin-top p-10" style={{ transform: `scale(${zoom})` }}>
           <div className="flex items-start justify-center gap-10">
             {forest.map((root) => (

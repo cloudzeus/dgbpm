@@ -136,7 +136,7 @@ export function OrganizationClient({ departments, users }: { departments: DeptDa
       </div>
 
       {/* body: canvas + panel; a single DndContext covers pool→poszone drops */}
-      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+      <DndContext id="org-root-dnd" sensors={sensors} onDragEnd={handleDragEnd}>
         <div className="flex h-[calc(100vh-16rem)]">
           <div className="flex-1 p-3">
             <OrgCanvas
@@ -180,7 +180,7 @@ export function OrganizationClient({ departments, users }: { departments: DeptDa
       />
 
       <DepartmentEditDialog
-        key={editDept?.id ?? "none"}
+        key={`dept-${editDept?.id ?? "none"}`}
         department={editDept}
         open={editDept !== null}
         onOpenChange={(o) => { if (!o) setEditDept(null); }}
@@ -188,7 +188,7 @@ export function OrganizationClient({ departments, users }: { departments: DeptDa
       />
 
       <PromptDialog
-        key={posRename?.id ?? "none"}
+        key={`pos-${posRename?.id ?? "none"}`}
         open={posRename !== null}
         onOpenChange={(o) => { if (!o) setPosRename(null); }}
         title="Μετονομασία θέσης"
