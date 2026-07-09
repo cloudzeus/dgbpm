@@ -87,8 +87,10 @@ export function OrgCanvas({
 
   function handleDragEnd(e: DragEndEvent) {
     const dragId = String(e.active.id).replace("drag:", "");
+    // Dropped over another node → reparent under it; dropped on empty canvas → move to root.
     const over = e.over ? String(e.over.id).replace("drop:", "") : null;
-    if (over && over !== dragId) onReparent(dragId, over);
+    if (over === null) onReparent(dragId, null);
+    else if (over !== dragId) onReparent(dragId, over);
   }
 
   return (
@@ -98,6 +100,9 @@ export function OrgCanvas({
         <span className="w-10 text-center text-xs">{Math.round(zoom * 100)}%</span>
         <button className="rounded p-1 hover:bg-muted" onClick={() => setZoom((z) => Math.min(1.6, z + 0.1))}><Plus className="size-4" /></button>
         <button className="rounded p-1 hover:bg-muted" onClick={() => setZoom(1)} title="Fit"><Maximize2 className="size-4" /></button>
+      </div>
+      <div className="pointer-events-none absolute bottom-2 left-3 z-10 text-[10px] text-muted-foreground">
+        Σύρε κουτί πάνω σε άλλο για αλλαγή γονέα · σε κενό χώρο για μεταφορά σε ρίζα
       </div>
       <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
         <div className="min-h-[400px] w-max min-w-full origin-top p-10" style={{ transform: `scale(${zoom})` }}>

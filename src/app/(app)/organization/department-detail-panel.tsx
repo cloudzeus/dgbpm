@@ -2,8 +2,14 @@
 
 import { useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
-import { ChevronRight, ChevronDown, X, Repeat, Plus, Trash2 } from "lucide-react";
+import { ChevronRight, ChevronDown, X, Repeat, Plus, Trash2, Pencil, MoreVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import { OrgAvatar, OrgAvatarStack, type OrgUser } from "./org-avatar";
 import type { DeptData } from "./organization-client";
 
@@ -16,8 +22,8 @@ function PositionCard({
   onClearManager,
   onOpenEmployeePicker,
   onRemoveEmployee,
-  onRename,
-  onDelete,
+  onRequestRename,
+  onRequestDelete,
 }: {
   position: Position;
   usersById: Map<string, OrgUser>;
@@ -25,8 +31,8 @@ function PositionCard({
   onClearManager: (positionId: string) => void;
   onOpenEmployeePicker: (positionId: string) => void;
   onRemoveEmployee: (positionId: string, userId: string) => void;
-  onRename: (positionId: string, name: string) => void;
-  onDelete: (positionId: string) => void;
+  onRequestRename: (positionId: string, currentName: string) => void;
+  onRequestDelete: (positionId: string, currentName: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const { setNodeRef, isOver } = useDroppable({ id: `poszone:${position.id}` });
@@ -46,8 +52,8 @@ function PositionCard({
       {open && (
         <div ref={setNodeRef} className={cn("px-3 pb-3", isOver && "rounded-b-[9px] ring-2 ring-primary ring-inset")}>
           <div className="flex items-center justify-end gap-3 pb-2 text-xs text-muted-foreground">
-            <button className="hover:text-foreground" onClick={() => { const n = prompt("Όνομα θέσης", position.name); if (n) onRename(position.id, n); }}>✎ μετονομασία</button>
-            <button className="hover:text-destructive" onClick={() => onDelete(position.id)}><Trash2 className="size-3.5" /></button>
+            <button className="flex items-center gap-1 hover:text-foreground" onClick={() => onRequestRename(position.id, position.name)}><Pencil className="size-3.5" /> μετονομασία</button>
+            <button className="hover:text-destructive" onClick={() => onRequestDelete(position.id, position.name)}><Trash2 className="size-3.5" /></button>
           </div>
 
           <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Προϊστάμενος</div>
@@ -91,29 +97,46 @@ export function DepartmentDetailPanel({
   parentName,
   usersById,
   onAddPosition,
-  onRenameDepartment,
+  onEditDepartment,
+  onDeleteDepartment,
   ...cardProps
 }: {
   department: DeptData | null;
   parentName: string | null;
   usersById: Map<string, OrgUser>;
   onAddPosition: (departmentId: string) => void;
-  onRenameDepartment: (id: string, name: string) => void;
+  onEditDepartment: (department: DeptData) => void;
+  onDeleteDepartment: (department: DeptData) => void;
   onOpenManagerPicker: (positionId: string) => void;
   onClearManager: (positionId: string) => void;
   onOpenEmployeePicker: (positionId: string) => void;
   onRemoveEmployee: (positionId: string, userId: string) => void;
-  onRename: (positionId: string, name: string) => void;
-  onDelete: (positionId: string) => void;
+  onRequestRename: (positionId: string, currentName: string) => void;
+  onRequestDelete: (positionId: string, currentName: string) => void;
 }) {
   if (!department) {
     return <div className="flex h-full items-center justify-center p-8 text-center text-sm text-muted-foreground">Επίλεξε ένα τμήμα από τον καμβά για να δεις τις θέσεις του.</div>;
   }
   return (
     <div className="flex h-full flex-col gap-2 overflow-auto p-4">
-      <div>
-        <button className="text-lg font-bold" onClick={() => { const n = prompt("Όνομα τμήματος", department.name); if (n) onRenameDepartment(department.id, n); }}>{department.name}</button>
-        <div className="text-[11px] text-muted-foreground">{parentName ? `${parentName} › ` : ""}{department.name}</div>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="truncate text-lg font-bold">{department.name}</div>
+          <div className="text-[11px] text-muted-foreground">{parentName ? `${parentName} › ` : ""}{department.name}</div>
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Ενέργειες τμήματος">
+            <MoreVertical className="size-4" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => onEditDepartment(department)}>
+              <Pencil className="mr-2 size-4" /> Επεξεργασία
+            </DropdownMenuItem>
+            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => onDeleteDepartment(department)}>
+              <Trash2 className="mr-2 size-4" /> Διαγραφή
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
       {department.positions.map((p) => (
         <PositionCard key={p.id} position={p} usersById={usersById} {...cardProps} />
