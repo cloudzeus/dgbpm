@@ -22,15 +22,17 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Accordion } from "@/components/ui/accordion";
+import { ArrowRight, Sparkles, Loader2, Wand2 } from "lucide-react";
 import { ProcessIcon, PROCESS_ICON_OPTIONS } from "@/lib/process-icons";
 import { fieldTypeLabel } from "@/lib/process-fields/field-types";
+import { generateProcessBlueprint } from "../actions";
 import type { FieldInput } from "../actions";
 import {
   SortableTaskItem,
   TaskTimelineModal,
   type TaskInput,
 } from "../process-templates-client";
-import { StepFields } from "./step-fields";
+import { StepFields, slugifyKey } from "./step-fields";
 
 const STEPS = [
   "Βασικά",
@@ -94,6 +96,49 @@ export function TemplateWizard(props: {
   const [state, setState] = useState<WizardState>(props.initial ?? emptyWizardState());
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // ---- AI blueprint ----
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
+
+  async function handleGenerateBlueprint() {
+    setAiError(null);
+    setAiLoading(true);
+    try {
+      const res = await generateProcessBlueprint({ description: aiPrompt });
+      if (!res.ok) {
+        setAiError(res.error);
+        return;
+      }
+      const bp = res.blueprint;
+      setState((s) => ({
+        ...s,
+        name: bp.name || s.name,
+        description: bp.description || s.description,
+        tasks: bp.tasks.map((t, i) => ({
+          ...newTask(i),
+          name: t.name,
+          description: t.description,
+          mandatory: t.mandatory,
+          needFile: t.needFile,
+        })),
+        fields: bp.fields.map((f, i) => ({
+          name: f.name,
+          key: slugifyKey(f.name),
+          type: f.type,
+          order: i,
+          required: f.required,
+          captureTaskOrder: f.captureTaskOrder,
+          lookupListId: null,
+        })),
+      }));
+    } catch {
+      setAiError("Αποτυχία δημιουργίας διαδικασίας.");
+    } finally {
+      setAiLoading(false);
+    }
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -226,9 +271,9 @@ export function TemplateWizard(props: {
     id ? props.lookupLists.find((l) => l.id === id)?.name ?? "—" : "—";
 
   return (
-    <div className="min-w-0 flex-1 flex flex-col">
+    <div className="flex min-h-0 flex-1 flex-col">
       {/* progress bar */}
-      <div className="flex items-center gap-1 mb-5">
+      <div className="flex shrink-0 items-center gap-1 border-b px-6 py-4">
         {STEPS.map((label, i) => {
           const done = i < step;
           const current = i === step;
@@ -266,10 +311,57 @@ export function TemplateWizard(props: {
         })}
       </div>
 
-      <div className="min-w-0 flex-1">
+      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
         {/* Step 0 — Βασικά */}
         {step === 0 && (
           <div className="space-y-6">
+            {/* AI blueprint hero */}
+            <section className="overflow-hidden rounded-xl border border-primary/30 bg-gradient-to-br from-primary/5 via-primary/5 to-transparent">
+              <div className="flex items-center gap-2 border-b border-primary/20 bg-primary/10 px-4 py-2.5">
+                <Wand2 className="size-4 text-primary" />
+                <h3 className="text-sm font-semibold text-foreground">Δημιουργία με AI</h3>
+                <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-medium text-primary">
+                  προτεινόμενο
+                </span>
+              </div>
+              <div className="space-y-3 p-4">
+                <p className="text-sm text-muted-foreground">
+                  Περιγράψτε τι θέλετε να πετύχει η διαδικασία και το AI θα προτείνει{" "}
+                  <span className="font-medium text-foreground">όνομα, βήματα και πεδία δεδομένων</span>{" "}
+                  — μπορείτε να τα προσαρμόσετε στη συνέχεια.
+                </p>
+                <Textarea
+                  value={aiPrompt}
+                  onChange={(e) => setAiPrompt(e.target.value)}
+                  rows={3}
+                  placeholder="π.χ. Διαδικασία έγκρισης δαπάνης: ο εργαζόμενος υποβάλλει αίτημα με ποσό και παραστατικό, ο προϊστάμενος εγκρίνει, το λογιστήριο πληρώνει."
+                  className="bg-background"
+                />
+                {aiError && <p className="text-sm text-destructive">{aiError}</p>}
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    onClick={handleGenerateBlueprint}
+                    disabled={aiLoading || !aiPrompt.trim()}
+                    className="gap-1.5"
+                  >
+                    {aiLoading ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="size-4" />
+                    )}
+                    {aiLoading ? "Δημιουργία..." : "Δημιουργία διαδικασίας"}
+                  </Button>
+                  {(state.tasks.length > 0 || state.fields.length > 0) && !aiLoading && (
+                    <span className="text-xs text-muted-foreground">
+                      ✓ Προτάθηκαν {state.tasks.length} βήματα & {state.fields.length} πεδία — δείτε τα
+                      επόμενα βήματα.
+                    </span>
+                  )}
+                </div>
+              </div>
+            </section>
+
             <section className="space-y-3">
               <h3 className="text-sm font-semibold text-foreground border-b pb-1">Γενικά</h3>
               <div className="space-y-1.5">
@@ -468,31 +560,38 @@ export function TemplateWizard(props: {
         )}
       </div>
 
-      {error && <p className="text-sm text-destructive mt-4">{error}</p>}
-
-      <div className="flex items-center justify-between gap-2 mt-6 pt-4 border-t">
-        <div>
-          {props.onCancel && (
-            <Button type="button" variant="ghost" onClick={props.onCancel}>
-              Άκυρο
-            </Button>
-          )}
-        </div>
-        <div className="flex gap-2">
-          {step > 0 && (
-            <Button type="button" variant="outline" onClick={back} disabled={loading}>
-              Πίσω
-            </Button>
-          )}
-          {step < STEPS.length - 1 ? (
-            <Button type="button" onClick={next}>
-              Επόμενο
-            </Button>
-          ) : (
-            <Button type="button" onClick={handleSubmit} disabled={loading}>
-              {loading ? "Αποθήκευση..." : props.submitLabel ?? "Αποθήκευση"}
-            </Button>
-          )}
+      <div className="shrink-0 border-t bg-muted/20 px-6 py-3.5">
+        {error && (
+          <p className="mb-2.5 text-sm text-destructive">{error}</p>
+        )}
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            {props.onCancel && (
+              <Button type="button" variant="ghost" onClick={props.onCancel}>
+                Άκυρο
+              </Button>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="mr-1 hidden text-xs text-muted-foreground sm:inline">
+              Βήμα {step + 1} από {STEPS.length}
+            </span>
+            {step > 0 && (
+              <Button type="button" variant="outline" onClick={back} disabled={loading}>
+                Πίσω
+              </Button>
+            )}
+            {step < STEPS.length - 1 ? (
+              <Button type="button" size="lg" onClick={next} className="gap-1.5 px-6">
+                Επόμενο
+                <ArrowRight className="size-4" />
+              </Button>
+            ) : (
+              <Button type="button" size="lg" onClick={handleSubmit} disabled={loading} className="px-6">
+                {loading ? "Αποθήκευση..." : props.submitLabel ?? "Αποθήκευση"}
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>

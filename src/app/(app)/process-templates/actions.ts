@@ -89,6 +89,119 @@ export async function generateTaskDescription(input: {
   }
 }
 
+export type ProcessBlueprint = {
+  name: string;
+  description: string;
+  tasks: { name: string; description: string; mandatory: boolean; needFile: boolean }[];
+  fields: { name: string; type: FieldType; captureTaskOrder: number | null; required: boolean }[];
+};
+
+const BLUEPRINT_FIELD_TYPES: FieldType[] = ["STRING", "TEXT", "NUMBER", "DATE", "FILE_URL", "BOOLEAN"];
+
+/**
+ * Από μια περιγραφή, προτείνει ολόκληρη διαδικασία (βήματα + πεδία) μέσω DeepSeek.
+ * Επιστρέφει δομημένο blueprint που ο wizard εφαρμόζει στα βήματά του.
+ */
+export async function generateProcessBlueprint(input: {
+  description: string;
+}): Promise<{ ok: true; blueprint: ProcessBlueprint } | { ok: false; error: string }> {
+  const session = await auth();
+  if (!session?.user) return { ok: false, error: "Μη εξουσιοδοτημένη πρόσβαση" };
+  try {
+    requireRole(session.user.role, [Role.SUPER_ADMIN]);
+  } catch {
+    return { ok: false, error: "Δεν έχετε δικαίωμα για αυτή την ενέργεια." };
+  }
+
+  const idea = input.description?.trim();
+  if (!idea) return { ok: false, error: "Γράψτε πρώτα μια περιγραφή της διαδικασίας." };
+
+  const system =
+    "Είσαι ειδικός σχεδιαστής επιχειρησιακών διαδικασιών (BPM). Από την περιγραφή του χρήστη " +
+    "σχεδιάζεις μια πλήρη διαδικασία και επιστρέφεις ΜΟΝΟ έγκυρο JSON (χωρίς markdown, χωρίς σχόλια) " +
+    "με αυτή ακριβώς τη δομή:\n" +
+    '{"name": string, "description": string, "tasks": [{"name": string, "description": string, ' +
+    '"mandatory": boolean, "needFile": boolean}], "fields": [{"name": string, "type": string, ' +
+    '"captureTaskOrder": number, "required": boolean}]}\n' +
+    "Κανόνες: Όλα τα κείμενα στα Ελληνικά. 2 έως 6 βήματα. 2 έως 8 πεδία. " +
+    'Το "type" κάθε πεδίου είναι ΕΝΑ από: "STRING","TEXT","NUMBER","DATE","FILE_URL","BOOLEAN". ' +
+    'Το "captureTaskOrder" είναι ο δείκτης (0-based) του βήματος στο οποίο συμπληρώνεται το πεδίο, ' +
+    "μέσα στα όρια των tasks. Επίστρεψε ΜΟΝΟ το JSON object.";
+
+  let raw: string;
+  try {
+    raw = await deepseekChat(
+      [
+        { role: "system", content: system },
+        { role: "user", content: `Περιγραφή διαδικασίας:\n"${idea}"\n\nΣχεδίασε τη διαδικασία ως JSON.` },
+      ],
+      { temperature: 0.4, maxTokens: 2000 },
+    );
+  } catch (err) {
+    const message = err instanceof DeepSeekError ? err.message : "Αποτυχία δημιουργίας διαδικασίας.";
+    console.error("generateProcessBlueprint", err);
+    return { ok: false, error: message };
+  }
+
+  const jsonText = raw.replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(jsonText);
+  } catch {
+    return { ok: false, error: "Το AI δεν επέστρεψε έγκυρη δομή. Δοκιμάστε ξανά." };
+  }
+
+  const obj = parsed as Record<string, unknown>;
+  const rawTasks = Array.isArray(obj.tasks) ? obj.tasks : [];
+  const tasks = rawTasks
+    .slice(0, 8)
+    .map((t) => {
+      const tt = t as Record<string, unknown>;
+      return {
+        name: String(tt.name ?? "").trim(),
+        description: String(tt.description ?? "").trim(),
+        mandatory: tt.mandatory !== false,
+        needFile: tt.needFile === true,
+      };
+    })
+    .filter((t) => t.name);
+
+  if (tasks.length === 0) {
+    return { ok: false, error: "Το AI δεν πρότεινε βήματα. Δοκιμάστε πιο συγκεκριμένη περιγραφή." };
+  }
+
+  const rawFields = Array.isArray(obj.fields) ? obj.fields : [];
+  const fields = rawFields
+    .slice(0, 12)
+    .map((f) => {
+      const ff = f as Record<string, unknown>;
+      const type = BLUEPRINT_FIELD_TYPES.includes(ff.type as FieldType)
+        ? (ff.type as FieldType)
+        : "STRING";
+      const rawOrder = Number(ff.captureTaskOrder);
+      const captureTaskOrder =
+        Number.isInteger(rawOrder) && rawOrder >= 0 && rawOrder < tasks.length ? rawOrder : 0;
+      return {
+        name: String(ff.name ?? "").trim(),
+        type,
+        captureTaskOrder,
+        required: ff.required === true,
+      };
+    })
+    .filter((f) => f.name);
+
+  return {
+    ok: true,
+    blueprint: {
+      name: String(obj.name ?? "").trim(),
+      description: String(obj.description ?? "").trim(),
+      tasks,
+      fields,
+    },
+  };
+}
+
 export async function createProcessTemplate(data: {
   name: string;
   description?: string;

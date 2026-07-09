@@ -55,7 +55,23 @@ import {
   type FieldInput,
 } from "./actions";
 import { TemplateWizard, emptyWizardState, type WizardState } from "./wizard/template-wizard";
-import { GripVertical, ChevronRight, Sparkles, Loader2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  GripVertical,
+  ChevronRight,
+  Sparkles,
+  Loader2,
+  MoreHorizontal,
+  BarChart3,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 
 type TemplateTask = {
   id: string;
@@ -670,41 +686,58 @@ export function ProcessTemplatesClient({
           {templates.map((t) => (
             <AccordionItem key={t.id} value={t.id} className="px-4">
               <AccordionHeader className="hover:no-underline">
-                <div className="flex flex-wrap items-center gap-4 w-full py-4">
-                  <AccordionTrigger asChildHeader className="flex-1 min-w-0 py-0">
-                    <div className="flex flex-wrap items-center gap-4 w-full text-left">
-                      <ProcessIcon icon={t.icon} className="size-5 shrink-0 text-muted-foreground" />
-                      <div className="min-w-0 flex-1">
-                        <span className="font-semibold">{t.name}</span>
-                        {t.description && (
-                          <span className="text-muted-foreground text-sm ml-2 truncate max-w-[200px] inline-block align-middle">
-                            — {t.description}
+                <div className="flex items-center gap-3 w-full py-3">
+                  <AccordionTrigger asChildHeader className="flex-1 min-w-0 py-0 hover:no-underline">
+                    <div className="flex min-w-0 items-center gap-3 text-left">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <ProcessIcon icon={t.icon} className="size-5" />
+                      </span>
+                      <div className="min-w-0 space-y-0.5">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span className="truncate font-semibold">{t.name}</span>
+                          <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                            {t._count.tasks} βήματα
                           </span>
+                        </div>
+                        {t.description && (
+                          <p className="truncate text-xs text-muted-foreground">{t.description}</p>
                         )}
+                        <p className="truncate text-xs text-muted-foreground/80">
+                          {t.allowedDepartments.length
+                            ? t.allowedDepartments.map((d) => d.department.name).join(" · ")
+                            : "Όλα τα τμήματα"}
+                        </p>
                       </div>
-                      <div className="text-muted-foreground text-sm shrink-0">
-                        {t.allowedDepartments.length
-                          ? t.allowedDepartments.map((d) => d.department.name).join(", ")
-                          : "—"}
-                      </div>
-                      <span className="text-muted-foreground text-sm shrink-0">{t._count.tasks} βήματα</span>
                     </div>
                   </AccordionTrigger>
-                  <div className="flex gap-2 shrink-0">
-                    <Button variant="outline" size="sm" asChild>
-                      <Link href={`/process-templates/${t.id}/results`}>Αποτελέσματα</Link>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openEdit(t)}
-                    >
-                      Επεξεργασία
-                    </Button>
-                    <Button variant="destructive" size="sm" onClick={() => setDeleteId(t.id)}>
-                      Διαγραφή
-                    </Button>
-                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="shrink-0 gap-1.5">
+                        Ενέργειες
+                        <MoreHorizontal className="size-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-44">
+                      <DropdownMenuItem asChild>
+                        <Link href={`/process-templates/${t.id}/results`}>
+                          <BarChart3 className="size-4 text-primary" />
+                          Αποτελέσματα
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => openEdit(t)}>
+                        <Pencil className="size-4 text-primary" />
+                        Επεξεργασία
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => setDeleteId(t.id)}
+                        className="text-destructive focus:text-destructive"
+                      >
+                        <Trash2 className="size-4 text-destructive" />
+                        Διαγραφή
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </AccordionHeader>
               <AccordionContent>
@@ -731,8 +764,8 @@ export function ProcessTemplatesClient({
         <DialogTrigger asChild>
           <Button onClick={openCreate}>Δημιουργία προτύπου</Button>
         </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
+        <DialogContent className="flex max-h-[88vh] w-[90vw] flex-col gap-0 overflow-hidden p-0 sm:max-w-4xl">
+          <DialogHeader className="shrink-0 border-b px-6 py-4">
             <DialogTitle>{editId ? "Επεξεργασία προτύπου διαδικασίας" : "Δημιουργία προτύπου διαδικασίας"}</DialogTitle>
           </DialogHeader>
           {wizardInitial ? (
