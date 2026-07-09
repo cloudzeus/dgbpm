@@ -147,6 +147,7 @@ model ProcessTemplate {
   allowedDepartments ProcessTemplateDepartment[]
   tasks       ProcessTaskTemplate[]
   instances   ProcessInstance[]
+  fields      ProcessFieldDefinition[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -253,6 +254,7 @@ model ProcessInstance {
   processTemplate ProcessTemplate   @relation(fields: [processTemplateId], references: [id], onDelete: Restrict)
   startedBy       User              @relation("ProcessStarter", fields: [startedById], references: [id], onDelete: Restrict)
   tasks           ProcessTaskAssignment[]
+  fieldValues     ProcessFieldValue[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -300,4 +302,75 @@ model TaskAction {
 
   task ProcessTaskAssignment @relation(fields: [taskId], references: [id], onDelete: Cascade)
   user User                  @relation("TaskActor", fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ============== Process Custom Data Fields ==============
+enum FieldType {
+  STRING
+  TEXT
+  NUMBER
+  DATE
+  FILE_URL
+  BOOLEAN
+  SELECT
+}
+
+model ProcessFieldDefinition {
+  id                String    @id @default(cuid())
+  processTemplateId String
+  name              String
+  key               String
+  type              FieldType
+  order             Int
+  required          Boolean   @default(false)
+  captureTaskOrder  Int?      // matches ProcessTaskTemplate.order at runtime
+  lookupListId      String?
+  deletedAt         DateTime?
+
+  processTemplate ProcessTemplate     @relation(fields: [processTemplateId], references: [id], onDelete: Cascade)
+  lookupList      LookupList?         @relation(fields: [lookupListId], references: [id], onDelete: Restrict)
+  values          ProcessFieldValue[]
+
+  @@unique([processTemplateId, key])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ProcessFieldValue {
+  id                String    @id @default(cuid())
+  processInstanceId String
+  fieldDefinitionId String
+  valueString       String?   @db.Text
+  valueNumber       Float?
+  valueDate         DateTime?
+  valueBool         Boolean?
+  valueListItemId   String?
+
+  processInstance ProcessInstance        @relation(fields: [processInstanceId], references: [id], onDelete: Cascade)
+  fieldDefinition ProcessFieldDefinition @relation(fields: [fieldDefinitionId], references: [id], onDelete: Cascade)
+  listItem        LookupListItem?        @relation(fields: [valueListItemId], references: [id], onDelete: SetNull)
+
+  @@unique([processInstanceId, fieldDefinitionId])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model LookupList {
+  id          String                   @id @default(cuid())
+  name        String
+  description String?                  @db.Text
+  items       LookupListItem[]
+  fields      ProcessFieldDefinition[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model LookupListItem {
+  id           String              @id @default(cuid())
+  lookupListId String
+  value        String
+  label        String
+  order        Int
+  lookupList   LookupList          @relation(fields: [lookupListId], references: [id], onDelete: Cascade)
+  usedByValues ProcessFieldValue[]
 }
