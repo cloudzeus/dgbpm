@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": "2026-07-09T07:35:58.004Z",
+  "timestamp": "2026-07-09T09:23:16.222Z",
   "source": "auto-postool",
   "partial": false,
   "phase": null,
@@ -22,9 +22,17 @@
     },
     {
       "status": "M",
-      "path": "src/app/(app)/organization/org-pdf.ts"
+      "path": "src/app/(app)/process-instances/actions.ts"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/process-fields/pivot-view.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/process-fields/pivot-view.ts"
     }
   ],
   "next_action": null,
-  "context_notes": "Recent commits:\nf5e3905 fix: org chart duplicate 'none' dialog keys + dnd-kit hydration mismatch\nd1190f1 feat: embed Roboto font in org chart PDF for correct Greek rendering\n0fad5ee Merge org chart extras (avatar photos, PDF export, position reorder)\n7ece43e feat: org chart extras — avatar photos, PDF export, position reorder\n7264081 Merge org chart enhancements (dept edit/delete, drag-to-root, shadcn dialogs)"
+  "context_notes": "Recent commits:\n60f144f feat(results): per-template results page with Excel/PDF/Word export\nc8949ad feat(execution): capture custom field values per step with required gating\n30e4c3d feat(templates): 5-step creation wizard with data-fields editor\n90c8a26 feat(templates): persist field definitions and refresh pivot view\nc9abcde feat(lookup): lookup lists management page with Excel import"
 }

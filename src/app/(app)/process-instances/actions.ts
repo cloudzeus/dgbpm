@@ -182,7 +182,7 @@ export async function startTask(taskId: string) {
 async function fieldsForTask(taskId: string) {
   const task = await prisma.processTaskAssignment.findUnique({
     where: { id: taskId },
-    include: { templateTask: true, processInstance: true },
+    include: { templateTask: true, processInstance: true, possibleAssignees: { select: { id: true } } },
   });
   if (!task) throw new Error("Δεν βρέθηκε η εργασία.");
   const fields = await prisma.processFieldDefinition.findMany({
@@ -200,6 +200,16 @@ export async function saveTaskFieldValues(taskId: string, values: Record<string,
   const session = await auth();
   if (!session?.user) throw new Error("Μη εξουσιοδοτημένη πρόσβαση");
   const { task, fields } = await fieldsForTask(taskId);
+
+  const canAct =
+    session.user.role === Role.SUPER_ADMIN ||
+    session.user.role === Role.ADMIN ||
+    task.possibleAssignees.some((u) => u.id === session.user!.id);
+  if (!canAct) throw new Error("Δεν επιτρέπεται");
+
+  if (task.status === "APPROVED" || task.status === "REJECTED")
+    throw new Error("Η εργασία έχει ολοκληρωθεί και δεν μπορεί να τροποποιηθεί");
+
   const instanceId = task.processInstanceId;
   await prisma.$transaction(async (tx) => {
     for (const f of fields) {

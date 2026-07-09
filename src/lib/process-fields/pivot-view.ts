@@ -21,9 +21,15 @@ function valueExpr(type: FieldType): string {
 
 /** id values come from cuid (safe); key is sanitized. */
 export function buildPivotViewSql(templateId: string, fields: ViewField[]): string {
+  if (!/^[a-z0-9]+$/i.test(templateId)) throw new Error("Invalid template id");
   const viewName = `process_data_${sanitizeIdentifier(templateId)}`;
+  const seen = new Map<string, string>();
   const cols = fields.map((f) => {
     const alias = sanitizeIdentifier(f.key);
+    const prev = seen.get(alias);
+    if (prev !== undefined && prev !== f.key)
+      throw new Error(`Duplicate sanitized column alias "${alias}" from fields "${prev}" and "${f.key}"`);
+    seen.set(alias, f.key);
     return `MAX(CASE WHEN fv.fieldDefinitionId = '${f.id}' THEN ${valueExpr(f.type)} END) AS \`${alias}\``;
   });
   const select = [

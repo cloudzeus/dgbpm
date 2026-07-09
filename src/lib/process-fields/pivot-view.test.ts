@@ -17,4 +17,17 @@ describe("pivot-view", () => {
     expect(sql).toContain("`amount`");
     expect(sql).toContain("`store`");
   });
+  it("throws on a templateId containing a quote/semicolon", () => {
+    expect(() =>
+      buildPivotViewSql("tmpl'; DROP VIEW x; --", [{ id: "f1", key: "amount", type: "NUMBER" }])
+    ).toThrow("Invalid template id");
+  });
+  it("throws when two fields sanitize to the same column alias", () => {
+    expect(() =>
+      buildPivotViewSql("tmpl123", [
+        { id: "f1", key: "Ποσό δαπάνης!", type: "NUMBER" },
+        { id: "f2", key: "Ποσό δαπάνης?", type: "NUMBER" },
+      ])
+    ).toThrow(/Duplicate sanitized column alias/);
+  });
 });
