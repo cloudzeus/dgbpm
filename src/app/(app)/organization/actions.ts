@@ -93,6 +93,17 @@ export async function deletePosition(id: string) {
   revalidate();
 }
 
+/** Persist a new order for a department's positions (orderedIds = full list top→bottom). */
+export async function reorderPositions(orderedIds: string[]) {
+  await guard();
+  await prisma.$transaction(
+    orderedIds.map((id, index) =>
+      prisma.jobPosition.update({ where: { id }, data: { sortOrder: index } })
+    )
+  );
+  revalidate();
+}
+
 export async function setPositionManager(positionId: string, userId: string | null) {
   await guard();
   await prisma.jobPosition.update({ where: { id: positionId }, data: { managerId: userId } });

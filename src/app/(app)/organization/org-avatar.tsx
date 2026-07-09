@@ -3,7 +3,7 @@
 import { getInitials, getAvatarColor } from "@/lib/avatar";
 import { cn } from "@/lib/utils";
 
-export type OrgUser = { id: string; firstName: string; lastName: string; email: string };
+export type OrgUser = { id: string; firstName: string; lastName: string; email: string; image?: string | null };
 
 const SIZES = { sm: "size-6 text-[10px]", md: "size-[30px] text-xs", lg: "size-10 text-sm" };
 
@@ -16,9 +16,25 @@ export function OrgAvatar({
   size?: keyof typeof SIZES;
   className?: string;
 }) {
+  const title = `${user.firstName} ${user.lastName}`;
+  if (user.image) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={user.image}
+        alt={title}
+        title={title}
+        className={cn(
+          "shrink-0 rounded-full object-cover ring-2 ring-background select-none",
+          SIZES[size],
+          className
+        )}
+      />
+    );
+  }
   return (
     <span
-      title={`${user.firstName} ${user.lastName}`}
+      title={title}
       style={{ backgroundColor: getAvatarColor(user.id) }}
       className={cn(
         "inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-white ring-2 ring-background select-none",

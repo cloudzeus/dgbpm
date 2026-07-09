@@ -64,6 +64,7 @@ model User {
   phone         String?
   mobile        String?
   address       String?   @db.Text
+  image         String?   @db.VarChar(500)
   hashedPassword String?  @db.VarChar(255)
   role          Role      @default(EMPLOYEE)
 
@@ -108,6 +109,7 @@ model JobPosition {
   name         String
   departmentId String
   managerId    String?
+  sortOrder    Int      @default(0)
 
   department   Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
   manager      User?      @relation("PositionManager", fields: [managerId], references: [id], onDelete: SetNull)

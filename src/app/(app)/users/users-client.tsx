@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   Table,
   TableBody,
@@ -32,7 +32,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { createUser, updateUser, deleteUser } from "./actions";
+import { createUser, updateUser, deleteUser, uploadUserImage, removeUserImage } from "./actions";
+import { OrgAvatar } from "@/app/(app)/organization/org-avatar";
+import { Camera, Trash2 } from "lucide-react";
 import type { Role } from "@prisma/client";
 
 type User = {
@@ -43,11 +45,59 @@ type User = {
   phone: string | null;
   mobile: string | null;
   address: string | null;
+  image: string | null;
   role: Role;
   positions: {
     position: { id: string; name: string; department: { name: string } };
   }[];
 };
+
+function AvatarCell({ user }: { user: User }) {
+  const [busy, setBusy] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBusy(true);
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      await uploadUserImage(user.id, formData);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Αποτυχία μεταφόρτωσης");
+    } finally {
+      setBusy(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  }
+
+  return (
+    <div className="group relative w-fit">
+      <OrgAvatar user={user} size="lg" />
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        disabled={busy}
+        title="Αλλαγή φωτογραφίας"
+        className="absolute -bottom-1 -right-1 flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground shadow ring-2 ring-background disabled:opacity-50"
+      >
+        <Camera className="size-3" />
+      </button>
+      {user.image && (
+        <button
+          type="button"
+          onClick={() => removeUserImage(user.id)}
+          title="Αφαίρεση φωτογραφίας"
+          className="absolute -top-1 -right-1 hidden size-5 items-center justify-center rounded-full bg-destructive text-white shadow ring-2 ring-background group-hover:flex"
+        >
+          <Trash2 className="size-3" />
+        </button>
+      )}
+      <input ref={inputRef} type="file" accept="image/*" hidden onChange={onFile} />
+    </div>
+  );
+}
 
 type Position = {
   id: string;
@@ -116,6 +166,7 @@ export function UsersClient({
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[70px]">Φωτο</TableHead>
               <TableHead>Όνομα</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Ρόλος</TableHead>
@@ -126,6 +177,7 @@ export function UsersClient({
           <TableBody>
             {users.map((u) => (
               <TableRow key={u.id}>
+                <TableCell><AvatarCell user={u} /></TableCell>
                 <TableCell>{u.firstName} {u.lastName}</TableCell>
                 <TableCell>{u.email}</TableCell>
                 <TableCell>

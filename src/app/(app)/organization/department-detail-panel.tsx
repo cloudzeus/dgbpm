@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
-import { ChevronRight, ChevronDown, X, Repeat, Plus, Trash2, Pencil, MoreVertical } from "lucide-react";
+import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { ChevronRight, ChevronDown, X, Repeat, Plus, Trash2, Pencil, MoreVertical, GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -36,18 +38,44 @@ function PositionCard({
 }) {
   const [open, setOpen] = useState(false);
   const { setNodeRef, isOver } = useDroppable({ id: `poszone:${position.id}` });
+  const {
+    setNodeRef: setSortRef,
+    attributes,
+    listeners,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: `sortpos:${position.id}` });
   const employees = position.users.map((u) => u.user);
   const manager = position.managerId ? usersById.get(position.managerId) : undefined;
 
   return (
-    <div className={cn("rounded-[9px] border", open ? "border-primary/40 bg-muted/30" : "border-border")}>
-      <button className="flex w-full items-center justify-between px-3 py-2" onClick={() => setOpen((o) => !o)}>
-        <span className="flex items-center gap-1 text-sm font-semibold">
-          {open ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
-          {position.name}
-        </span>
-        {!open && employees.length > 0 && <OrgAvatarStack users={employees} />}
-      </button>
+    <div
+      ref={setSortRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={cn(
+        "rounded-[9px] border",
+        open ? "border-primary/40 bg-muted/30" : "border-border",
+        isDragging && "opacity-60 shadow-lg"
+      )}
+    >
+      <div className="flex w-full items-center gap-1 px-2 py-2">
+        <button
+          className="cursor-grab touch-none text-muted-foreground hover:text-foreground"
+          aria-label="Αναδιάταξη θέσης"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="size-4" />
+        </button>
+        <button className="flex flex-1 items-center justify-between" onClick={() => setOpen((o) => !o)}>
+          <span className="flex items-center gap-1 text-sm font-semibold">
+            {open ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
+            {position.name}
+          </span>
+          {!open && employees.length > 0 && <OrgAvatarStack users={employees} />}
+        </button>
+      </div>
 
       {open && (
         <div ref={setNodeRef} className={cn("px-3 pb-3", isOver && "rounded-b-[9px] ring-2 ring-primary ring-inset")}>
@@ -138,9 +166,14 @@ export function DepartmentDetailPanel({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      {department.positions.map((p) => (
-        <PositionCard key={p.id} position={p} usersById={usersById} {...cardProps} />
-      ))}
+      <SortableContext
+        items={department.positions.map((p) => `sortpos:${p.id}`)}
+        strategy={verticalListSortingStrategy}
+      >
+        {department.positions.map((p) => (
+          <PositionCard key={p.id} position={p} usersById={usersById} {...cardProps} />
+        ))}
+      </SortableContext>
       <button className="mt-1 rounded-md border border-dashed p-2 text-sm text-muted-foreground hover:border-primary hover:text-primary" onClick={() => onAddPosition(department.id)}>
         <Plus className="mr-1 inline size-4" />Νέα θέση εργασίας
       </button>

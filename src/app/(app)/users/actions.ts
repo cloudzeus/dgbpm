@@ -6,6 +6,39 @@ import { requireRole } from "@/lib/rbac";
 import { Role } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { hash } from "bcryptjs";
+import { uploadToBunny, isBunnyConfigured } from "@/lib/bunnycdn";
+
+export async function uploadUserImage(userId: string, formData: FormData) {
+  const session = await auth();
+  if (!session?.user) throw new Error("Unauthorized");
+  requireRole(session.user.role, [Role.SUPER_ADMIN, Role.ADMIN]);
+
+  const file = formData.get("file") as File | null;
+  if (!file || file.size === 0) throw new Error("Δεν επιλέχθηκε αρχείο.");
+  if (!file.type.startsWith("image/")) throw new Error("Επίτρεπτές μόνο εικόνες.");
+  if (file.size > 5 * 1024 * 1024) throw new Error("Η εικόνα ξεπερνά τα 5MB.");
+  if (!isBunnyConfigured()) throw new Error("Το BunnyCDN δεν είναι ρυθμισμένο.");
+
+  const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const buffer = Buffer.from(await file.arrayBuffer());
+  // Timestamped filename busts the CDN cache when a user replaces their photo.
+  const path = `bpm/avatars/${userId}/${buffer.byteLength}-${ext ? `avatar.${ext}` : "avatar"}`;
+  const url = await uploadToBunny(buffer, path, file.type);
+
+  await prisma.user.update({ where: { id: userId }, data: { image: url } });
+  revalidatePath("/users");
+  revalidatePath("/organization");
+  return url;
+}
+
+export async function removeUserImage(userId: string) {
+  const session = await auth();
+  if (!session?.user) throw new Error("Unauthorized");
+  requireRole(session.user.role, [Role.SUPER_ADMIN, Role.ADMIN]);
+  await prisma.user.update({ where: { id: userId }, data: { image: null } });
+  revalidatePath("/users");
+  revalidatePath("/organization");
+}
 
 export async function createUser(formData: FormData) {
   const session = await auth();
