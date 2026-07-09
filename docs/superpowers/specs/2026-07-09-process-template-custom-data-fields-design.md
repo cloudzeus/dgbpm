@@ -45,12 +45,11 @@ model ProcessFieldDefinition {
   type                  FieldType
   order                 Int
   required              Boolean  @default(false)
-  captureTaskTemplateId String?  // which step captures it (Hybrid C); null = any/first
+  captureTaskOrder      Int?     // which step (by order) captures it (Hybrid C); null = any/first
   lookupListId          String?  // required when type = SELECT
   deletedAt             DateTime? // soft-delete; historical values survive
 
   processTemplate ProcessTemplate      @relation(fields: [processTemplateId], references: [id], onDelete: Cascade)
-  captureTask     ProcessTaskTemplate? @relation(fields: [captureTaskTemplateId], references: [id], onDelete: SetNull)
   lookupList      LookupList?          @relation(fields: [lookupListId], references: [id], onDelete: Restrict)
   values          ProcessFieldValue[]
 
@@ -99,8 +98,14 @@ model LookupListItem {
 }
 ```
 
-Relations to add on existing models: `ProcessTemplate.fields`, `ProcessInstance.fieldValues`,
-`ProcessTaskTemplate.capturedFields`.
+Relations to add on existing models: `ProcessTemplate.fields`, `ProcessInstance.fieldValues`.
+
+**Capture step is referenced by `order`, not FK.** The existing `updateProcessTemplate` deletes
+and recreates all `ProcessTaskTemplate` rows on every edit (new ids), so a task-id FK would be
+orphaned. Fields are matched to their capture task at runtime by `captureTaskOrder === task.order`.
+
+**Field definitions are upserted (not delete-recreated) on template edit** — kept by id, new ones
+created, removed ones soft-deleted — so `ProcessFieldValue.fieldDefinitionId` stays valid.
 
 Value is stored in the **typed column** matching the field type (cleaner queries/sorting)
 rather than a single generic string.
