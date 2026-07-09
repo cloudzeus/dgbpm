@@ -1,22 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
+import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,7 +10,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -52,7 +36,6 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Tooltip,
@@ -60,13 +43,15 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { ProcessIcon, PROCESS_ICON_OPTIONS } from "@/lib/process-icons";
+import { ProcessIcon } from "@/lib/process-icons";
 import {
   createProcessTemplate,
   updateProcessTemplate,
   deleteProcessTemplate,
   generateTaskDescription,
+  type FieldInput,
 } from "./actions";
+import { TemplateWizard, emptyWizardState, type WizardState } from "./wizard/template-wizard";
 import { GripVertical, ChevronRight, Sparkles, Loader2 } from "lucide-react";
 
 type TemplateTask = {
@@ -87,9 +72,10 @@ type Template = {
   allowedDepartments: { departmentId: string; department: { name: string } }[];
   _count: { tasks: number };
   tasks: TemplateTask[];
+  fields: FieldInput[];
 };
 
-type TaskInput = {
+export type TaskInput = {
   id: string;
   name: string;
   order: number;
@@ -108,7 +94,7 @@ type TaskInput = {
   notifyOnCompleteDepartmentManager: boolean;
 };
 
-function PositionMultiSelect({
+export function PositionMultiSelect({
   positions,
   selectedIds,
   onChange,
@@ -175,7 +161,7 @@ const TIMELINE_DOT_CLASSES = [
   "bg-rose-500 border-rose-600",
 ];
 
-function TaskTimelineModal({ tasks }: { tasks: TaskInput[] }) {
+export function TaskTimelineModal({ tasks }: { tasks: TaskInput[] }) {
   if (tasks.length === 0) return null;
   return (
     <div className="mb-6 rounded-lg border bg-muted/30 p-4">
@@ -255,7 +241,7 @@ function TaskFlowVisual({ tasks }: { tasks: TemplateTask[] }) {
   );
 }
 
-function SortableTaskItem({
+export function SortableTaskItem({
   task,
   index,
   positions,
@@ -504,136 +490,136 @@ export function ProcessTemplatesClient({
   templates,
   departments,
   positions,
+  lookupLists,
 }: {
   templates: Template[];
   departments: { id: string; name: string }[];
   positions: { id: string; name: string; department: { name: string } }[];
+  lookupLists: { id: string; name: string; items: { id: string; value: string; label: string }[] }[];
 }) {
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // null while an edit template's tasks are still loading
+  const [wizardInitial, setWizardInitial] = useState<WizardState | null>(null);
 
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [icon, setIcon] = useState("FiFileText");
-  const [allowedDepartmentIds, setAllowedDepartmentIds] = useState<string[]>([]);
-  const [tasks, setTasks] = useState<TaskInput[]>([]);
-
-  const editing = editId ? templates.find((t) => t.id === editId) : null;
-
-  function resetForm() {
-    setName("");
-    setDescription("");
-    setIcon("FiFileText");
-    setAllowedDepartmentIds([]);
-    setTasks([]);
+  function openCreate() {
     setEditId(null);
-  }
-
-  function openEdit(t: Template) {
-    setEditId(t.id);
-    setName(t.name);
-    setDescription(t.description ?? "");
-    setIcon(t.icon);
-    setAllowedDepartmentIds(t.allowedDepartments.map((d) => d.departmentId));
-    setTasks([]);
+    setWizardInitial(emptyWizardState());
     setOpen(true);
   }
 
-  async function loadTemplateTasks(id: string) {
-    const res = await fetch(`/api/process-templates/${id}/tasks`);
-    const data = await res.json();
-    if (data.tasks) {
-      setTasks(
-        data.tasks.map(
-          (
-            task: {
-              name: string;
-              order: number;
-              description: string | null;
-              needFile: boolean;
-              mandatory: boolean;
-              slaDays?: number | null;
-              approverRoles: { jobPositionId: string }[];
-              notifyOnStartPositionIds?: string[];
-              notifyOnCompletePositionIds?: string[];
-              approverSameDepartment?: boolean;
-              approverDepartmentManager?: boolean;
-              notifyOnStartSameDepartment?: boolean;
-              notifyOnStartDepartmentManager?: boolean;
-              notifyOnCompleteSameDepartment?: boolean;
-              notifyOnCompleteDepartmentManager?: boolean;
-            },
-            i: number
-          ) => ({
-            id: `task-${task.order}-${i}-${Math.random().toString(36).slice(2)}`,
-            name: task.name,
-            order: task.order,
-            description: task.description ?? "",
-            needFile: task.needFile,
-            mandatory: task.mandatory,
-            slaDays: task.slaDays ?? null,
-            approverPositionIds: task.approverRoles?.map((r: { jobPositionId: string }) => r.jobPositionId) ?? [],
-            notifyOnStartPositionIds: task.notifyOnStartPositionIds ?? [],
-            notifyOnCompletePositionIds: task.notifyOnCompletePositionIds ?? [],
-            approverSameDepartment: task.approverSameDepartment ?? false,
-            approverDepartmentManager: task.approverDepartmentManager ?? false,
-            notifyOnStartSameDepartment: task.notifyOnStartSameDepartment ?? false,
-            notifyOnStartDepartmentManager: task.notifyOnStartDepartmentManager ?? false,
-            notifyOnCompleteSameDepartment: task.notifyOnCompleteSameDepartment ?? false,
-            notifyOnCompleteDepartmentManager: task.notifyOnCompleteDepartmentManager ?? false,
-          })
-        )
-      );
-    }
+  async function openEdit(t: Template) {
+    setEditId(t.id);
+    setWizardInitial(null);
+    setOpen(true);
+    const tasks = await loadTemplateTasks(t.id);
+    setWizardInitial({
+      name: t.name,
+      description: t.description ?? "",
+      icon: t.icon,
+      allowedDepartmentIds: t.allowedDepartments.map((d) => d.departmentId),
+      tasks,
+      fields: t.fields.map((f) => ({ ...f })),
+    });
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const taskPayload = tasks.map((t, i) => ({
-        name: t.name,
-        order: i,
-        description: t.description || undefined,
-        needFile: t.needFile,
-        mandatory: t.mandatory,
-        slaDays: t.slaDays,
-        approverPositionIds: t.approverPositionIds,
-        notifyOnStartPositionIds: t.notifyOnStartPositionIds,
-        notifyOnCompletePositionIds: t.notifyOnCompletePositionIds,
-        approverSameDepartment: t.approverSameDepartment,
-        approverDepartmentManager: t.approverDepartmentManager,
-        notifyOnStartSameDepartment: t.notifyOnStartSameDepartment,
-        notifyOnStartDepartmentManager: t.notifyOnStartDepartmentManager,
-        notifyOnCompleteSameDepartment: t.notifyOnCompleteSameDepartment,
-        notifyOnCompleteDepartmentManager: t.notifyOnCompleteDepartmentManager,
-      }));
-      if (editId) {
-        await updateProcessTemplate(editId, {
-          name,
-          description: description || undefined,
-          icon,
-          allowedDepartmentIds,
-          tasks: taskPayload,
-        });
-      } else {
-        await createProcessTemplate({
-          name,
-          description: description || undefined,
-          icon,
-          allowedDepartmentIds,
-          tasks: taskPayload,
-        });
-      }
-      setOpen(false);
-      resetForm();
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
+  async function loadTemplateTasks(id: string): Promise<TaskInput[]> {
+    const res = await fetch(`/api/process-templates/${id}/tasks`);
+    const data = await res.json();
+    if (!data.tasks) return [];
+    return data.tasks.map(
+      (
+        task: {
+          name: string;
+          order: number;
+          description: string | null;
+          needFile: boolean;
+          mandatory: boolean;
+          slaDays?: number | null;
+          approverRoles: { jobPositionId: string }[];
+          notifyOnStartPositionIds?: string[];
+          notifyOnCompletePositionIds?: string[];
+          approverSameDepartment?: boolean;
+          approverDepartmentManager?: boolean;
+          notifyOnStartSameDepartment?: boolean;
+          notifyOnStartDepartmentManager?: boolean;
+          notifyOnCompleteSameDepartment?: boolean;
+          notifyOnCompleteDepartmentManager?: boolean;
+        },
+        i: number
+      ): TaskInput => ({
+        id: `task-${task.order}-${i}-${Math.random().toString(36).slice(2)}`,
+        name: task.name,
+        order: task.order,
+        description: task.description ?? "",
+        needFile: task.needFile,
+        mandatory: task.mandatory,
+        slaDays: task.slaDays ?? null,
+        approverPositionIds: task.approverRoles?.map((r: { jobPositionId: string }) => r.jobPositionId) ?? [],
+        notifyOnStartPositionIds: task.notifyOnStartPositionIds ?? [],
+        notifyOnCompletePositionIds: task.notifyOnCompletePositionIds ?? [],
+        approverSameDepartment: task.approverSameDepartment ?? false,
+        approverDepartmentManager: task.approverDepartmentManager ?? false,
+        notifyOnStartSameDepartment: task.notifyOnStartSameDepartment ?? false,
+        notifyOnStartDepartmentManager: task.notifyOnStartDepartmentManager ?? false,
+        notifyOnCompleteSameDepartment: task.notifyOnCompleteSameDepartment ?? false,
+        notifyOnCompleteDepartmentManager: task.notifyOnCompleteDepartmentManager ?? false,
+      })
+    );
+  }
+
+  async function handleWizardSubmit(state: WizardState) {
+    const taskPayload = state.tasks.map((t, i) => ({
+      name: t.name,
+      order: i,
+      description: t.description || undefined,
+      needFile: t.needFile,
+      mandatory: t.mandatory,
+      slaDays: t.slaDays,
+      approverPositionIds: t.approverPositionIds,
+      notifyOnStartPositionIds: t.notifyOnStartPositionIds,
+      notifyOnCompletePositionIds: t.notifyOnCompletePositionIds,
+      approverSameDepartment: t.approverSameDepartment,
+      approverDepartmentManager: t.approverDepartmentManager,
+      notifyOnStartSameDepartment: t.notifyOnStartSameDepartment,
+      notifyOnStartDepartmentManager: t.notifyOnStartDepartmentManager,
+      notifyOnCompleteSameDepartment: t.notifyOnCompleteSameDepartment,
+      notifyOnCompleteDepartmentManager: t.notifyOnCompleteDepartmentManager,
+    }));
+    const fieldPayload: FieldInput[] = state.fields.map((f, i) => ({
+      id: f.id,
+      name: f.name.trim(),
+      key: f.key.trim(),
+      type: f.type,
+      order: i,
+      required: f.required,
+      captureTaskOrder: f.captureTaskOrder,
+      lookupListId: f.lookupListId,
+    }));
+    if (editId) {
+      await updateProcessTemplate(editId, {
+        name: state.name,
+        description: state.description || undefined,
+        icon: state.icon,
+        allowedDepartmentIds: state.allowedDepartmentIds,
+        tasks: taskPayload,
+        fields: fieldPayload,
+      });
+    } else {
+      await createProcessTemplate({
+        name: state.name,
+        description: state.description || undefined,
+        icon: state.icon,
+        allowedDepartmentIds: state.allowedDepartmentIds,
+        tasks: taskPayload,
+        fields: fieldPayload,
+      });
     }
+    setOpen(false);
+    setWizardInitial(null);
+    setEditId(null);
   }
 
   async function handleDelete() {
@@ -648,64 +634,6 @@ export function ProcessTemplatesClient({
       setLoading(false);
     }
   }
-
-  function addTask() {
-    setTasks((prev) => [
-      ...prev,
-      {
-        id: crypto.randomUUID(),
-        name: "",
-        order: prev.length,
-        description: "",
-        needFile: false,
-        mandatory: true,
-        slaDays: null,
-        approverPositionIds: [],
-        notifyOnStartPositionIds: [],
-        notifyOnCompletePositionIds: [],
-        approverSameDepartment: false,
-        approverDepartmentManager: false,
-        notifyOnStartSameDepartment: false,
-        notifyOnStartDepartmentManager: false,
-        notifyOnCompleteSameDepartment: false,
-        notifyOnCompleteDepartmentManager: false,
-      },
-    ]);
-  }
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  );
-
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    setTasks((prev) => {
-      const oldIndex = prev.findIndex((t) => t.id === active.id);
-      const newIndex = prev.findIndex((t) => t.id === over.id);
-      if (oldIndex === -1 || newIndex === -1) return prev;
-      return arrayMove(prev, oldIndex, newIndex);
-    });
-  }
-
-  function updateTask(index: number, updates: Partial<TaskInput>) {
-    setTasks((prev) => {
-      const next = [...prev];
-      next[index] = { ...next[index], ...updates };
-      return next;
-    });
-  }
-
-  function removeTask(index: number) {
-    setTasks((prev) => prev.filter((_, i) => i !== index));
-  }
-
-  const toggleDepartment = (id: string) => {
-    setAllowedDepartmentIds((prev) =>
-      prev.includes(id) ? prev.filter((d) => d !== id) : [...prev, id]
-    );
-  };
 
   return (
     <>
@@ -738,10 +666,7 @@ export function ProcessTemplatesClient({
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={async () => {
-                        openEdit(t);
-                        await loadTemplateTasks(t.id);
-                      }}
+                      onClick={() => openEdit(t)}
                     >
                       Επεξεργασία
                     </Button>
@@ -766,136 +691,35 @@ export function ProcessTemplatesClient({
         open={open}
         onOpenChange={(o) => {
           setOpen(o);
-          if (!o) resetForm();
+          if (!o) {
+            setWizardInitial(null);
+            setEditId(null);
+          }
         }}
       >
         <DialogTrigger asChild>
-          <Button
-            onClick={() => {
-              resetForm();
-              setOpen(true);
-            }}
-          >
-            Δημιουργία προτύπου
-          </Button>
+          <Button onClick={openCreate}>Δημιουργία προτύπου</Button>
         </DialogTrigger>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editId ? "Επεξεργασία προτύπου διαδικασίας" : "Δημιουργία προτύπου διαδικασίας"}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="min-w-0 flex-1 flex flex-col">
-            <Tabs defaultValue="basic" className="min-w-0 flex-1 flex flex-col">
-              <TabsList>
-                <TabsTrigger value="basic">Βασικά</TabsTrigger>
-                <TabsTrigger value="access">Πρόσβαση</TabsTrigger>
-                <TabsTrigger value="tasks">Εργασίες</TabsTrigger>
-              </TabsList>
-              <TabsContent value="basic" className="space-y-6 pt-4">
-                <section className="space-y-3">
-                  <h3 className="text-sm font-semibold text-foreground border-b pb-1">Γενικά</h3>
-                  <div className="space-y-2">
-                    <Label>Όνομα</Label>
-                    <Input value={name} onChange={(e) => setName(e.target.value)} name="name" required placeholder="π.χ. Αίτηση άδειας" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Περιγραφή</Label>
-                    <Textarea value={description} onChange={(e) => setDescription(e.target.value)} name="description" placeholder="Σύντομη περιγραφή αυτής της διαδικασίας" rows={3} />
-                  </div>
-                </section>
-                <section className="space-y-3">
-                  <h3 className="text-sm font-semibold text-foreground border-b pb-1">Εικονίδιο</h3>
-                  <p className="text-muted-foreground text-sm">Επιλέξτε ένα εικονίδιο για αυτή τη διαδικασία</p>
-                  <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2 py-1">
-                    {PROCESS_ICON_OPTIONS.map((opt) => {
-                      const label = opt.replace(/^Fi/, "").replace(/([A-Z])/g, " $1").trim();
-                      const isSelected = icon === opt;
-                      return (
-                        <button
-                          key={opt}
-                          type="button"
-                          onClick={() => setIcon(opt)}
-                          className={`flex flex-col items-center gap-1.5 rounded-lg border py-2.5 px-2 transition-all hover:bg-muted/80 hover:border-muted-foreground/30 min-w-0 ${isSelected ? "border-primary bg-primary/5 ring-2 ring-primary/20 ring-offset-2" : "border-border bg-card"}`}
-                        >
-                          <ProcessIcon icon={opt} className="size-5 shrink-0 text-muted-foreground" />
-                          <span className="text-[10px] font-medium text-center text-muted-foreground truncate w-full leading-tight">
-                            {label}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <input type="hidden" name="icon" value={icon} />
-                </section>
-              </TabsContent>
-              <TabsContent value="access" className="space-y-4 pt-4">
-                <section className="space-y-3">
-                  <h3 className="text-sm font-semibold text-foreground border-b pb-1">Ποιος μπορεί να ξεκινήσει αυτή τη διαδικασία</h3>
-                  <p className="text-muted-foreground text-sm">Επιλέξτε τα τμήματα που επιτρέπεται να ξεκινούν διαδικασίες αυτού του τύπου.</p>
-                <div className="space-y-2 rounded-lg border bg-muted/20 p-3">
-                  {departments.map((d) => (
-                    <label key={d.id} className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={allowedDepartmentIds.includes(d.id)}
-                        onChange={() => toggleDepartment(d.id)}
-                      />
-                      {d.name}
-                    </label>
-                  ))}
-                </div>
-                </section>
-              </TabsContent>
-              <TabsContent value="tasks" className="space-y-4 pt-4">
-                <TaskTimelineModal tasks={tasks} />
-                <section>
-                  <div className="flex justify-between items-center mb-3">
-                    <h3 className="text-sm font-semibold text-foreground">Λίστα εργασιών</h3>
-                    <Button type="button" variant="outline" size="sm" onClick={addTask}>
-                      Προσθήκη εργασίας
-                    </Button>
-                  </div>
-                <div className="rounded-md border">
-                  {tasks.length === 0 ? (
-                    <p className="text-muted-foreground text-sm p-4">Καμία εργασία ακόμη. Κάντε κλικ στο &quot;Προσθήκη εργασίας&quot; για να προσθέσετε μία.</p>
-                  ) : (
-                    <DndContext
-                      sensors={sensors}
-                      collisionDetection={closestCenter}
-                      onDragEnd={handleDragEnd}
-                    >
-                      <SortableContext
-                        items={tasks.map((t) => t.id)}
-                        strategy={verticalListSortingStrategy}
-                      >
-                        <Accordion type="multiple" className="w-full">
-                          {tasks.map((task, index) => (
-                            <SortableTaskItem
-                              key={task.id}
-                              task={task}
-                              index={index}
-                              positions={positions}
-                              processName={name}
-                              onUpdate={updateTask}
-                              onRemove={removeTask}
-                            />
-                          ))}
-                        </Accordion>
-                      </SortableContext>
-                    </DndContext>
-                  )}
-                </div>
-                </section>
-              </TabsContent>
-            </Tabs>
-            <DialogFooter className="mt-4">
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-                Άκυρο
-              </Button>
-              <Button type="submit" disabled={loading}>
-                {loading ? "Αποθήκευση..." : editId ? "Ενημέρωση" : "Δημιουργία"}
-              </Button>
-            </DialogFooter>
-          </form>
+          {wizardInitial ? (
+            <TemplateWizard
+              key={editId ?? "new"}
+              initial={wizardInitial}
+              departments={departments}
+              positions={positions}
+              lookupLists={lookupLists}
+              onSubmit={handleWizardSubmit}
+              onCancel={() => setOpen(false)}
+              submitLabel={editId ? "Ενημέρωση" : "Δημιουργία"}
+            />
+          ) : (
+            <div className="flex items-center gap-2 py-10 justify-center text-muted-foreground text-sm">
+              <Loader2 className="size-4 animate-spin" /> Φόρτωση…
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

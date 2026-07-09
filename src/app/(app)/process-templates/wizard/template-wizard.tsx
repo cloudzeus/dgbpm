@@ -1,0 +1,486 @@
+"use client";
+
+import { useState } from "react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Accordion } from "@/components/ui/accordion";
+import { ProcessIcon, PROCESS_ICON_OPTIONS } from "@/lib/process-icons";
+import { fieldTypeLabel } from "@/lib/process-fields/field-types";
+import type { FieldInput } from "../actions";
+import {
+  SortableTaskItem,
+  TaskTimelineModal,
+  type TaskInput,
+} from "../process-templates-client";
+import { StepFields } from "./step-fields";
+
+const STEPS = [
+  "Βασικά",
+  "Τμήματα",
+  "Βήματα & Ανάθεση",
+  "Πεδία Δεδομένων",
+  "Επισκόπηση",
+] as const;
+
+export type WizardState = {
+  name: string;
+  description: string;
+  icon: string;
+  allowedDepartmentIds: string[];
+  tasks: TaskInput[];
+  fields: FieldInput[];
+};
+
+export function emptyWizardState(): WizardState {
+  return {
+    name: "",
+    description: "",
+    icon: "FiFileText",
+    allowedDepartmentIds: [],
+    tasks: [],
+    fields: [],
+  };
+}
+
+function newTask(order: number): TaskInput {
+  return {
+    id: crypto.randomUUID(),
+    name: "",
+    order,
+    description: "",
+    needFile: false,
+    mandatory: true,
+    slaDays: null,
+    approverPositionIds: [],
+    notifyOnStartPositionIds: [],
+    notifyOnCompletePositionIds: [],
+    approverSameDepartment: false,
+    approverDepartmentManager: false,
+    notifyOnStartSameDepartment: false,
+    notifyOnStartDepartmentManager: false,
+    notifyOnCompleteSameDepartment: false,
+    notifyOnCompleteDepartmentManager: false,
+  };
+}
+
+export function TemplateWizard(props: {
+  initial?: WizardState;
+  departments: { id: string; name: string }[];
+  positions: { id: string; name: string; department: { name: string } }[];
+  lookupLists: { id: string; name: string; items: { id: string; value: string; label: string }[] }[];
+  onSubmit: (state: WizardState) => Promise<void>;
+  onCancel?: () => void;
+  submitLabel?: string;
+}) {
+  const [step, setStep] = useState(0);
+  const [state, setState] = useState<WizardState>(props.initial ?? emptyWizardState());
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  function patch(p: Partial<WizardState>) {
+    setState((s) => ({ ...s, ...p }));
+  }
+
+  // ---- task helpers ----
+  function addTask() {
+    setState((s) => ({ ...s, tasks: [...s.tasks, newTask(s.tasks.length)] }));
+  }
+  function updateTask(index: number, updates: Partial<TaskInput>) {
+    setState((s) => {
+      const next = [...s.tasks];
+      next[index] = { ...next[index], ...updates };
+      return { ...s, tasks: next };
+    });
+  }
+  function removeTask(index: number) {
+    setState((s) => ({ ...s, tasks: s.tasks.filter((_, i) => i !== index) }));
+  }
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setState((s) => {
+      const oldIndex = s.tasks.findIndex((t) => t.id === active.id);
+      const newIndex = s.tasks.findIndex((t) => t.id === over.id);
+      if (oldIndex === -1 || newIndex === -1) return s;
+      return { ...s, tasks: arrayMove(s.tasks, oldIndex, newIndex) };
+    });
+  }
+  const toggleDepartment = (id: string) =>
+    setState((s) => ({
+      ...s,
+      allowedDepartmentIds: s.allowedDepartmentIds.includes(id)
+        ? s.allowedDepartmentIds.filter((d) => d !== id)
+        : [...s.allowedDepartmentIds, id],
+    }));
+
+  // ---- validation per step ----
+  function validateStep(i: number): string | null {
+    if (i === 0) {
+      if (!state.name.trim()) return "Συμπληρώστε το όνομα της διαδικασίας.";
+    }
+    if (i === 2) {
+      if (state.tasks.length === 0) return "Προσθέστε τουλάχιστον ένα βήμα.";
+      if (state.tasks.some((t) => !t.name.trim())) return "Κάθε βήμα πρέπει να έχει όνομα.";
+    }
+    if (i === 3) {
+      const err = validateFields();
+      if (err) return err;
+    }
+    return null;
+  }
+
+  function validateFields(): string | null {
+    if (state.fields.some((f) => !f.name.trim())) return "Κάθε πεδίο πρέπει να έχει όνομα.";
+    if (state.fields.some((f) => !f.key.trim())) return "Κάθε πεδίο πρέπει να έχει κλειδί.";
+    const keys = state.fields.map((f) => f.key.trim());
+    if (new Set(keys).size !== keys.length) return "Τα κλειδιά των πεδίων πρέπει να είναι μοναδικά.";
+    if (state.fields.some((f) => f.type === "SELECT" && !f.lookupListId))
+      return "Τα πεδία τύπου «Λίστα τιμών» απαιτούν επιλογή λίστας.";
+    return null;
+  }
+
+  function next() {
+    const err = validateStep(step);
+    if (err) {
+      setError(err);
+      return;
+    }
+    setError(null);
+    setStep((s) => Math.min(s + 1, STEPS.length - 1));
+  }
+  function back() {
+    setError(null);
+    setStep((s) => Math.max(s - 1, 0));
+  }
+  function goto(target: number) {
+    if (target <= step) {
+      setError(null);
+      setStep(target);
+      return;
+    }
+    // validate all steps up to target-1
+    for (let i = step; i < target; i++) {
+      const err = validateStep(i);
+      if (err) {
+        setError(err);
+        setStep(i);
+        return;
+      }
+    }
+    setError(null);
+    setStep(target);
+  }
+
+  async function handleSubmit() {
+    // full validation
+    for (let i = 0; i < STEPS.length - 1; i++) {
+      const err = validateStep(i);
+      if (err) {
+        setError(err);
+        setStep(i);
+        return;
+      }
+    }
+    setError(null);
+    setLoading(true);
+    try {
+      // renumber tasks & fields order to reflect current arrangement
+      const normalized: WizardState = {
+        ...state,
+        tasks: state.tasks.map((t, i) => ({ ...t, order: i })),
+        fields: state.fields.map((f, i) => ({ ...f, order: i })),
+      };
+      await props.onSubmit(normalized);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Αποτυχία αποθήκευσης.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const taskOptions = state.tasks.map((t, i) => ({ order: i, name: t.name }));
+  const listName = (id: string | null) =>
+    id ? props.lookupLists.find((l) => l.id === id)?.name ?? "—" : "—";
+
+  return (
+    <div className="min-w-0 flex-1 flex flex-col">
+      {/* progress bar */}
+      <div className="flex items-center gap-1 mb-5">
+        {STEPS.map((label, i) => {
+          const done = i < step;
+          const current = i === step;
+          return (
+            <div key={label} className="flex items-center flex-1 min-w-0">
+              <button
+                type="button"
+                onClick={() => goto(i)}
+                className="flex items-center gap-2 min-w-0"
+              >
+                <span
+                  className={`flex size-7 shrink-0 items-center justify-center rounded-full border-2 text-xs font-semibold transition-colors ${
+                    current
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : done
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-muted-foreground/30 text-muted-foreground"
+                  }`}
+                >
+                  {i + 1}
+                </span>
+                <span
+                  className={`text-xs font-medium truncate hidden sm:inline ${
+                    current ? "text-foreground" : "text-muted-foreground"
+                  }`}
+                >
+                  {label}
+                </span>
+              </button>
+              {i < STEPS.length - 1 && (
+                <div className={`mx-2 h-0.5 flex-1 rounded ${done ? "bg-primary" : "bg-muted"}`} />
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="min-w-0 flex-1">
+        {/* Step 0 — Βασικά */}
+        {step === 0 && (
+          <div className="space-y-6">
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold text-foreground border-b pb-1">Γενικά</h3>
+              <div className="space-y-2">
+                <Label>Όνομα</Label>
+                <Input
+                  value={state.name}
+                  onChange={(e) => patch({ name: e.target.value })}
+                  required
+                  placeholder="π.χ. Αίτηση άδειας"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Περιγραφή</Label>
+                <Textarea
+                  value={state.description}
+                  onChange={(e) => patch({ description: e.target.value })}
+                  placeholder="Σύντομη περιγραφή αυτής της διαδικασίας"
+                  rows={3}
+                />
+              </div>
+            </section>
+            <section className="space-y-3">
+              <h3 className="text-sm font-semibold text-foreground border-b pb-1">Εικονίδιο</h3>
+              <p className="text-muted-foreground text-sm">Επιλέξτε ένα εικονίδιο για αυτή τη διαδικασία</p>
+              <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2 py-1">
+                {PROCESS_ICON_OPTIONS.map((opt) => {
+                  const label = opt.replace(/^Fi/, "").replace(/([A-Z])/g, " $1").trim();
+                  const isSelected = state.icon === opt;
+                  return (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => patch({ icon: opt })}
+                      className={`flex flex-col items-center gap-1.5 rounded-lg border py-2.5 px-2 transition-all hover:bg-muted/80 hover:border-muted-foreground/30 min-w-0 ${isSelected ? "border-primary bg-primary/5 ring-2 ring-primary/20 ring-offset-2" : "border-border bg-card"}`}
+                    >
+                      <ProcessIcon icon={opt} className="size-5 shrink-0 text-muted-foreground" />
+                      <span className="text-[10px] font-medium text-center text-muted-foreground truncate w-full leading-tight">
+                        {label}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          </div>
+        )}
+
+        {/* Step 1 — Τμήματα */}
+        {step === 1 && (
+          <section className="space-y-3">
+            <h3 className="text-sm font-semibold text-foreground border-b pb-1">
+              Ποιος μπορεί να ξεκινήσει αυτή τη διαδικασία
+            </h3>
+            <p className="text-muted-foreground text-sm">
+              Επιλέξτε τα τμήματα που επιτρέπεται να ξεκινούν διαδικασίες αυτού του τύπου.
+            </p>
+            <div className="space-y-2 rounded-lg border bg-muted/20 p-3">
+              {props.departments.map((d) => (
+                <label key={d.id} className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={state.allowedDepartmentIds.includes(d.id)}
+                    onChange={() => toggleDepartment(d.id)}
+                  />
+                  {d.name}
+                </label>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Step 2 — Βήματα & Ανάθεση */}
+        {step === 2 && (
+          <div className="space-y-4">
+            <TaskTimelineModal tasks={state.tasks} />
+            <section>
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="text-sm font-semibold text-foreground">Λίστα εργασιών</h3>
+                <Button type="button" variant="outline" size="sm" onClick={addTask}>
+                  Προσθήκη εργασίας
+                </Button>
+              </div>
+              <div className="rounded-md border">
+                {state.tasks.length === 0 ? (
+                  <p className="text-muted-foreground text-sm p-4">
+                    Καμία εργασία ακόμη. Κάντε κλικ στο «Προσθήκη εργασίας» για να προσθέσετε μία.
+                  </p>
+                ) : (
+                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                    <SortableContext items={state.tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+                      <Accordion type="multiple" className="w-full">
+                        {state.tasks.map((task, index) => (
+                          <SortableTaskItem
+                            key={task.id}
+                            task={task}
+                            index={index}
+                            positions={props.positions}
+                            processName={state.name}
+                            onUpdate={updateTask}
+                            onRemove={removeTask}
+                          />
+                        ))}
+                      </Accordion>
+                    </SortableContext>
+                  </DndContext>
+                )}
+              </div>
+            </section>
+          </div>
+        )}
+
+        {/* Step 3 — Πεδία Δεδομένων */}
+        {step === 3 && (
+          <StepFields
+            fields={state.fields}
+            taskOptions={taskOptions}
+            lookupLists={props.lookupLists}
+            onChange={(fields) => patch({ fields })}
+          />
+        )}
+
+        {/* Step 4 — Επισκόπηση */}
+        {step === 4 && (
+          <div className="space-y-5">
+            <section className="space-y-2">
+              <h3 className="text-sm font-semibold text-foreground border-b pb-1">Επισκόπηση</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                <div className="flex items-center gap-2">
+                  <ProcessIcon icon={state.icon} className="size-5 text-muted-foreground" />
+                  <span className="font-semibold">{state.name || "—"}</span>
+                </div>
+                <div className="text-muted-foreground">
+                  Τμήματα:{" "}
+                  {state.allowedDepartmentIds.length
+                    ? props.departments
+                        .filter((d) => state.allowedDepartmentIds.includes(d.id))
+                        .map((d) => d.name)
+                        .join(", ")
+                    : "—"}
+                </div>
+              </div>
+              {state.description && <p className="text-muted-foreground text-sm">{state.description}</p>}
+            </section>
+
+            <section className="space-y-2">
+              <h4 className="text-sm font-semibold text-foreground">Βήματα ({state.tasks.length})</h4>
+              <ol className="list-decimal pl-5 text-sm space-y-1">
+                {state.tasks.map((t) => (
+                  <li key={t.id}>
+                    {t.name.trim() || "Χωρίς όνομα"}
+                    {t.mandatory && <span className="text-muted-foreground"> · υποχρεωτικό</span>}
+                    {t.needFile && <span className="text-muted-foreground"> · αρχείο</span>}
+                  </li>
+                ))}
+                {state.tasks.length === 0 && <li className="text-muted-foreground">—</li>}
+              </ol>
+            </section>
+
+            <section className="space-y-2">
+              <h4 className="text-sm font-semibold text-foreground">Πεδία δεδομένων ({state.fields.length})</h4>
+              {state.fields.length === 0 ? (
+                <p className="text-muted-foreground text-sm">Δεν έχουν οριστεί πεδία.</p>
+              ) : (
+                <div className="rounded-md border divide-y text-sm">
+                  {state.fields.map((f, i) => (
+                    <div key={i} className="flex flex-wrap items-center gap-2 px-3 py-2">
+                      <span className="font-medium">{f.name.trim() || "—"}</span>
+                      <span className="text-muted-foreground text-xs">({fieldTypeLabel(f.type)})</span>
+                      {f.required && <span className="text-xs text-muted-foreground">· υποχρεωτικό</span>}
+                      <span className="text-xs text-muted-foreground">
+                        · βήμα{" "}
+                        {f.captureTaskOrder == null ? "—" : `${f.captureTaskOrder + 1}`}
+                      </span>
+                      {f.type === "SELECT" && (
+                        <span className="text-xs text-muted-foreground">· λίστα: {listName(f.lookupListId)}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          </div>
+        )}
+      </div>
+
+      {error && <p className="text-sm text-destructive mt-4">{error}</p>}
+
+      <div className="flex items-center justify-between gap-2 mt-6 pt-4 border-t">
+        <div>
+          {props.onCancel && (
+            <Button type="button" variant="ghost" onClick={props.onCancel}>
+              Άκυρο
+            </Button>
+          )}
+        </div>
+        <div className="flex gap-2">
+          {step > 0 && (
+            <Button type="button" variant="outline" onClick={back} disabled={loading}>
+              Πίσω
+            </Button>
+          )}
+          {step < STEPS.length - 1 ? (
+            <Button type="button" onClick={next}>
+              Επόμενο
+            </Button>
+          ) : (
+            <Button type="button" onClick={handleSubmit} disabled={loading}>
+              {loading ? "Αποθήκευση..." : props.submitLabel ?? "Αποθήκευση"}
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

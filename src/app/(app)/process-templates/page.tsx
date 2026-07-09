@@ -26,6 +26,20 @@ export default async function ProcessTemplatesPage() {
           slaDays: true,
         },
       },
+      fields: {
+        where: { deletedAt: null },
+        orderBy: { order: "asc" },
+        select: {
+          id: true,
+          name: true,
+          key: true,
+          type: true,
+          order: true,
+          required: true,
+          captureTaskOrder: true,
+          lookupListId: true,
+        },
+      },
     },
     orderBy: { name: "asc" },
   });
@@ -40,6 +54,18 @@ export default async function ProcessTemplatesPage() {
     orderBy: [{ department: { name: "asc" } }, { name: "asc" }],
   });
 
+  const lookupLists = await prisma.lookupList.findMany({
+    orderBy: { name: "asc" },
+    select: {
+      id: true,
+      name: true,
+      items: {
+        orderBy: { order: "asc" },
+        select: { id: true, value: true, label: true },
+      },
+    },
+  });
+
   return (
     <div className="space-y-6">
       <div>
@@ -50,6 +76,7 @@ export default async function ProcessTemplatesPage() {
         templates={templates}
         departments={departments}
         positions={positions}
+        lookupLists={lookupLists}
       />
     </div>
   );
