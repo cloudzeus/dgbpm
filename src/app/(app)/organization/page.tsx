@@ -16,17 +16,17 @@ export default async function OrganizationPage() {
       select: {
         id: true, name: true, color: true, parentId: true, email: true, phoneNumber: true,
         positions: {
-          orderBy: { name: "asc" },
+          orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
           select: {
             id: true, name: true, managerId: true,
-            users: { select: { user: { select: { id: true, firstName: true, lastName: true, email: true } } } },
+            users: { select: { user: { select: { id: true, firstName: true, lastName: true, email: true, image: true } } } },
           },
         },
       },
     }),
     prisma.user.findMany({
       orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
-      select: { id: true, firstName: true, lastName: true, email: true },
+      select: { id: true, firstName: true, lastName: true, email: true, image: true },
     }),
   ]);
 

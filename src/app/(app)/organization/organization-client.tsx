@@ -2,7 +2,8 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
-import { Plus, Users, Check, Loader2, AlertTriangle } from "lucide-react";
+import { arrayMove } from "@dnd-kit/sortable";
+import { Plus, Users, Check, Loader2, AlertTriangle, FileDown } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,9 +22,10 @@ import { DepartmentEditDialog, type DepartmentMeta } from "./department-edit-dia
 import { PromptDialog } from "./prompt-dialog";
 import {
   createDepartmentNode, reparentDepartment, updateDepartmentMeta, deleteDepartmentNode,
-  createPosition, renamePosition, deletePosition,
+  createPosition, renamePosition, deletePosition, reorderPositions,
   setPositionManager, assignUserToPosition, removeUserFromPosition,
 } from "./actions";
+import { downloadOrgChartPdf } from "./org-pdf";
 
 export type DeptData = {
   id: string; name: string; color: string; parentId: string | null;
@@ -65,14 +67,30 @@ export function OrganizationClient({ departments, users }: { departments: DeptDa
     });
   }
 
-  function handleDrawerDrop(e: DragEndEvent) {
+  function handleDragEnd(e: DragEndEvent) {
     const activeId = String(e.active.id);
-    if (!activeId.startsWith("user:") || !e.over) return;
+    if (!e.over) return;
     const overId = String(e.over.id);
-    if (!overId.startsWith("poszone:")) return;
-    const userId = activeId.replace("user:", "");
-    const positionId = overId.replace("poszone:", "");
-    run(() => assignUserToPosition(positionId, userId));
+
+    // A user avatar dropped onto a position (drop-zone or the sortable card itself)
+    if (activeId.startsWith("user:")) {
+      const userId = activeId.slice("user:".length);
+      let positionId: string | null = null;
+      if (overId.startsWith("poszone:")) positionId = overId.slice("poszone:".length);
+      else if (overId.startsWith("sortpos:")) positionId = overId.slice("sortpos:".length);
+      if (positionId) run(() => assignUserToPosition(positionId!, userId));
+      return;
+    }
+
+    // Reordering positions within the selected department
+    if (activeId.startsWith("sortpos:") && overId.startsWith("sortpos:") && activeId !== overId) {
+      const ids = (selected?.positions ?? []).map((p) => p.id);
+      const from = ids.indexOf(activeId.slice("sortpos:".length));
+      const to = ids.indexOf(overId.slice("sortpos:".length));
+      if (from === -1 || to === -1) return;
+      const next = arrayMove(ids, from, to);
+      run(() => reorderPositions(next));
+    }
   }
 
   const cardProps = {
@@ -98,6 +116,9 @@ export function OrganizationClient({ departments, users }: { departments: DeptDa
           <Plus className="mr-1 inline size-4" />Τμήμα
         </button>
         <div className="ml-auto flex items-center gap-3">
+          <button className="flex items-center gap-1.5 rounded-md bg-muted px-3 py-1.5" onClick={() => downloadOrgChartPdf(departments, usersById)}>
+            <FileDown className="size-4" />Εξαγωγή PDF
+          </button>
           <button className="flex items-center gap-1.5 rounded-md bg-muted px-3 py-1.5" onClick={() => setDrawerOpen(true)}>
             <Users className="size-4" />Ανάθεση χρηστών
           </button>
@@ -108,7 +129,7 @@ export function OrganizationClient({ departments, users }: { departments: DeptDa
       </div>
 
       {/* body: canvas + panel; a single DndContext covers pool→poszone drops */}
-      <DndContext sensors={sensors} onDragEnd={handleDrawerDrop}>
+      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
         <div className="flex h-[calc(100vh-16rem)]">
           <div className="flex-1 p-3">
             <OrgCanvas

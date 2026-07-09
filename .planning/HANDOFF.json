@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": "2026-07-09T06:56:25.209Z",
+  "timestamp": "2026-07-09T07:10:34.970Z",
   "source": "auto-postool",
   "partial": false,
   "phase": null,
@@ -18,29 +18,45 @@
   "uncommitted_files": [
     {
       "status": "M",
+      "path": ".planning/HANDOFF.json"
+    },
+    {
+      "status": "M",
+      "path": "prisma/schema.prisma"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/organization/actions.ts"
+    },
+    {
+      "status": "M",
       "path": "src/app/(app)/organization/department-detail-panel.tsx"
     },
     {
       "status": "M",
-      "path": "src/app/(app)/organization/org-canvas.tsx"
+      "path": "src/app/(app)/organization/org-avatar.tsx"
     },
     {
       "status": "M",
       "path": "src/app/(app)/organization/organization-client.tsx"
     },
     {
-      "status": "??",
-      "path": ".planning/"
+      "status": "M",
+      "path": "src/app/(app)/organization/page.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/users/actions.ts"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/users/users-client.tsx"
     },
     {
       "status": "??",
-      "path": "src/app/(app)/organization/department-edit-dialog.tsx"
-    },
-    {
-      "status": "??",
-      "path": "src/app/(app)/organization/prompt-dialog.tsx"
+      "path": "src/app/(app)/organization/org-pdf.ts"
     }
   ],
   "next_action": null,
-  "context_notes": "Recent commits:\n20726e3 Merge org chart builder feature\n6ea8e0d feat: wire org chart orchestrator (canvas + panel + drawer + picker)\nd040658 feat: user pool drawer + picker dialog\nfe94563 feat: department detail panel with expandable position cards\n6456d0a feat: org canvas with dnd reparent + zoom"
+  "context_notes": "Recent commits:\n7264081 Merge org chart enhancements (dept edit/delete, drag-to-root, shadcn dialogs)\n56bce36 feat: org chart enhancements — dept edit/delete menu, drag-to-root, shadcn dialogs\n20726e3 Merge org chart builder feature\n6ea8e0d feat: wire org chart orchestrator (canvas + panel + drawer + picker)\nd040658 feat: user pool drawer + picker dialog"
 }
