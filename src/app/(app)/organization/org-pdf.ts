@@ -15,8 +15,17 @@ function buildForest(depts: DeptData[]): TreeNode[] {
 }
 
 /** Build and download a hierarchical PDF outline of the whole org chart. */
-export function downloadOrgChartPdf(departments: DeptData[], usersById: Map<string, OrgUser>) {
+export async function downloadOrgChartPdf(departments: DeptData[], usersById: Map<string, OrgUser>) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+
+  // Embed Roboto (Greek-capable) so accented Greek text renders correctly.
+  // Loaded lazily to keep the ~1.4MB font data out of the main bundle.
+  const { robotoRegularBase64, robotoBoldBase64 } = await import("./roboto-font");
+  doc.addFileToVFS("Roboto-Regular.ttf", robotoRegularBase64);
+  doc.addFont("Roboto-Regular.ttf", "Roboto", "normal");
+  doc.addFileToVFS("Roboto-Bold.ttf", robotoBoldBase64);
+  doc.addFont("Roboto-Bold.ttf", "Roboto", "bold");
+
   const pageHeight = doc.internal.pageSize.getHeight();
   const marginTop = 18;
   const lineHeight = 6;
@@ -35,14 +44,14 @@ export function downloadOrgChartPdf(departments: DeptData[], usersById: Map<stri
 
   function writeLine(text: string, indentMm: number, opts?: { bold?: boolean; size?: number; color?: [number, number, number] }) {
     ensureSpace();
-    doc.setFont("helvetica", opts?.bold ? "bold" : "normal");
+    doc.setFont("Roboto", opts?.bold ? "bold" : "normal");
     doc.setFontSize(opts?.size ?? 10);
     doc.setTextColor(...(opts?.color ?? [30, 30, 34]));
     doc.text(text, 14 + indentMm, y);
     y += lineHeight;
   }
 
-  doc.setFont("helvetica", "bold");
+  doc.setFont("Roboto", "bold");
   doc.setFontSize(16);
   doc.setTextColor(122, 20, 32);
   doc.text("Οργανόγραμμα", 14, y);

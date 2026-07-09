@@ -116,7 +116,14 @@ export function OrganizationClient({ departments, users }: { departments: DeptDa
           <Plus className="mr-1 inline size-4" />Τμήμα
         </button>
         <div className="ml-auto flex items-center gap-3">
-          <button className="flex items-center gap-1.5 rounded-md bg-muted px-3 py-1.5" onClick={() => downloadOrgChartPdf(departments, usersById)}>
+          <button
+            className="flex items-center gap-1.5 rounded-md bg-muted px-3 py-1.5"
+            onClick={() => {
+              downloadOrgChartPdf(departments, usersById).catch((e) =>
+                setErrorMsg(e instanceof Error ? e.message : "Αποτυχία εξαγωγής PDF")
+              );
+            }}
+          >
             <FileDown className="size-4" />Εξαγωγή PDF
           </button>
           <button className="flex items-center gap-1.5 rounded-md bg-muted px-3 py-1.5" onClick={() => setDrawerOpen(true)}>
