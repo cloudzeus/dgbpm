@@ -6,6 +6,33 @@ import { requireRole } from "@/lib/rbac";
 import { Role } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { deepseekChat, DeepSeekError } from "@/lib/deepseek";
+import { buildPivotViewSql, sanitizeIdentifier } from "@/lib/process-fields/pivot-view";
+import type { FieldType, Prisma } from "@prisma/client";
+
+export type FieldInput = {
+  id?: string; // present when editing an existing field def
+  name: string;
+  key: string;
+  type: FieldType;
+  order: number;
+  required: boolean;
+  captureTaskOrder: number | null;
+  lookupListId: string | null;
+};
+
+async function refreshPivotView(tx: Prisma.TransactionClient, templateId: string) {
+  const fields = await tx.processFieldDefinition.findMany({
+    where: { processTemplateId: templateId, deletedAt: null },
+    orderBy: { order: "asc" },
+    select: { id: true, key: true, type: true },
+  });
+  const viewName = `process_data_${sanitizeIdentifier(templateId)}`;
+  if (fields.length === 0) {
+    await tx.$executeRawUnsafe(`DROP VIEW IF EXISTS \`${viewName}\``);
+    return;
+  }
+  await tx.$executeRawUnsafe(buildPivotViewSql(templateId, fields));
+}
 
 /**
  * Δημιουργεί αναλυτική περιγραφή βήματος από μια σύντομη ιδέα, μέσω DeepSeek.
@@ -84,46 +111,68 @@ export async function createProcessTemplate(data: {
     notifyOnCompleteSameDepartment?: boolean;
     notifyOnCompleteDepartmentManager?: boolean;
   }[];
+  fields?: FieldInput[];
 }) {
   const session = await auth();
   if (!session?.user) throw new Error("Μη εξουσιοδοτημένη πρόσβαση");
   requireRole(session.user.role, [Role.SUPER_ADMIN]);
 
-  await prisma.processTemplate.create({
-    data: {
-      name: data.name,
-      description: data.description ?? undefined,
-      icon: data.icon,
-      createdById: session.user.id,
-      allowedDepartments: {
-        create: data.allowedDepartmentIds.map((departmentId) => ({ departmentId })),
+  const fields = data.fields ?? [];
+
+  await prisma.$transaction(async (tx) => {
+    const template = await tx.processTemplate.create({
+      data: {
+        name: data.name,
+        description: data.description ?? undefined,
+        icon: data.icon,
+        createdById: session.user.id,
+        allowedDepartments: {
+          create: data.allowedDepartmentIds.map((departmentId) => ({ departmentId })),
+        },
+        tasks: {
+          create: data.tasks.map((t) => ({
+            name: t.name,
+            order: t.order,
+            description: t.description ?? undefined,
+            needFile: t.needFile,
+            mandatory: t.mandatory,
+            slaDays: t.slaDays ?? null,
+            approverRoles: {
+              create: (t.approverPositionIds ?? []).map((jobPositionId) => ({ jobPositionId })),
+            },
+            notifyOnStartPositions: {
+              create: (t.notifyOnStartPositionIds ?? []).map((jobPositionId) => ({ jobPositionId })),
+            },
+            notifyOnCompletePositions: {
+              create: (t.notifyOnCompletePositionIds ?? []).map((jobPositionId) => ({ jobPositionId })),
+            },
+            approverSameDepartment: t.approverSameDepartment ?? false,
+            approverDepartmentManager: t.approverDepartmentManager ?? false,
+            notifyOnStartSameDepartment: t.notifyOnStartSameDepartment ?? false,
+            notifyOnStartDepartmentManager: t.notifyOnStartDepartmentManager ?? false,
+            notifyOnCompleteSameDepartment: t.notifyOnCompleteSameDepartment ?? false,
+            notifyOnCompleteDepartmentManager: t.notifyOnCompleteDepartmentManager ?? false,
+          })),
+        },
       },
-      tasks: {
-        create: data.tasks.map((t) => ({
-          name: t.name,
-          order: t.order,
-          description: t.description ?? undefined,
-          needFile: t.needFile,
-          mandatory: t.mandatory,
-          slaDays: t.slaDays ?? null,
-          approverRoles: {
-            create: (t.approverPositionIds ?? []).map((jobPositionId) => ({ jobPositionId })),
-          },
-          notifyOnStartPositions: {
-            create: (t.notifyOnStartPositionIds ?? []).map((jobPositionId) => ({ jobPositionId })),
-          },
-          notifyOnCompletePositions: {
-            create: (t.notifyOnCompletePositionIds ?? []).map((jobPositionId) => ({ jobPositionId })),
-          },
-          approverSameDepartment: t.approverSameDepartment ?? false,
-          approverDepartmentManager: t.approverDepartmentManager ?? false,
-          notifyOnStartSameDepartment: t.notifyOnStartSameDepartment ?? false,
-          notifyOnStartDepartmentManager: t.notifyOnStartDepartmentManager ?? false,
-          notifyOnCompleteSameDepartment: t.notifyOnCompleteSameDepartment ?? false,
-          notifyOnCompleteDepartmentManager: t.notifyOnCompleteDepartmentManager ?? false,
-        })),
-      },
-    },
+    });
+
+    for (const f of fields) {
+      await tx.processFieldDefinition.create({
+        data: {
+          processTemplateId: template.id,
+          name: f.name,
+          key: f.key,
+          type: f.type,
+          order: f.order,
+          required: f.required,
+          captureTaskOrder: f.captureTaskOrder,
+          lookupListId: f.lookupListId ?? undefined,
+        },
+      });
+    }
+
+    await refreshPivotView(tx, template.id);
   });
   revalidatePath("/process-templates");
   revalidatePath("/dashboard");
@@ -154,11 +203,14 @@ export async function updateProcessTemplate(
     notifyOnCompleteSameDepartment?: boolean;
     notifyOnCompleteDepartmentManager?: boolean;
   }[];
+  fields?: FieldInput[];
 }
 ) {
   const session = await auth();
   if (!session?.user) throw new Error("Μη εξουσιοδοτημένη πρόσβαση");
   requireRole(session.user.role, [Role.SUPER_ADMIN]);
+
+  const fields = data.fields ?? [];
 
   await prisma.$transaction(async (tx) => {
     await tx.processTemplateDepartment.deleteMany({ where: { processTemplateId: id } });
@@ -211,6 +263,38 @@ export async function updateProcessTemplate(
         },
       });
     }
+
+    const existingFields = await tx.processFieldDefinition.findMany({
+      where: { processTemplateId: id, deletedAt: null },
+    });
+    const keepIds = new Set(fields.filter((f) => f.id).map((f) => f.id as string));
+
+    // soft-delete removed fields (preserve historical values)
+    for (const ef of existingFields) {
+      if (!keepIds.has(ef.id)) {
+        await tx.processFieldDefinition.update({ where: { id: ef.id }, data: { deletedAt: new Date() } });
+      }
+    }
+
+    for (const f of fields) {
+      if (f.id) {
+        const prev = existingFields.find((e) => e.id === f.id);
+        // block type change once values exist
+        if (prev && prev.type !== f.type) {
+          const used = await tx.processFieldValue.count({ where: { fieldDefinitionId: f.id } });
+          if (used > 0) throw new Error(`Δεν επιτρέπεται αλλαγή τύπου στο πεδίο «${f.name}» — υπάρχουν καταχωρημένες τιμές.`);
+        }
+        await tx.processFieldDefinition.update({
+          where: { id: f.id },
+          data: { name: f.name, key: f.key, type: f.type, order: f.order, required: f.required, captureTaskOrder: f.captureTaskOrder, lookupListId: f.lookupListId ?? null },
+        });
+      } else {
+        await tx.processFieldDefinition.create({
+          data: { processTemplateId: id, name: f.name, key: f.key, type: f.type, order: f.order, required: f.required, captureTaskOrder: f.captureTaskOrder, lookupListId: f.lookupListId ?? undefined },
+        });
+      }
+    }
+    await refreshPivotView(tx, id);
   });
 
   revalidatePath("/process-templates");
