@@ -31,6 +31,16 @@ const EXAMPLES = [
   "Εταιρία παροχής υπηρεσιών IT",
 ];
 
+/** Παλέτα χρωμάτων για τις κάρτες προτεινόμενων διαδικασιών (κυκλική ανά κάρτα). */
+const CARD_ACCENTS = [
+  { bar: "bg-blue-500", tint: "bg-blue-500/10 text-blue-600 dark:text-blue-400", selRing: "ring-blue-500/40 border-blue-500" },
+  { bar: "bg-emerald-500", tint: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400", selRing: "ring-emerald-500/40 border-emerald-500" },
+  { bar: "bg-amber-500", tint: "bg-amber-500/10 text-amber-600 dark:text-amber-400", selRing: "ring-amber-500/40 border-amber-500" },
+  { bar: "bg-violet-500", tint: "bg-violet-500/10 text-violet-600 dark:text-violet-400", selRing: "ring-violet-500/40 border-violet-500" },
+  { bar: "bg-rose-500", tint: "bg-rose-500/10 text-rose-600 dark:text-rose-400", selRing: "ring-rose-500/40 border-rose-500" },
+  { bar: "bg-cyan-500", tint: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400", selRing: "ring-cyan-500/40 border-cyan-500" },
+] as const;
+
 export function ProcessAdvisorClient() {
   const [description, setDescription] = useState("");
   const [processes, setProcesses] = useState<ProcessBlueprint[]>([]);
@@ -219,16 +229,20 @@ export function ProcessAdvisorClient() {
             {processes.map((p, i) => {
               const isSel = selected.has(i);
               const isOpen = expanded.has(i);
+              const accent = CARD_ACCENTS[i % CARD_ACCENTS.length];
               return (
                 <div
                   key={i}
                   className={cn(
-                    "flex flex-col rounded-xl border bg-card shadow-sm transition-all",
+                    "flex flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition-all",
                     isSel
-                      ? "border-primary ring-1 ring-primary/40 shadow-md"
+                      ? cn("ring-1 shadow-md", accent.selRing)
                       : "hover:border-border hover:shadow-md",
                   )}
                 >
+                  {/* colored accent bar */}
+                  <div className={cn("h-1 w-full", accent.bar)} />
+
                   {/* card head */}
                   <div
                     role="button"
@@ -248,11 +262,11 @@ export function ProcessAdvisorClient() {
                         {p.name || "Διαδικασία"}
                       </h3>
                       <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                        <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">
+                        <span className={cn("inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium", accent.tint)}>
                           <ListChecks className="size-3" />
                           {p.tasks.length} βήματα
                         </span>
-                        <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">
+                        <span className={cn("inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium", accent.tint)}>
                           <FormInput className="size-3" />
                           {p.fields.length} πεδία
                         </span>

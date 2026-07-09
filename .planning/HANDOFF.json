@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": "2026-07-09T15:12:06.812Z",
+  "timestamp": "2026-07-09T15:25:14.955Z",
   "source": "auto-postool",
   "partial": false,
   "phase": null,
@@ -22,27 +22,7 @@
     },
     {
       "status": "M",
-      "path": "package-lock.json"
-    },
-    {
-      "status": "M",
-      "path": "package.json"
-    },
-    {
-      "status": "M",
-      "path": "prisma/schema.prisma"
-    },
-    {
-      "status": "M",
-      "path": "src/app/(app)/organization/org-canvas.tsx"
-    },
-    {
-      "status": "M",
       "path": "src/app/(app)/process-templates/actions.ts"
-    },
-    {
-      "status": "M",
-      "path": "src/app/(app)/settings/process-advisor/page.tsx"
     },
     {
       "status": "M",
@@ -50,37 +30,9 @@
     },
     {
       "status": "M",
-      "path": "src/components/app-sidebar.tsx"
-    },
-    {
-      "status": "M",
-      "path": "src/lib/nav-config.ts"
-    },
-    {
-      "status": "??",
-      "path": "src/app/(app)/settings/company/"
-    },
-    {
-      "status": "??",
-      "path": "src/app/(app)/settings/connectors/"
-    },
-    {
-      "status": "??",
-      "path": "src/app/api/company/"
-    },
-    {
-      "status": "??",
-      "path": "src/lib/connectors/"
-    },
-    {
-      "status": "??",
-      "path": "src/lib/crypto.ts"
-    },
-    {
-      "status": "??",
-      "path": "src/lib/vat-wwa.ts"
+      "path": "src/app/(app)/users/users-client.tsx"
     }
   ],
   "next_action": null,
-  "context_notes": "Recent commits:\nba9b9ae style(dashboard): align process launcher + Kanban board with app design\n9b48b3f feat: BPMS dashboard overview + AI business process advisor tool\n2908305 fix: self-heal stale session via email; clarify approval comment is optional\n960eeff fix(process-instances): guard against stale session user (P2003 on currentAssigneeId)\n51ddba4 feat(notifications): per-step option to notify the process initiator"
+  "context_notes": "Recent commits:\n2cdd350 feat(settings): Connectors — διασυνδέσεις με τρίτες εφαρμογές (eshop & ERP)\nba9b9ae style(dashboard): align process launcher + Kanban board with app design\n9b48b3f feat: BPMS dashboard overview + AI business process advisor tool\n2908305 fix: self-heal stale session via email; clarify approval comment is optional\n960eeff fix(process-instances): guard against stale session user (P2003 on currentAssigneeId)"
 }
