@@ -1,6 +1,7 @@
 "use client";
 
-import { Trash2, Plus, Database, AlertCircle } from "lucide-react";
+import { useState } from "react";
+import { Trash2, Plus, Database, AlertCircle, Pencil } from "lucide-react";
 import type { FieldInput } from "../actions";
 import { FIELD_TYPES, fieldTypeLabel } from "@/lib/process-fields/field-types";
 import { Button } from "@/components/ui/button";
@@ -17,12 +18,23 @@ import {
 
 const NONE = "__none__";
 
+const GREEK_MAP: Record<string, string> = {
+  α: "a", β: "v", γ: "g", δ: "d", ε: "e", ζ: "z", η: "i", θ: "th", ι: "i",
+  κ: "k", λ: "l", μ: "m", ν: "n", ξ: "x", ο: "o", π: "p", ρ: "r", σ: "s",
+  ς: "s", τ: "t", υ: "y", φ: "f", χ: "ch", ψ: "ps", ω: "o",
+  ά: "a", έ: "e", ή: "i", ί: "i", ό: "o", ύ: "y", ώ: "o", ϊ: "i", ϋ: "y", ΐ: "i", ΰ: "y",
+};
+
 export function slugifyKey(s: string): string {
+  const transliterated = s
+    .toLowerCase()
+    .split("")
+    .map((ch) => GREEK_MAP[ch] ?? ch)
+    .join("");
   return (
-    s
+    transliterated
       .normalize("NFD")
       .replace(/[̀-ͯ]/g, "")
-      .toLowerCase()
       .replace(/[^a-z0-9]+/g, "_")
       .replace(/^_+|_+$/g, "") || "field"
   );
@@ -104,153 +116,198 @@ export function StepFields(props: {
         </div>
       ) : (
         <div className="space-y-3">
-          {fields.map((f, i) => {
-            const dupKey = f.key.trim() !== "" && (keyCounts.get(f.key.trim()) ?? 0) > 1;
-            const missingList = f.type === "SELECT" && !f.lookupListId;
-            return (
-              <div
-                key={i}
-                className="overflow-hidden rounded-xl border bg-card shadow-sm transition-shadow focus-within:shadow-md"
-              >
-                {/* header: number · name · delete */}
-                <div className="flex items-center gap-3 border-b bg-muted/30 px-3 py-2">
-                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                    {i + 1}
-                  </span>
-                  <Input
-                    value={f.name}
-                    placeholder="Όνομα πεδίου — π.χ. Ποσό δαπάνης"
-                    className="h-8 flex-1 border-0 bg-transparent px-0 text-sm font-medium shadow-none focus-visible:ring-0"
-                    onChange={(e) => update(i, { name: e.target.value })}
-                    onBlur={() => {
-                      if (!f.key.trim() && f.name.trim()) update(i, { key: slugifyKey(f.name) });
-                    }}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="size-8 shrink-0 text-muted-foreground hover:text-destructive"
-                    onClick={() => remove(i)}
-                    aria-label="Αφαίρεση πεδίου"
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
-                </div>
+          {fields.map((f, i) => (
+            <FieldRow
+              key={i}
+              index={i}
+              field={f}
+              taskOptions={taskOptions}
+              lookupLists={lookupLists}
+              dupKey={f.key.trim() !== "" && (keyCounts.get(f.key.trim()) ?? 0) > 1}
+              onUpdate={(patch) => update(i, patch)}
+              onRemove={() => remove(i)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
-                {/* controls */}
-                <div className="grid gap-4 p-3 sm:grid-cols-2 lg:grid-cols-4">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">Τύπος</Label>
-                    <Select
-                      value={f.type}
-                      onValueChange={(v) =>
-                        update(i, {
-                          type: v as FieldInput["type"],
-                          lookupListId: v === "SELECT" ? f.lookupListId : null,
-                        })
-                      }
-                    >
-                      <SelectTrigger className="h-9 w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {FIELD_TYPES.map((t) => (
-                          <SelectItem key={t} value={t}>
-                            {fieldTypeLabel(t)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+function FieldRow(props: {
+  index: number;
+  field: FieldInput;
+  taskOptions: { order: number; name: string }[];
+  lookupLists: { id: string; name: string }[];
+  dupKey: boolean;
+  onUpdate: (patch: Partial<FieldInput>) => void;
+  onRemove: () => void;
+}) {
+  const { index, field: f, taskOptions, lookupLists, dupKey, onUpdate, onRemove } = props;
+  const [showKey, setShowKey] = useState(false);
+  // Key auto-syncs (Latin slug) from the name until the user edits it manually.
+  const [keyEdited, setKeyEdited] = useState(() => f.key.trim() !== "");
+  const missingList = f.type === "SELECT" && !f.lookupListId;
 
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">Βήμα καταχώρησης</Label>
-                    <Select
-                      value={f.captureTaskOrder == null ? NONE : String(f.captureTaskOrder)}
-                      onValueChange={(v) =>
-                        update(i, { captureTaskOrder: v === NONE ? null : Number(v) })
-                      }
-                    >
-                      <SelectTrigger className="h-9 w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={NONE}>Κανένα / πρώτο</SelectItem>
-                        {taskOptions.map((t) => (
-                          <SelectItem key={t.order} value={String(t.order)}>
-                            Βήμα {t.order + 1}: {t.name.trim() || "Χωρίς όνομα"}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+  function handleNameChange(name: string) {
+    onUpdate(keyEdited ? { name } : { name, key: name.trim() ? slugifyKey(name) : "" });
+  }
+  function handleKeyChange(key: string) {
+    setKeyEdited(true);
+    onUpdate({ key });
+  }
 
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">Κλειδί (slug)</Label>
-                    <Input
-                      value={f.key}
-                      placeholder="auto από το όνομα"
-                      className="h-9 font-mono text-xs"
-                      onChange={(e) => update(i, { key: e.target.value })}
-                    />
-                    {dupKey && (
-                      <p className="flex items-center gap-1 text-xs text-destructive">
-                        <AlertCircle className="size-3" />
-                        Το κλειδί πρέπει να είναι μοναδικό.
-                      </p>
-                    )}
-                  </div>
+  return (
+    <div className="overflow-hidden rounded-xl border bg-card shadow-sm transition-shadow focus-within:shadow-md">
+      {/* header: index label + delete */}
+      <div className="flex items-center justify-between border-b bg-muted/30 px-3 py-1.5">
+        <span className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+          <span className="flex size-5 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary">
+            {index + 1}
+          </span>
+          Πεδίο {index + 1}
+        </span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-7 text-muted-foreground hover:text-destructive"
+          onClick={onRemove}
+          aria-label="Αφαίρεση πεδίου"
+        >
+          <Trash2 className="size-4" />
+        </Button>
+      </div>
 
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">Συμπλήρωση</Label>
-                    <label className="flex h-9 cursor-pointer select-none items-center gap-2 rounded-md border border-input bg-transparent px-3 text-sm">
-                      <Checkbox
-                        checked={f.required}
-                        onCheckedChange={(c) => update(i, { required: !!c })}
-                      />
-                      Υποχρεωτικό
-                    </label>
-                  </div>
-                </div>
+      {/* primary controls */}
+      <div className="grid gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="space-y-1.5 sm:col-span-2 lg:col-span-1">
+          <Label className="text-xs text-muted-foreground">Όνομα πεδίου</Label>
+          <Input
+            value={f.name}
+            placeholder="π.χ. Ποσό δαπάνης"
+            className="h-9"
+            onChange={(e) => handleNameChange(e.target.value)}
+          />
+        </div>
 
-                {/* lookup list binding (SELECT only) */}
-                {f.type === "SELECT" && (
-                  <div className="space-y-1.5 border-t bg-primary/5 px-3 py-3">
-                    <Label className="text-xs font-medium text-foreground">Λίστα τιμών</Label>
-                    <Select
-                      value={f.lookupListId ?? undefined}
-                      onValueChange={(v) => update(i, { lookupListId: v })}
-                      disabled={lookupLists.length === 0}
-                    >
-                      <SelectTrigger className="h-9 w-full max-w-sm">
-                        <SelectValue placeholder="Επιλέξτε λίστα τιμών…" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {lookupLists.map((l) => (
-                          <SelectItem key={l.id} value={l.id}>
-                            {l.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {lookupLists.length === 0 ? (
-                      <p className="text-xs text-muted-foreground">
-                        Δεν υπάρχουν λίστες τιμών. Δημιουργήστε μία από τις Ρυθμίσεις → Λίστες Τιμών.
-                      </p>
-                    ) : (
-                      missingList && (
-                        <p className="flex items-center gap-1 text-xs text-destructive">
-                          <AlertCircle className="size-3" />
-                          Τα πεδία τύπου «Λίστα τιμών» απαιτούν επιλογή λίστας.
-                        </p>
-                      )
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Τύπος</Label>
+          <Select
+            value={f.type}
+            onValueChange={(v) =>
+              onUpdate({
+                type: v as FieldInput["type"],
+                lookupListId: v === "SELECT" ? f.lookupListId : null,
+              })
+            }
+          >
+            <SelectTrigger className="h-9 w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {FIELD_TYPES.map((t) => (
+                <SelectItem key={t} value={t}>
+                  {fieldTypeLabel(t)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground">Βήμα καταχώρησης</Label>
+          <Select
+            value={f.captureTaskOrder == null ? NONE : String(f.captureTaskOrder)}
+            onValueChange={(v) => onUpdate({ captureTaskOrder: v === NONE ? null : Number(v) })}
+          >
+            <SelectTrigger className="h-9 w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NONE}>Κανένα / πρώτο</SelectItem>
+              {taskOptions.map((t) => (
+                <SelectItem key={t.order} value={String(t.order)}>
+                  Βήμα {t.order + 1}: {t.name.trim() || "Χωρίς όνομα"}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* secondary row: required toggle + collapsible key */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-3 pb-3">
+        <label className="flex cursor-pointer select-none items-center gap-2 text-sm">
+          <Checkbox checked={f.required} onCheckedChange={(c) => onUpdate({ required: !!c })} />
+          Υποχρεωτικό
+        </label>
+        <button
+          type="button"
+          onClick={() => setShowKey((s) => !s)}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <span>Κλειδί:</span>
+          <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-foreground">
+            {f.key.trim() || "—"}
+          </code>
+          <Pencil className="size-3" />
+        </button>
+        {dupKey && (
+          <span className="flex items-center gap-1 text-xs text-destructive">
+            <AlertCircle className="size-3" />
+            Διπλό κλειδί
+          </span>
+        )}
+      </div>
+
+      {showKey && (
+        <div className="space-y-1.5 border-t bg-muted/20 px-3 py-3">
+          <Label className="text-xs text-muted-foreground">Κλειδί (τεχνικό αναγνωριστικό)</Label>
+          <Input
+            value={f.key}
+            placeholder={f.name.trim() ? slugifyKey(f.name) : "auto"}
+            className="h-9 max-w-xs font-mono text-xs"
+            onChange={(e) => handleKeyChange(e.target.value)}
+          />
+          <p className="text-xs text-muted-foreground">
+            Δημιουργείται αυτόματα από το όνομα. Χρησιμοποιείται στις στήλες αποτελεσμάτων/export.
+          </p>
+        </div>
+      )}
+
+      {/* lookup list binding (SELECT only) */}
+      {f.type === "SELECT" && (
+        <div className="space-y-1.5 border-t bg-primary/5 px-3 py-3">
+          <Label className="text-xs font-medium text-foreground">Λίστα τιμών</Label>
+          <Select
+            value={f.lookupListId ?? undefined}
+            onValueChange={(v) => onUpdate({ lookupListId: v })}
+            disabled={lookupLists.length === 0}
+          >
+            <SelectTrigger className="h-9 w-full max-w-sm">
+              <SelectValue placeholder="Επιλέξτε λίστα τιμών…" />
+            </SelectTrigger>
+            <SelectContent>
+              {lookupLists.map((l) => (
+                <SelectItem key={l.id} value={l.id}>
+                  {l.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {lookupLists.length === 0 ? (
+            <p className="text-xs text-muted-foreground">
+              Δεν υπάρχουν λίστες τιμών. Δημιουργήστε μία από τις Ρυθμίσεις → Λίστες Τιμών.
+            </p>
+          ) : (
+            missingList && (
+              <p className="flex items-center gap-1 text-xs text-destructive">
+                <AlertCircle className="size-3" />
+                Τα πεδία τύπου «Λίστα τιμών» απαιτούν επιλογή λίστας.
+              </p>
+            )
+          )}
         </div>
       )}
     </div>
