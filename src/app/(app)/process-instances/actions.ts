@@ -146,8 +146,14 @@ export async function startTask(taskId: string) {
     const taskWithDetails = await prisma.processTaskAssignment.findUnique({
       where: { id: taskId },
       include: {
-        processInstance: { select: { name: true, id: true } },
-        templateTask: { select: { name: true } },
+        processInstance: {
+          select: {
+            name: true,
+            id: true,
+            startedBy: { select: { id: true, email: true, firstName: true, lastName: true } },
+          },
+        },
+        templateTask: { select: { name: true, notifyOnStartInitiator: true } },
         possibleAssignees: { include: { user: { select: { id: true, email: true, firstName: true, lastName: true } } } },
       },
     });
@@ -156,8 +162,10 @@ export async function startTask(taskId: string) {
       const processName = taskWithDetails.processInstance.name;
       const taskName = taskWithDetails.templateTask.name;
       const instanceId = taskWithDetails.processInstance.id;
+      const notified = new Set<string>();
       for (const pa of taskWithDetails.possibleAssignees) {
         if (pa.user.id === session.user.id) continue;
+        notified.add(pa.user.id);
         const { subject, html } = buildTaskStartedEmail({
           assigneeEmail: pa.user.email,
           assigneeName: `${pa.user.firstName} ${pa.user.lastName}`.trim() || pa.user.email,
@@ -168,6 +176,26 @@ export async function startTask(taskId: string) {
         });
         sendEmail({ to: pa.user.email, subject, html }).catch((err) =>
           console.error("[BPM] Task started email failed:", err)
+        );
+      }
+      // Notify the process initiator that this step has started (if enabled)
+      const initiator = taskWithDetails.processInstance.startedBy;
+      if (
+        taskWithDetails.templateTask.notifyOnStartInitiator &&
+        initiator &&
+        initiator.id !== session.user.id &&
+        !notified.has(initiator.id)
+      ) {
+        const { subject, html } = buildTaskStartedEmail({
+          assigneeEmail: initiator.email,
+          assigneeName: `${initiator.firstName} ${initiator.lastName}`.trim() || initiator.email,
+          processName,
+          taskName,
+          startedByName,
+          instanceId,
+        });
+        sendEmail({ to: initiator.email, subject, html }).catch((err) =>
+          console.error("[BPM] Task started (initiator) email failed:", err)
         );
       }
     }
@@ -293,17 +321,19 @@ export async function approveTask(taskId: string, comment?: string) {
     });
     if (instanceWithStarter?.startedBy) {
       const toName = `${instanceWithStarter.startedBy.firstName} ${instanceWithStarter.startedBy.lastName}`.trim() || instanceWithStarter.startedBy.email;
-      const { subject, html } = buildTaskApprovedEmail({
-        toEmail: instanceWithStarter.startedBy.email,
-        toName,
-        processName: instanceWithStarter.name,
-        taskName: task.templateTask.name,
-        approvedByName: session.user.name ?? session.user.email ?? "Ένας χρήστης",
-        instanceId: task.processInstanceId,
-      });
-      sendEmail({ to: instanceWithStarter.startedBy.email, subject, html }).catch((err) =>
-        console.error("[BPM] Task approved email failed:", err)
-      );
+      if (task.templateTask.notifyOnCompleteInitiator) {
+        const { subject, html } = buildTaskApprovedEmail({
+          toEmail: instanceWithStarter.startedBy.email,
+          toName,
+          processName: instanceWithStarter.name,
+          taskName: task.templateTask.name,
+          approvedByName: session.user.name ?? session.user.email ?? "Ένας χρήστης",
+          instanceId: task.processInstanceId,
+        });
+        sendEmail({ to: instanceWithStarter.startedBy.email, subject, html }).catch((err) =>
+          console.error("[BPM] Task approved email failed:", err)
+        );
+      }
       if (allMandatoryApproved) {
         const completed = buildProcessCompletedEmail({
           toEmail: instanceWithStarter.startedBy.email,
@@ -359,10 +389,10 @@ export async function rejectTask(taskId: string, comment: string) {
         processInstance: {
           include: { startedBy: { select: { email: true, firstName: true, lastName: true } } },
         },
-        templateTask: { select: { name: true } },
+        templateTask: { select: { name: true, notifyOnCompleteInitiator: true } },
       },
     });
-    if (taskWithInstance?.processInstance?.startedBy) {
+    if (taskWithInstance?.processInstance?.startedBy && taskWithInstance.templateTask.notifyOnCompleteInitiator) {
       const starter = taskWithInstance.processInstance.startedBy;
       const toName = `${starter.firstName} ${starter.lastName}`.trim() || starter.email;
       const { subject, html } = buildTaskRejectedEmail({

@@ -80,6 +80,8 @@ function newTask(order: number): TaskInput {
     notifyOnStartDepartmentManager: false,
     notifyOnCompleteSameDepartment: false,
     notifyOnCompleteDepartmentManager: false,
+    notifyOnStartInitiator: false,
+    notifyOnCompleteInitiator: true,
   };
 }
 

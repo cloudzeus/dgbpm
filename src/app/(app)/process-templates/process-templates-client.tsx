@@ -111,6 +111,8 @@ export type TaskInput = {
   notifyOnStartDepartmentManager: boolean;
   notifyOnCompleteSameDepartment: boolean;
   notifyOnCompleteDepartmentManager: boolean;
+  notifyOnStartInitiator: boolean;
+  notifyOnCompleteInitiator: boolean;
 };
 
 export function PositionMultiSelect({
@@ -495,6 +497,13 @@ export function SortableTaskItem({
                 />
                 Προϊστάμενος τμήματος του υπευθύνου
               </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <Checkbox
+                  checked={task.notifyOnStartInitiator}
+                  onCheckedChange={(c) => onUpdate(index, { notifyOnStartInitiator: !!c })}
+                />
+                Αυτόν που ξεκίνησε τη διαδικασία
+              </label>
             </div>
           </div>
           <div className="space-y-2">
@@ -520,6 +529,13 @@ export function SortableTaskItem({
                   onCheckedChange={(c) => onUpdate(index, { notifyOnCompleteDepartmentManager: !!c })}
                 />
                 Προϊστάμενος τμήματος του υπευθύνου
+              </label>
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <Checkbox
+                  checked={task.notifyOnCompleteInitiator}
+                  onCheckedChange={(c) => onUpdate(index, { notifyOnCompleteInitiator: !!c })}
+                />
+                Αυτόν που ξεκίνησε τη διαδικασία
               </label>
             </div>
           </div>
@@ -591,6 +607,8 @@ export function ProcessTemplatesClient({
           notifyOnStartDepartmentManager?: boolean;
           notifyOnCompleteSameDepartment?: boolean;
           notifyOnCompleteDepartmentManager?: boolean;
+          notifyOnStartInitiator?: boolean;
+          notifyOnCompleteInitiator?: boolean;
         },
         i: number
       ): TaskInput => ({
@@ -610,6 +628,8 @@ export function ProcessTemplatesClient({
         notifyOnStartDepartmentManager: task.notifyOnStartDepartmentManager ?? false,
         notifyOnCompleteSameDepartment: task.notifyOnCompleteSameDepartment ?? false,
         notifyOnCompleteDepartmentManager: task.notifyOnCompleteDepartmentManager ?? false,
+        notifyOnStartInitiator: task.notifyOnStartInitiator ?? false,
+        notifyOnCompleteInitiator: task.notifyOnCompleteInitiator ?? true,
       })
     );
   }
@@ -631,6 +651,8 @@ export function ProcessTemplatesClient({
       notifyOnStartDepartmentManager: t.notifyOnStartDepartmentManager,
       notifyOnCompleteSameDepartment: t.notifyOnCompleteSameDepartment,
       notifyOnCompleteDepartmentManager: t.notifyOnCompleteDepartmentManager,
+      notifyOnStartInitiator: t.notifyOnStartInitiator,
+      notifyOnCompleteInitiator: t.notifyOnCompleteInitiator,
     }));
     const fieldPayload: FieldInput[] = state.fields.map((f, i) => ({
       id: f.id,

@@ -37,6 +37,8 @@ export async function GET(
       notifyOnStartDepartmentManager: t.notifyOnStartDepartmentManager,
       notifyOnCompleteSameDepartment: t.notifyOnCompleteSameDepartment,
       notifyOnCompleteDepartmentManager: t.notifyOnCompleteDepartmentManager,
+      notifyOnStartInitiator: t.notifyOnStartInitiator,
+      notifyOnCompleteInitiator: t.notifyOnCompleteInitiator,
     })),
   });
 }

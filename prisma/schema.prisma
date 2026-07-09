@@ -181,6 +181,9 @@ model ProcessTaskTemplate {
   notifyOnStartDepartmentManager Boolean @default(false)
   notifyOnCompleteSameDepartment    Boolean @default(false)
   notifyOnCompleteDepartmentManager Boolean @default(false)
+  // Notify the user who started the process instance
+  notifyOnStartInitiator    Boolean @default(false)
+  notifyOnCompleteInitiator Boolean @default(true)
 
   processTemplate         ProcessTemplate         @relation(fields: [processTemplateId], references: [id], onDelete: Cascade)
   approverRoles            TaskApproverRole[]

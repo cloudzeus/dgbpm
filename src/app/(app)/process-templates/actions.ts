@@ -223,6 +223,8 @@ export async function createProcessTemplate(data: {
     notifyOnStartDepartmentManager?: boolean;
     notifyOnCompleteSameDepartment?: boolean;
     notifyOnCompleteDepartmentManager?: boolean;
+    notifyOnStartInitiator?: boolean;
+    notifyOnCompleteInitiator?: boolean;
   }[];
   fields?: FieldInput[];
 }) {
@@ -265,6 +267,8 @@ export async function createProcessTemplate(data: {
             notifyOnStartDepartmentManager: t.notifyOnStartDepartmentManager ?? false,
             notifyOnCompleteSameDepartment: t.notifyOnCompleteSameDepartment ?? false,
             notifyOnCompleteDepartmentManager: t.notifyOnCompleteDepartmentManager ?? false,
+            notifyOnStartInitiator: t.notifyOnStartInitiator ?? false,
+            notifyOnCompleteInitiator: t.notifyOnCompleteInitiator ?? true,
           })),
         },
       },
@@ -315,6 +319,8 @@ export async function updateProcessTemplate(
     notifyOnStartDepartmentManager?: boolean;
     notifyOnCompleteSameDepartment?: boolean;
     notifyOnCompleteDepartmentManager?: boolean;
+    notifyOnStartInitiator?: boolean;
+    notifyOnCompleteInitiator?: boolean;
   }[];
   fields?: FieldInput[];
 }
@@ -373,6 +379,8 @@ export async function updateProcessTemplate(
           notifyOnStartDepartmentManager: t.notifyOnStartDepartmentManager ?? false,
           notifyOnCompleteSameDepartment: t.notifyOnCompleteSameDepartment ?? false,
           notifyOnCompleteDepartmentManager: t.notifyOnCompleteDepartmentManager ?? false,
+          notifyOnStartInitiator: t.notifyOnStartInitiator ?? false,
+          notifyOnCompleteInitiator: t.notifyOnCompleteInitiator ?? true,
         },
       });
     }
