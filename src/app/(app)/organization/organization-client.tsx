@@ -3,12 +3,24 @@
 import { useMemo, useState, useTransition } from "react";
 import { DndContext, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { Plus, Users, Check, Loader2, AlertTriangle } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import type { OrgUser } from "./org-avatar";
 import { OrgCanvas } from "./org-canvas";
 import { DepartmentDetailPanel } from "./department-detail-panel";
 import { UserPoolDrawer, UserPickerDialog } from "./user-pool-drawer";
+import { DepartmentEditDialog, type DepartmentMeta } from "./department-edit-dialog";
+import { PromptDialog } from "./prompt-dialog";
 import {
-  createDepartmentNode, reparentDepartment, renameDepartment,
+  createDepartmentNode, reparentDepartment, updateDepartmentMeta, deleteDepartmentNode,
   createPosition, renamePosition, deletePosition,
   setPositionManager, assignUserToPosition, removeUserFromPosition,
 } from "./actions";
@@ -21,12 +33,18 @@ export type DeptData = {
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 type PickerTarget = { positionId: string; mode: "manager" | "employee" } | null;
+type PosPrompt = { id: string; name: string } | null;
+type Confirm = { title: string; description: string; action: () => Promise<void> } | null;
 
 export function OrganizationClient({ departments, users }: { departments: DeptData[]; users: OrgUser[] }) {
   const [selectedId, setSelectedId] = useState<string | null>(departments[0]?.id ?? null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [picker, setPicker] = useState<PickerTarget>(null);
   const [save, setSave] = useState<SaveState>("idle");
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [editDept, setEditDept] = useState<DeptData | null>(null);
+  const [posRename, setPosRename] = useState<PosPrompt>(null);
+  const [confirm, setConfirm] = useState<Confirm>(null);
   const [, startTransition] = useTransition();
 
   const usersById = useMemo(() => new Map(users.map((u) => [u.id, u])), [users]);
@@ -43,7 +61,7 @@ export function OrganizationClient({ departments, users }: { departments: DeptDa
     setSave("saving");
     startTransition(async () => {
       try { await fn(); setSave("saved"); }
-      catch (e) { setSave("error"); alert(e instanceof Error ? e.message : "Σφάλμα αποθήκευσης"); }
+      catch (e) { setSave("error"); setErrorMsg(e instanceof Error ? e.message : "Σφάλμα αποθήκευσης"); }
     });
   }
 
@@ -63,8 +81,13 @@ export function OrganizationClient({ departments, users }: { departments: DeptDa
     onClearManager: (positionId: string) => run(() => setPositionManager(positionId, null)),
     onOpenEmployeePicker: (positionId: string) => setPicker({ positionId, mode: "employee" as const }),
     onRemoveEmployee: (positionId: string, userId: string) => run(() => removeUserFromPosition(positionId, userId)),
-    onRename: (positionId: string, name: string) => run(() => renamePosition(positionId, name)),
-    onDelete: (positionId: string) => run(() => deletePosition(positionId)),
+    onRequestRename: (positionId: string, currentName: string) => setPosRename({ id: positionId, name: currentName }),
+    onRequestDelete: (positionId: string, currentName: string) =>
+      setConfirm({
+        title: "Διαγραφή θέσης εργασίας",
+        description: `Σίγουρα θέλεις να διαγράψεις τη θέση «${currentName}»; Οι αναθέσεις χρηστών σε αυτή τη θέση θα αφαιρεθούν.`,
+        action: () => deletePosition(positionId),
+      }),
   };
 
   return (
@@ -100,7 +123,14 @@ export function OrganizationClient({ departments, users }: { departments: DeptDa
               department={selected}
               parentName={parentName}
               onAddPosition={(departmentId) => run(() => createPosition(departmentId))}
-              onRenameDepartment={(id, name) => run(() => renameDepartment(id, name))}
+              onEditDepartment={(dept) => setEditDept(dept)}
+              onDeleteDepartment={(dept) =>
+                setConfirm({
+                  title: "Διαγραφή τμήματος",
+                  description: `Σίγουρα θέλεις να διαγράψεις το τμήμα «${dept.name}»; Τυχόν υποτμήματα θα μεταφερθούν στον γονέα του και οι θέσεις του θα διαγραφούν.`,
+                  action: () => deleteDepartmentNode(dept.id),
+                })
+              }
               {...cardProps}
             />
           </div>
@@ -120,6 +150,54 @@ export function OrganizationClient({ departments, users }: { departments: DeptDa
           else run(() => assignUserToPosition(picker.positionId, userId));
         }}
       />
+
+      <DepartmentEditDialog
+        key={editDept?.id ?? "none"}
+        department={editDept}
+        open={editDept !== null}
+        onOpenChange={(o) => { if (!o) setEditDept(null); }}
+        onSave={(id: string, meta: DepartmentMeta) => run(() => updateDepartmentMeta(id, meta))}
+      />
+
+      <PromptDialog
+        key={posRename?.id ?? "none"}
+        open={posRename !== null}
+        onOpenChange={(o) => { if (!o) setPosRename(null); }}
+        title="Μετονομασία θέσης"
+        label="Όνομα θέσης"
+        initial={posRename?.name ?? ""}
+        onSubmit={(name) => { if (posRename) run(() => renamePosition(posRename.id, name)); }}
+      />
+
+      <AlertDialog open={confirm !== null} onOpenChange={(o) => { if (!o) setConfirm(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{confirm?.title}</AlertDialogTitle>
+            <AlertDialogDescription>{confirm?.description}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Άκυρο</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-white hover:bg-destructive/90"
+              onClick={() => { if (confirm) run(confirm.action); }}
+            >
+              Διαγραφή
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={errorMsg !== null} onOpenChange={(o) => { if (!o) setErrorMsg(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Σφάλμα</AlertDialogTitle>
+            <AlertDialogDescription>{errorMsg}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setErrorMsg(null)}>Εντάξει</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
