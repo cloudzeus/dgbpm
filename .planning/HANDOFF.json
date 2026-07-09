@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": "2026-07-09T11:07:04.810Z",
+  "timestamp": "2026-07-09T11:12:08.414Z",
   "source": "auto-postool",
   "partial": false,
   "phase": null,
@@ -22,33 +22,9 @@
     },
     {
       "status": "M",
-      "path": "src/app/(app)/dashboard/page.tsx"
-    },
-    {
-      "status": "M",
-      "path": "src/app/(app)/process-templates/actions.ts"
-    },
-    {
-      "status": "M",
-      "path": "src/app/(app)/process-templates/wizard/step-fields.tsx"
-    },
-    {
-      "status": "M",
-      "path": "src/lib/nav-config.ts"
-    },
-    {
-      "status": "??",
-      "path": "src/app/(app)/dashboard/dashboard-overview.tsx"
-    },
-    {
-      "status": "??",
-      "path": "src/app/(app)/settings/process-advisor/"
-    },
-    {
-      "status": "??",
-      "path": "src/lib/process-fields/slug.ts"
+      "path": "src/app/(app)/dashboard/dashboard-process-section.tsx"
     }
   ],
   "next_action": null,
-  "context_notes": "Recent commits:\n2908305 fix: self-heal stale session via email; clarify approval comment is optional\n960eeff fix(process-instances): guard against stale session user (P2003 on currentAssigneeId)\n51ddba4 feat(notifications): per-step option to notify the process initiator\na693319 feat(ui): AI process blueprint, sticky wizard footer, actions dropdown & row layout fix\ne8d3939 fix(ui): make field name the primary input; auto-generate Latin slug key"
+  "context_notes": "Recent commits:\n9b48b3f feat: BPMS dashboard overview + AI business process advisor tool\n2908305 fix: self-heal stale session via email; clarify approval comment is optional\n960eeff fix(process-instances): guard against stale session user (P2003 on currentAssigneeId)\n51ddba4 feat(notifications): per-step option to notify the process initiator\na693319 feat(ui): AI process blueprint, sticky wizard footer, actions dropdown & row layout fix"
 }

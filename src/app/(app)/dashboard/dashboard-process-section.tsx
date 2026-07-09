@@ -45,29 +45,21 @@ import { cn } from "@/lib/utils";
 const KANBAN_COLUMNS = ["PENDING", "IN_PROGRESS", "APPROVED", "REJECTED", "SKIPPED"] as const;
 type KanbanStatus = (typeof KANBAN_COLUMNS)[number];
 
-const COLUMN_COLORS: Record<KanbanStatus, string> = {
-  PENDING: "border-amber-500 bg-amber-500/10",
-  IN_PROGRESS: "border-blue-500 bg-blue-500/10",
-  APPROVED: "border-emerald-500 bg-emerald-500/10",
-  REJECTED: "border-red-500 bg-red-500/10",
-  SKIPPED: "border-zinc-500 bg-zinc-500/10",
+const STATUS_DOT: Record<KanbanStatus, string> = {
+  PENDING: "bg-amber-500",
+  IN_PROGRESS: "bg-blue-500",
+  APPROVED: "bg-emerald-500",
+  REJECTED: "bg-red-500",
+  SKIPPED: "bg-muted-foreground/40",
 };
 
-const CARD_COLORS: Record<KanbanStatus, string> = {
-  PENDING: "border-amber-500/60 bg-amber-500/20 text-white",
-  IN_PROGRESS: "border-blue-500/60 bg-blue-500/20 text-white",
-  APPROVED: "border-emerald-500/60 bg-emerald-500/20 text-white",
-  REJECTED: "border-red-500/60 bg-red-500/20 text-white",
-  SKIPPED: "border-zinc-500/60 bg-zinc-500/20 text-white",
+const CARD_ACCENT: Record<KanbanStatus, string> = {
+  PENDING: "border-l-amber-500",
+  IN_PROGRESS: "border-l-blue-500",
+  APPROVED: "border-l-emerald-500",
+  REJECTED: "border-l-red-500",
+  SKIPPED: "border-l-muted-foreground/30",
 };
-
-const TEMPLATE_CARD_ICON_AND_TEXT: string[] = [
-  "text-emerald-500",
-  "text-blue-500",
-  "text-amber-500",
-  "text-red-500",
-  "text-zinc-400",
-];
 
 export type DashboardTemplate = { id: string; name: string; description: string | null; icon: string };
 export type DashboardTask = {
@@ -99,9 +91,9 @@ function KanbanCard({
   return (
     <div
       className={cn(
-        "rounded-lg border-2 p-3 shadow-sm transition-all",
-        CARD_COLORS[status],
-        isDragging && "opacity-95 scale-105 shadow-lg ring-2 ring-white/30",
+        "rounded-lg border border-l-4 bg-card p-3 shadow-sm transition-all",
+        CARD_ACCENT[status],
+        isDragging ? "scale-[1.02] shadow-md ring-1 ring-primary/30" : "hover:shadow-md",
         isGhost && "pointer-events-none z-[100]"
       )}
       style={style}
@@ -109,12 +101,12 @@ function KanbanCard({
       <div className="flex items-start gap-2">
         <ProcessIcon
           icon={task.processInstance.processTemplate.icon}
-          className="size-4 shrink-0 opacity-80 mt-0.5"
+          className="size-4 shrink-0 text-muted-foreground mt-0.5"
         />
         <div className="min-w-0 flex-1">
-          <p className="font-medium text-sm truncate">{task.templateTask.name}</p>
-          <p className="text-xs opacity-90 truncate">{task.processInstance.name}</p>
-          <p className="text-xs opacity-80">
+          <p className="font-medium text-sm text-foreground truncate">{task.templateTask.name}</p>
+          <p className="text-xs text-muted-foreground truncate">{task.processInstance.name}</p>
+          <p className="text-xs text-muted-foreground/80 truncate">
             {task.processInstance.startedBy.firstName} {task.processInstance.startedBy.lastName}
           </p>
         </div>
@@ -191,15 +183,15 @@ function StaticKanbanColumn({
     return true;
   });
   return (
-    <div
-      className={cn(
-        "rounded-xl border-2 min-h-[200px] p-3 transition-colors",
-        COLUMN_COLORS[status]
-      )}
-    >
-      <h3 className="font-semibold text-sm mb-3 flex items-center justify-between text-zinc-200">
-        <span>{taskStatusMeta(status).label}</span>
-        <span className="text-zinc-400 font-normal">{tasks.length}</span>
+    <div className="rounded-xl border bg-muted/30 min-h-[200px] p-2.5 transition-colors">
+      <h3 className="font-semibold text-sm mb-3 flex items-center justify-between px-1">
+        <span className="flex items-center gap-2 text-foreground">
+          <span className={cn("size-2 rounded-full", STATUS_DOT[status])} />
+          {taskStatusMeta(status).label}
+        </span>
+        <span className="rounded-full bg-background px-1.5 text-xs font-medium text-muted-foreground">
+          {tasks.length}
+        </span>
       </h3>
       <div className="space-y-2">
         {uniqueTasks.map((t) => (
@@ -246,14 +238,18 @@ function DroppableColumn({
         columnRef?.(el);
       }}
       className={cn(
-        "rounded-xl border-2 min-h-[200px] p-3 transition-colors",
-        COLUMN_COLORS[status],
-        isOver && "ring-2 ring-white/50"
+        "rounded-xl border bg-muted/30 min-h-[200px] p-2.5 transition-colors",
+        isOver && "ring-2 ring-primary/40 bg-primary/5"
       )}
     >
-      <h3 className="font-semibold text-sm mb-3 flex items-center justify-between text-zinc-200">
-        <span>{taskStatusMeta(status).label}</span>
-        <span className="text-zinc-400 font-normal">{tasks.length}</span>
+      <h3 className="font-semibold text-sm mb-3 flex items-center justify-between px-1">
+        <span className="flex items-center gap-2 text-foreground">
+          <span className={cn("size-2 rounded-full", STATUS_DOT[status])} />
+          {taskStatusMeta(status).label}
+        </span>
+        <span className="rounded-full bg-background px-1.5 text-xs font-medium text-muted-foreground">
+          {tasks.length}
+        </span>
       </h3>
       <div className="space-y-2">
         {(() => {
@@ -529,8 +525,7 @@ export function DashboardProcessSection({
           <h2 className="text-lg font-semibold">Έναρξη διαδικασίας</h2>
           <TooltipProvider>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {allowedTemplates.map((t, i) => {
-                const colorClass = TEMPLATE_CARD_ICON_AND_TEXT[i % TEMPLATE_CARD_ICON_AND_TEXT.length];
+              {allowedTemplates.map((t) => {
                 const displayName = t.name.length > 20 ? `${t.name.slice(0, 20)}…` : t.name;
                 const tooltipContent = [t.name, t.description].filter(Boolean).join(t.description ? "\n\n" : "");
                 const card = (
@@ -544,12 +539,12 @@ export function DashboardProcessSection({
                         templateName: t.name,
                       })
                     }
-                    className="rounded-xl border border-zinc-600 bg-zinc-800 p-3 transition-all hover:bg-zinc-700 hover:shadow-lg flex items-center gap-3 text-left w-full"
+                    className="group flex w-full items-center gap-3 rounded-xl border bg-card p-3 text-left shadow-sm transition-all hover:border-primary/40 hover:bg-muted/50 hover:shadow-md"
                   >
-                    <div className={cn("shrink-0", colorClass)}>
-                      <ProcessIcon icon={t.icon} className="size-6" />
-                    </div>
-                    <span className={cn("font-medium text-size-xs truncate min-w-0 flex-1", colorClass)}>
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary/15">
+                      <ProcessIcon icon={t.icon} className="size-5" />
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
                       {displayName}
                     </span>
                   </button>
@@ -571,9 +566,9 @@ export function DashboardProcessSection({
       )}
 
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold text-zinc-200">Εργασίες ανά κατάσταση</h2>
+        <h2 className="text-lg font-semibold">Εργασίες ανά κατάσταση</h2>
         {!dndMounted ? (
-          <div className="rounded-xl bg-zinc-900/95 border border-zinc-700 p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 overflow-x-auto pb-4">
+          <div className="rounded-xl border bg-muted/20 p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 overflow-x-auto pb-4">
             {KANBAN_COLUMNS.map((status) => (
               <StaticKanbanColumn
                 key={status}
@@ -589,7 +584,7 @@ export function DashboardProcessSection({
             collisionDetection={pointerWithin}
             onDragEnd={handleDragEnd}
           >
-            <div className="rounded-xl bg-zinc-900/95 border border-zinc-700 p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 overflow-x-auto pb-4">
+            <div className="rounded-xl border bg-muted/20 p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 overflow-x-auto pb-4">
               {KANBAN_COLUMNS.map((status) => (
                 <DroppableColumn
                   key={status}
