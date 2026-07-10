@@ -428,7 +428,8 @@ export async function rejectTask(taskId: string, comment: string) {
 
   if (!comment?.trim()) throw new Error("Απαιτείται σχόλιο για την απόρριψη");
 
-  await assertPriorTasksComplete(taskId);
+  // Σημείωση: η απόρριψη ΔΕΝ ελέγχει τη σειρά — διακόπτει/ακυρώνει τη διαδικασία
+  // και επιτρέπεται από οποιοδήποτε βήμα στο οποίο έχει δικαίωμα ο χρήστης.
 
   const now = new Date();
   await prisma.$transaction([

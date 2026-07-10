@@ -347,7 +347,7 @@ export function ProcessInstanceDetail({
                     </div>
                   )}
 
-                  {canAct && !locked && (
+                  {canAct && (
                     <section className="space-y-2">
                       <div>
                         <h4 className="ui-eyebrow">Σχόλιο</h4>
@@ -434,46 +434,50 @@ export function ProcessInstanceDetail({
 
                 {/* footer */}
                 {canAct &&
-                  (task.status === "PENDING" || task.status === "IN_PROGRESS") &&
-                  (locked ? (
-                    <div className="flex items-center gap-2 border-t bg-muted/20 px-6 py-4 text-sm text-muted-foreground">
-                      <Lock className="size-4 shrink-0" />
-                      <span>
-                        Ολοκληρώστε πρώτα το προηγούμενο βήμα{" "}
-                        <span className="font-medium text-foreground">
-                          «{priorBlocking!.templateTask.name}» (Βήμα{" "}
-                          {priorBlocking!.templateTask.order + 1})
-                        </span>
-                        .
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="flex flex-wrap justify-end gap-2 border-t px-6 py-4">
-                      {task.status === "PENDING" && (
-                        <Button
-                          variant="outline"
-                          onClick={() => handleStart(task.id)}
-                          disabled={loading}
-                        >
-                          Έναρξη εργασίας
-                        </Button>
+                  (task.status === "PENDING" || task.status === "IN_PROGRESS") && (
+                    <div className="border-t px-6 py-4">
+                      {locked && (
+                        <div className="mb-3 flex items-center gap-2 text-sm text-muted-foreground">
+                          <Lock className="size-4 shrink-0" />
+                          <span>
+                            Η έγκριση είναι κλειδωμένη — ολοκληρώστε πρώτα το βήμα{" "}
+                            <span className="font-medium text-foreground">
+                              «{priorBlocking!.templateTask.name}» (Βήμα{" "}
+                              {priorBlocking!.templateTask.order + 1})
+                            </span>
+                            . Μπορείτε πάντως να απορρίψετε (διακόπτει τη διαδικασία).
+                          </span>
+                        </div>
                       )}
-                      <Button
-                        variant="destructive"
-                        onClick={() => handleReject(task.id)}
-                        disabled={
-                          loading ||
-                          !taskComment.trim() ||
-                          taskComment.replace(/<[^>]*>/g, "").trim() === ""
-                        }
-                      >
-                        Απόρριψη
-                      </Button>
-                      <Button onClick={() => handleApprove(task.id)} disabled={loading}>
-                        Έγκριση
-                      </Button>
+                      <div className="flex flex-wrap justify-end gap-2">
+                        {!locked && task.status === "PENDING" && (
+                          <Button
+                            variant="outline"
+                            onClick={() => handleStart(task.id)}
+                            disabled={loading}
+                          >
+                            Έναρξη εργασίας
+                          </Button>
+                        )}
+                        <Button
+                          variant="destructive"
+                          onClick={() => handleReject(task.id)}
+                          disabled={
+                            loading ||
+                            !taskComment.trim() ||
+                            taskComment.replace(/<[^>]*>/g, "").trim() === ""
+                          }
+                        >
+                          Απόρριψη
+                        </Button>
+                        {!locked && (
+                          <Button onClick={() => handleApprove(task.id)} disabled={loading}>
+                            Έγκριση
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                  ))}
+                  )}
               </>
             );
           })()}

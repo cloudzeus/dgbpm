@@ -32,16 +32,18 @@ export async function sendEmail(params: {
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
-/** Accent colors per notification type (hex for email clients) */
+/** Χρώματα, emoji & ετικέτα κατάστασης ανά τύπο ειδοποίησης */
 const ACCENT = {
-  assigned: "#0ea5e9",
-  started: "#8b5cf6",
-  approved: "#10b981",
-  rejected: "#ef4444",
-  completed: "#06b6d4",
+  assigned: { base: "#0ea5e9", soft: "#e0f2fe", text: "#0369a1", emoji: "📋", badge: "Ανάθεση" },
+  started: { base: "#8b5cf6", soft: "#ede9fe", text: "#6d28d9", emoji: "⏳", badge: "Σε εξέλιξη" },
+  approved: { base: "#10b981", soft: "#d1fae5", text: "#047857", emoji: "✅", badge: "Εγκρίθηκε" },
+  rejected: { base: "#ef4444", soft: "#fee2e2", text: "#b91c1c", emoji: "⛔", badge: "Απορρίφθηκε" },
+  completed: { base: "#06b6d4", soft: "#cffafe", text: "#0e7490", emoji: "🎉", badge: "Ολοκληρώθηκε" },
 } as const;
 
-/** Base layout for BPM notification emails – branded header, card body, CTA button, footer */
+const BRAND = process.env.BPM_EMAIL_BRAND ?? "DG-Smart · BPM";
+
+/** Βασικό layout ειδοποιήσεων BPM – header με brand, status badge, λεπτομέρειες, CTA, footer */
 function emailLayout(options: {
   title: string;
   accent: keyof typeof ACCENT;
@@ -50,52 +52,76 @@ function emailLayout(options: {
   details: Array<{ label: string; value: string }>;
   ctaUrl: string;
   ctaLabel: string;
+  /** Προαιρετικό callout (π.χ. λόγος απόρριψης) με έμφαση στο χρώμα του accent */
+  callout?: { label: string; value: string };
 }): string {
-  const color = ACCENT[options.accent];
+  const c = ACCENT[options.accent];
   const detailsRows = options.details
     .map(
-      (d) => `
-    <tr><td style="padding: 12px 16px 4px 16px; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">${escapeHtml(d.label)}</td></tr>
-    <tr><td style="padding: 0 16px 14px 16px; font-size: 15px; color: #0f172a; font-weight: 500;">${escapeHtml(d.value)}</td></tr>`
+      (d, i) => `
+    <tr><td style="padding: ${i === 0 ? "2px" : "14px"} 18px 4px 18px; border-top: ${i === 0 ? "none" : "1px solid #eef2f7"}; font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 600;">${escapeHtml(d.label)}</td></tr>
+    <tr><td style="padding: 0 18px 6px 18px; font-size: 15px; color: #0f172a; font-weight: 600;">${escapeHtml(d.value)}</td></tr>`
     )
     .join("");
+  const callout = options.callout
+    ? `
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 16px 0 0 0; background: ${c.soft}; border-radius: 10px;">
+                <tr><td style="padding: 14px 18px 4px 18px; font-size: 11px; color: ${c.text}; text-transform: uppercase; letter-spacing: 0.6px; font-weight: 700;">${escapeHtml(options.callout.label)}</td></tr>
+                <tr><td style="padding: 0 18px 14px 18px; font-size: 15px; color: #0f172a; line-height: 1.5;">${escapeHtml(options.callout.value)}</td></tr>
+              </table>`
+    : "";
   return `
 <!DOCTYPE html>
-<html>
+<html lang="el">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${escapeHtml(options.title)}</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f1f5f9; line-height: 1.6;">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;font-size:1px;line-height:1px;">${escapeHtml(options.title)} — ${escapeHtml(options.intro)}</div>
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f1f5f9; padding: 32px 16px;">
     <tr>
       <td align="center">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 520px; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1); overflow: hidden;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 540px; background: #ffffff; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -2px rgba(0,0,0,0.06); overflow: hidden;">
           <tr>
-            <td style="height: 4px; background: ${color};"></td>
+            <td style="height: 5px; background: ${c.base};"></td>
           </tr>
           <tr>
-            <td style="padding: 24px 28px 16px 28px;">
-              <h1 style="margin: 0; font-size: 20px; font-weight: 700; color: #0f172a; letter-spacing: -0.025em;">${escapeHtml(options.title)}</h1>
+            <td style="padding: 22px 28px 0 28px;">
+              <p style="margin: 0 0 18px 0; font-size: 12px; font-weight: 700; letter-spacing: 0.4px; color: #94a3b8; text-transform: uppercase;">${escapeHtml(BRAND)}</p>
+              <table role="presentation" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="vertical-align: middle;">
+                    <div style="width: 44px; height: 44px; border-radius: 12px; background: ${c.soft}; text-align: center; line-height: 44px; font-size: 22px;">${c.emoji}</div>
+                  </td>
+                  <td style="vertical-align: middle; padding-left: 14px;">
+                    <span style="display: inline-block; padding: 3px 10px; border-radius: 999px; background: ${c.soft}; color: ${c.text}; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">${escapeHtml(c.badge)}</span>
+                    <h1 style="margin: 6px 0 0 0; font-size: 21px; font-weight: 700; color: #0f172a; letter-spacing: -0.02em;">${escapeHtml(options.title)}</h1>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
           <tr>
-            <td style="padding: 0 28px 24px 28px;">
-              <p style="margin: 0 0 16px 0; font-size: 15px; color: #334155;">${escapeHtml(options.greeting)}</p>
+            <td style="padding: 20px 28px 26px 28px;">
+              <p style="margin: 0 0 14px 0; font-size: 15px; color: #334155;">${escapeHtml(options.greeting)}</p>
               <p style="margin: 0 0 20px 0; font-size: 15px; color: #475569;">${escapeHtml(options.intro)}</p>
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f8fafc; border-radius: 8px; padding: 4px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f8fafc; border: 1px solid #eef2f7; border-radius: 12px; padding: 8px 0;">
                 ${detailsRows}
               </table>
-              <p style="margin: 24px 0 0 0;">
-                <a href="${options.ctaUrl}" style="display: inline-block; padding: 12px 24px; background: ${color}; color: #ffffff !important; font-size: 14px; font-weight: 600; text-decoration: none; border-radius: 8px;">${escapeHtml(options.ctaLabel)}</a>
-              </p>
+              ${callout}
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 26px 0 0 0;">
+                <tr><td style="border-radius: 10px; background: ${c.base};">
+                  <a href="${options.ctaUrl}" style="display: inline-block; padding: 13px 28px; color: #ffffff !important; font-size: 14px; font-weight: 600; text-decoration: none; border-radius: 10px;">${escapeHtml(options.ctaLabel)} →</a>
+                </td></tr>
+              </table>
             </td>
           </tr>
           <tr>
-            <td style="padding: 20px 28px; border-top: 1px solid #e2e8f0;">
+            <td style="padding: 18px 28px; border-top: 1px solid #eef2f7; background: #fafbfc;">
               <p style="margin: 0; font-size: 12px; color: #94a3b8;">
-                <a href="${SITE_URL}" style="color: #0ea5e9; text-decoration: none;">Open BPM</a> · You received this notification from your BPM application.
+                <a href="${SITE_URL}" style="color: ${c.base}; text-decoration: none; font-weight: 600;">Άνοιγμα BPM</a> · Λάβατε αυτή την ειδοποίηση από την εφαρμογή BPM σας.
               </p>
             </td>
           </tr>
@@ -118,18 +144,18 @@ export type TaskAssignedPayload = {
 export function buildTaskAssignedEmail(p: TaskAssignedPayload): { subject: string; html: string } {
   const url = `${SITE_URL}/process-instances/${p.instanceId}`;
   return {
-    subject: `[BPM] Task assigned: ${p.taskName} – ${p.processName}`,
+    subject: `[BPM] Ανάθεση εργασίας: ${p.taskName} – ${p.processName}`,
     html: emailLayout({
-      title: "New task assigned",
+      title: "Νέα ανάθεση εργασίας",
       accent: "assigned",
-      greeting: `Hello ${p.assigneeName},`,
-      intro: "You have been assigned to a task. Review the details below and open the process when you're ready.",
+      greeting: `Γεια σας ${p.assigneeName},`,
+      intro: "Σας ανατέθηκε μια εργασία. Δείτε τις λεπτομέρειες παρακάτω και ανοίξτε τη διαδικασία όποτε είστε έτοιμοι.",
       details: [
-        { label: "Process", value: p.processName },
-        { label: "Task", value: p.taskName },
+        { label: "Διαδικασία", value: p.processName },
+        { label: "Εργασία", value: p.taskName },
       ],
       ctaUrl: url,
-      ctaLabel: "View process & task",
+      ctaLabel: "Προβολή εργασίας",
     }),
   };
 }
@@ -146,19 +172,19 @@ export type TaskStartedPayload = {
 export function buildTaskStartedEmail(p: TaskStartedPayload): { subject: string; html: string } {
   const url = `${SITE_URL}/process-instances/${p.instanceId}`;
   return {
-    subject: `[BPM] Task started: ${p.taskName} – ${p.processName}`,
+    subject: `[BPM] Έναρξη εργασίας: ${p.taskName} – ${p.processName}`,
     html: emailLayout({
-      title: "Task in progress",
+      title: "Εργασία σε εξέλιξη",
       accent: "started",
-      greeting: `Hello ${p.assigneeName},`,
-      intro: "A task you can act on has been started. See who started it and open the process below.",
+      greeting: `Γεια σας ${p.assigneeName},`,
+      intro: "Ξεκίνησε μια εργασία στην οποία μπορείτε να ενεργήσετε. Δείτε ποιος την ξεκίνησε και ανοίξτε τη διαδικασία παρακάτω.",
       details: [
-        { label: "Process", value: p.processName },
-        { label: "Task", value: p.taskName },
-        { label: "Started by", value: p.startedByName },
+        { label: "Διαδικασία", value: p.processName },
+        { label: "Εργασία", value: p.taskName },
+        { label: "Έναρξη από", value: p.startedByName },
       ],
       ctaUrl: url,
-      ctaLabel: "View process",
+      ctaLabel: "Προβολή διαδικασίας",
     }),
   };
 }
@@ -175,19 +201,19 @@ export type TaskApprovedPayload = {
 export function buildTaskApprovedEmail(p: TaskApprovedPayload): { subject: string; html: string } {
   const url = `${SITE_URL}/process-instances/${p.instanceId}`;
   return {
-    subject: `[BPM] Task approved: ${p.taskName} – ${p.processName}`,
+    subject: `[BPM] Έγκριση εργασίας: ${p.taskName} – ${p.processName}`,
     html: emailLayout({
-      title: "Task approved",
+      title: "Η εργασία εγκρίθηκε",
       accent: "approved",
-      greeting: `Hello ${p.toName},`,
-      intro: "A task in a process you're involved in has been approved. Details below.",
+      greeting: `Γεια σας ${p.toName},`,
+      intro: "Μια εργασία σε διαδικασία που σας αφορά εγκρίθηκε. Ακολουθούν οι λεπτομέρειες.",
       details: [
-        { label: "Process", value: p.processName },
-        { label: "Task", value: p.taskName },
-        { label: "Approved by", value: p.approvedByName },
+        { label: "Διαδικασία", value: p.processName },
+        { label: "Εργασία", value: p.taskName },
+        { label: "Εγκρίθηκε από", value: p.approvedByName },
       ],
       ctaUrl: url,
-      ctaLabel: "View process",
+      ctaLabel: "Προβολή διαδικασίας",
     }),
   };
 }
@@ -205,21 +231,24 @@ export type TaskRejectedPayload = {
 export function buildTaskRejectedEmail(p: TaskRejectedPayload): { subject: string; html: string } {
   const url = `${SITE_URL}/process-instances/${p.instanceId}`;
   const details: Array<{ label: string; value: string }> = [
-    { label: "Process", value: p.processName },
-    { label: "Task", value: p.taskName },
-    { label: "Rejected by", value: p.rejectedByName },
+    { label: "Διαδικασία", value: p.processName },
+    { label: "Εργασία", value: p.taskName },
+    { label: "Απορρίφθηκε από", value: p.rejectedByName },
   ];
-  if (p.comment?.trim()) details.push({ label: "Comment", value: p.comment.trim() });
+  const callout = p.comment?.trim()
+    ? { label: "Λόγος απόρριψης", value: p.comment.trim() }
+    : undefined;
   return {
-    subject: `[BPM] Task rejected: ${p.taskName} – ${p.processName}`,
+    subject: `[BPM] Απόρριψη εργασίας: ${p.taskName} – ${p.processName}`,
     html: emailLayout({
-      title: "Task rejected",
+      title: "Η εργασία απορρίφθηκε",
       accent: "rejected",
-      greeting: `Hello ${p.toName},`,
-      intro: "A task in a process you're involved in has been rejected. You can view the process and comment below.",
+      greeting: `Γεια σας ${p.toName},`,
+      intro: "Μια εργασία σε διαδικασία που σας αφορά απορρίφθηκε. Δείτε τον λόγο παρακάτω. Η διαδικασία έχει διακοπεί.",
       details,
+      callout,
       ctaUrl: url,
-      ctaLabel: "View process",
+      ctaLabel: "Προβολή διαδικασίας",
     }),
   };
 }
@@ -234,15 +263,15 @@ export type ProcessCompletedPayload = {
 export function buildProcessCompletedEmail(p: ProcessCompletedPayload): { subject: string; html: string } {
   const url = `${SITE_URL}/process-instances/${p.instanceId}`;
   return {
-    subject: `[BPM] Process completed: ${p.processName}`,
+    subject: `[BPM] Ολοκλήρωση διαδικασίας: ${p.processName}`,
     html: emailLayout({
-      title: "Process completed",
+      title: "Η διαδικασία ολοκληρώθηκε",
       accent: "completed",
-      greeting: `Hello ${p.toName},`,
-      intro: "The following process has been completed. You can open it to review the outcome.",
-      details: [{ label: "Process", value: p.processName }],
+      greeting: `Γεια σας ${p.toName},`,
+      intro: "Η παρακάτω διαδικασία ολοκληρώθηκε. Μπορείτε να την ανοίξετε για να δείτε το αποτέλεσμα.",
+      details: [{ label: "Διαδικασία", value: p.processName }],
       ctaUrl: url,
-      ctaLabel: "View process",
+      ctaLabel: "Προβολή διαδικασίας",
     }),
   };
 }
@@ -250,13 +279,13 @@ export function buildProcessCompletedEmail(p: ProcessCompletedPayload): { subjec
 /** Test email HTML (e.g. for "Send test email" from License modal) */
 export function buildTestEmailHtml(): string {
   return emailLayout({
-    title: "BPM email test",
+    title: "Δοκιμαστικό email BPM",
     accent: "assigned",
-    greeting: "Hello,",
-    intro: "This is a test email from your BPM application. If you received this, email sending (Office 365 or Resend) is configured correctly.",
-    details: [{ label: "Sent at", value: new Date().toISOString() }],
+    greeting: "Γεια σας,",
+    intro: "Αυτό είναι ένα δοκιμαστικό email από την εφαρμογή BPM σας. Αν το λάβατε, η αποστολή email (Office 365 ή Resend) έχει ρυθμιστεί σωστά.",
+    details: [{ label: "Στάλθηκε", value: new Date().toLocaleString("el-GR") }],
     ctaUrl: SITE_URL,
-    ctaLabel: "Open BPM",
+    ctaLabel: "Άνοιγμα BPM",
   });
 }
 
