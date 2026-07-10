@@ -85,7 +85,7 @@ function ConnectorPanel({ def, initial }: { def: ConnectorDef; initial: Connecto
           <CardTitle className="flex items-center gap-2">
             {def.label}
             <Badge variant={def.kind === "erp" ? "default" : "secondary"}>
-              {def.kind === "erp" ? "ERP" : "eshop"}
+              {def.kind === "erp" ? "ERP" : def.kind === "email" ? "Email" : "eshop"}
             </Badge>
             {enabled && <Badge variant="secondary">Ενεργός</Badge>}
           </CardTitle>

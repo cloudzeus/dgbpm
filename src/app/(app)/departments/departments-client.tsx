@@ -1,21 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
@@ -30,7 +22,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { createDepartment, updateDepartment, deleteDepartment } from "./actions";
 
 const COLOR_SWATCHES = [
@@ -71,6 +62,30 @@ export function DepartmentsClient({
 
   const editing = editId ? departments.find((d) => d.id === editId) : null;
 
+  const columns: DataTableColumn<Dept>[] = [
+    {
+      key: "name",
+      header: "Όνομα",
+      cell: (d) => (
+        <>
+          <span
+            className="mr-2 inline-block size-3 rounded-full"
+            style={{ backgroundColor: d.color }}
+          />
+          {d.name}
+        </>
+      ),
+    },
+    { key: "parent", header: "Γονικό", cell: (d) => d.parent?.name ?? "—" },
+    { key: "email", header: "Email", cell: (d) => d.email ?? "—" },
+    { key: "phoneNumber", header: "Τηλέφωνο", cell: (d) => d.phoneNumber ?? "—" },
+    {
+      key: "positions",
+      header: "Θέσεις Εργασίας",
+      cell: (d) => d._count.positions,
+    },
+  ];
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
@@ -106,58 +121,30 @@ export function DepartmentsClient({
 
   return (
     <>
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Όνομα</TableHead>
-              <TableHead>Γονικό</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Τηλέφωνο</TableHead>
-              <TableHead>Θέσεις Εργασίας</TableHead>
-              <TableHead className="w-[120px]">Ενέργειες</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {departments.map((d) => (
-              <TableRow key={d.id}>
-                <TableCell>
-                  <span
-                    className="mr-2 inline-block size-3 rounded-full"
-                    style={{ backgroundColor: d.color }}
-                  />
-                  {d.name}
-                </TableCell>
-                <TableCell>{d.parent?.name ?? "—"}</TableCell>
-                <TableCell>{d.email ?? "—"}</TableCell>
-                <TableCell>{d.phoneNumber ?? "—"}</TableCell>
-                <TableCell>{d._count.positions}</TableCell>
-                <TableCell>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setEditId(d.id);
-                        setOpen(true);
-                      }}
-                    >
-                      Επεξεργασία
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => setDeleteId(d.id)}
-                    >
-                      Διαγραφή
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable
+        columns={columns}
+        data={departments}
+        rowKey={(d) => d.id}
+        columnToggle
+        actions={(d) => [
+          {
+            label: "Επεξεργασία",
+            onSelect: () => {
+              setEditId(d.id);
+              setOpen(true);
+            },
+          },
+          {
+            label: "Διαγραφή",
+            destructive: true,
+            separatorBefore: true,
+            onSelect: () => setDeleteId(d.id),
+          },
+        ]}
+        toolbar={
+          <Button onClick={() => setOpen(true)}>Δημιουργία τμήματος</Button>
+        }
+      />
 
       <Dialog
         open={open}
@@ -166,9 +153,6 @@ export function DepartmentsClient({
           if (!o) setEditId(null);
         }}
       >
-        <DialogTrigger asChild>
-          <Button onClick={() => setOpen(true)}>Δημιουργία τμήματος</Button>
-        </DialogTrigger>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editId ? "Επεξεργασία τμήματος" : "Δημιουργία τμήματος"}</DialogTitle>

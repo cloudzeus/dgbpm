@@ -27,7 +27,7 @@ export default async function UsersPage() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="flex h-full min-h-0 flex-1 flex-col gap-6">
       <div>
         <h1 className="text-2xl font-bold">Χρήστες</h1>
         <p className="text-muted-foreground">Διαχείριση χρηστών, ρόλων και αναθέσεων θέσεων εργασίας.</p>

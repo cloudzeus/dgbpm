@@ -16,8 +16,8 @@ export interface ConnectorDef {
   label: string;
   /** Σύντομη περιγραφή του τι κάνει η διασύνδεση. */
   description: string;
-  /** Κατηγορία: eshop ή erp. */
-  kind: "eshop" | "erp";
+  /** Κατηγορία: eshop, erp ή email. */
+  kind: "eshop" | "erp" | "email";
   fields: ConnectorField[];
 }
 
@@ -69,6 +69,30 @@ export const CONNECTOR_DEFS: ConnectorDef[] = [
       { key: "apiKey", label: "API Key", secret: true },
       { key: "username", label: "Username", optional: true },
       { key: "password", label: "Password", secret: true, optional: true },
+    ],
+  },
+  {
+    type: "MAILGUN",
+    label: "Mailgun",
+    description: "Αποστολή emails ενημέρωσης μέσω του Mailgun API.",
+    kind: "email",
+    fields: [
+      { key: "domain", label: "Domain", placeholder: "mg.example.com", help: "Το verified sending domain του Mailgun." },
+      { key: "apiKey", label: "API Key", secret: true, placeholder: "key-... ή Sending API key" },
+      {
+        key: "baseUrl",
+        label: "Base URL / Region",
+        placeholder: "https://api.mailgun.net",
+        optional: true,
+        help: "US: https://api.mailgun.net · EU: https://api.eu.mailgun.net (default: US).",
+      },
+      {
+        key: "fromEmail",
+        label: "From (αποστολέας)",
+        placeholder: "DGBPM <no-reply@mg.example.com>",
+        optional: true,
+        help: "Προεπιλεγμένος αποστολέας για τα emails ενημέρωσης.",
+      },
     ],
   },
 ];

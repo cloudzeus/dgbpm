@@ -2,14 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableHead,
-  TableRow,
-  TableCell,
-} from "@/components/ui/table";
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -36,6 +29,21 @@ export function ResultsClient(props: {
 }) {
   const { title, fields, instances } = props;
   const rows = useMemo(() => buildPivotRows(fields, instances), [fields, instances]);
+  const columns = useMemo<DataTableColumn<(typeof rows)[number]>[]>(
+    () => [
+      {
+        key: "instance",
+        header: "Διαδικασία",
+        cell: (r) => <span className="font-medium">{r.instanceName}</span>,
+      },
+      ...fields.map((f) => ({
+        key: f.id,
+        header: f.name,
+        cell: (r: (typeof rows)[number]) => r.cells[f.id] ?? "",
+      })),
+    ],
+    [fields],
+  );
   const [selected, setSelected] = useState<Record<Format, boolean>>({
     excel: true,
     pdf: false,
@@ -125,36 +133,12 @@ export function ResultsClient(props: {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Διαδικασία</TableHead>
-              {fields.map((f) => (
-                <TableHead key={f.id}>{f.name}</TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={fields.length + 1} className="text-muted-foreground text-center">
-                  Δεν υπάρχουν καταχωρημένες διαδικασίες.
-                </TableCell>
-              </TableRow>
-            ) : (
-              rows.map((r) => (
-                <TableRow key={r.instanceId}>
-                  <TableCell className="font-medium">{r.instanceName}</TableCell>
-                  {fields.map((f) => (
-                    <TableCell key={f.id}>{r.cells[f.id] ?? ""}</TableCell>
-                  ))}
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable
+        columns={columns}
+        data={rows}
+        rowKey={(r) => r.instanceId}
+        emptyMessage="Δεν υπάρχουν καταχωρημένες διαδικασίες."
+      />
     </div>
   );
 }

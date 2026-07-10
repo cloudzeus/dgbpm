@@ -113,6 +113,31 @@ async function testOpenCard(v: Record<string, string>): Promise<TestResult> {
   return { ok: false, message: `Το endpoint επέστρεψε σφάλμα (HTTP ${res.status}).` };
 }
 
+async function testMailgun(v: Record<string, string>): Promise<TestResult> {
+  const domain = v.domain?.trim();
+  if (!domain) return { ok: false, message: "Λείπει το Domain." };
+  const apiKey = v.apiKey?.trim();
+  if (!apiKey) return { ok: false, message: "Λείπει το API Key." };
+  const base = stripTrailingSlash(v.baseUrl?.trim() || "https://api.mailgun.net");
+  if (!/^https:\/\//.test(base)) {
+    return { ok: false, message: "Το Base URL πρέπει να ξεκινά με https://." };
+  }
+  const auth = Buffer.from(`api:${apiKey}`).toString("base64");
+  const res = await timedFetch(`${base}/v3/domains/${encodeURIComponent(domain)}`, {
+    headers: { Authorization: `Basic ${auth}` },
+  });
+  if (res.ok) {
+    return { ok: true, message: "Επιτυχής σύνδεση με το Mailgun API." };
+  }
+  if (res.status === 401) {
+    return { ok: false, message: "Άκυρο API Key (HTTP 401)." };
+  }
+  if (res.status === 404) {
+    return { ok: false, message: "Το domain δεν βρέθηκε στον λογαριασμό Mailgun (HTTP 404) — ελέγξτε domain/region." };
+  }
+  return { ok: false, message: `Αποτυχία σύνδεσης (HTTP ${res.status}).` };
+}
+
 export async function runConnectorTest(
   type: ConnectorType,
   values: Record<string, string>,
@@ -127,6 +152,8 @@ export async function runConnectorTest(
         return await testMagento(values);
       case "OPENCARD":
         return await testOpenCard(values);
+      case "MAILGUN":
+        return await testMailgun(values);
       default:
         return { ok: false, message: "Άγνωστος τύπος connector." };
     }

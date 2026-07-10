@@ -18,6 +18,7 @@ import {
   FiCpu,
   FiHome,
   FiLink,
+  FiMail,
 } from "react-icons/fi";
 
 export interface NavItem {
@@ -44,6 +45,7 @@ export const reportNavItems: NavItem[] = [
   { href: "/reports/by-user", label: "Ανά Χρήστη", icon: FiUser, roles: ["SUPER_ADMIN", "ADMIN", "MANAGER"] },
   { href: "/reports/by-task", label: "Ανά Εργασία", icon: FiCheckCircle, roles: ["SUPER_ADMIN", "ADMIN", "MANAGER"] },
   { href: "/reports/summary", label: "Σύνοψη Διαδικασιών", icon: FiLayers, roles: ["SUPER_ADMIN", "ADMIN", "MANAGER"] },
+  { href: "/reports/mailgun", label: "Emails (Mailgun)", icon: FiMail, roles: ["SUPER_ADMIN", "ADMIN", "MANAGER"] },
 ];
 
 export const settingsNavItems: NavItem[] = [

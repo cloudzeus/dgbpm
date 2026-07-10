@@ -72,6 +72,7 @@ import {
   BarChart3,
   Pencil,
   Trash2,
+  Paperclip,
 } from "lucide-react";
 
 type TemplateTask = {
@@ -239,52 +240,63 @@ function TaskFlowVisual({ tasks }: { tasks: TemplateTask[] }) {
       <p className="text-muted-foreground text-sm py-4 text-center">Δεν έχουν οριστεί βήματα ακόμη.</p>
     );
   }
-  const gradientClasses = [
-    "from-indigo-600 to-violet-700 text-white shadow-lg shadow-violet-500/25 border-0",
-    "from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/25 border-0",
-    "from-fuchsia-500 to-pink-600 text-white shadow-lg shadow-fuchsia-500/25 border-0",
-    "from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/25 border-0",
-    "from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/25 border-0",
-    "from-rose-500 to-red-500 text-white shadow-lg shadow-rose-500/25 border-0",
-  ];
   return (
-    <div className="flex flex-wrap items-center gap-2 py-4">
-      {tasks.map((task, i) => {
-        const gradient = gradientClasses[i % gradientClasses.length];
-        return (
-          <div key={task.id} className="flex items-center gap-2">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className={`flex flex-col items-center gap-1 rounded-xl border-2 bg-gradient-to-br ${gradient} px-4 py-3 min-w-[120px] hover:scale-[1.02] hover:shadow-xl transition-all duration-200 cursor-default`}>
-                  <span className="text-xs font-semibold text-white/80 uppercase tracking-wider">Βήμα {task.order + 1}</span>
-                  <span className="font-semibold text-sm text-center leading-tight text-white drop-shadow-sm">{task.name || "Χωρίς όνομα"}</span>
-                  {(task.needFile || task.mandatory) && (
-                    <span className="flex gap-1 mt-0.5 text-white/90">
-                      {task.needFile && <span className="text-[10px]">📎</span>}
-                      {task.mandatory && <span className="text-[10px]">*</span>}
-                    </span>
-                  )}
+    <div className="flex flex-wrap items-stretch gap-x-1 gap-y-3 py-2">
+      {tasks.map((task, i) => (
+        <div key={task.id} className="flex items-center gap-1">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="group flex min-w-[160px] max-w-[210px] items-start gap-2.5 rounded-lg border bg-card px-3 py-2.5 shadow-sm transition-colors hover:border-foreground/20 hover:bg-accent/40 cursor-default">
+                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold tabular-nums text-primary">
+                  {task.order + 1}
+                </span>
+                <div className="min-w-0 space-y-1">
+                  <div className="text-[9px] font-medium uppercase tracking-wide text-muted-foreground">
+                    Βήμα {task.order + 1}
+                  </div>
+                  <div className="text-xs font-medium leading-snug text-foreground">
+                    {task.name || "Χωρίς όνομα"}
+                  </div>
+                  <div className="flex flex-wrap gap-1 pt-0.5">
+                    {task.mandatory ? (
+                      <Badge className="border-transparent bg-amber-100 px-1.5 py-0 text-[10px] font-medium text-amber-800 dark:bg-amber-500/20 dark:text-amber-300">
+                        Υποχρεωτικό
+                      </Badge>
+                    ) : (
+                      <Badge className="border-transparent bg-emerald-100 px-1.5 py-0 text-[10px] font-medium text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300">
+                        Προαιρετικό
+                      </Badge>
+                    )}
+                    {task.needFile && (
+                      <Badge className="gap-1 border-transparent bg-sky-100 px-1.5 py-0 text-[10px] font-medium text-sky-800 dark:bg-sky-500/20 dark:text-sky-300">
+                        <Paperclip className="size-2.5" />
+                        Αρχείο
+                      </Badge>
+                    )}
+                  </div>
                 </div>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="max-w-xs text-left space-y-2 p-3 bg-foreground text-white border-0">
-                <div className="font-semibold text-white">{task.name || "Βήμα χωρίς όνομα"}</div>
-                {task.description ? (
-                  <p className="text-white/90 text-xs leading-relaxed">{task.description}</p>
-                ) : (
-                  <p className="text-white/70 text-xs italic">Χωρίς περιγραφή</p>
-                )}
-                <div className="flex flex-wrap gap-2 pt-1 border-t border-white/20">
-                  {task.needFile && <span className="text-xs text-white/90">Απαιτείται αρχείο</span>}
-                  {task.mandatory && <span className="text-xs text-white/90">Υποχρεωτικό</span>}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-xs space-y-1.5 p-3 text-left">
+              <div className="text-sm font-semibold text-background">{task.name || "Βήμα χωρίς όνομα"}</div>
+              {task.description ? (
+                <p className="text-xs leading-relaxed text-background/80">{task.description}</p>
+              ) : (
+                <p className="text-xs italic text-background/60">Χωρίς περιγραφή</p>
+              )}
+              {(task.needFile || task.mandatory) && (
+                <div className="flex flex-wrap gap-x-3 gap-y-1 border-t border-background/20 pt-1.5 text-xs text-background/80">
+                  {task.mandatory && <span>Υποχρεωτικό</span>}
+                  {task.needFile && <span>Απαιτείται αρχείο</span>}
                 </div>
-              </TooltipContent>
-            </Tooltip>
-            {i < tasks.length - 1 && (
-              <ChevronRight className="size-5 text-muted-foreground shrink-0" aria-hidden />
-            )}
-          </div>
-        );
-      })}
+              )}
+            </TooltipContent>
+          </Tooltip>
+          {i < tasks.length - 1 && (
+            <ChevronRight className="size-4 shrink-0 text-muted-foreground/50" aria-hidden />
+          )}
+        </div>
+      ))}
     </div>
   );
 }

@@ -2,14 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   exportReportByUserToExcel,
@@ -19,6 +12,18 @@ import {
 import { FiDownload, FiFileText } from "react-icons/fi";
 
 const TITLE = "Διαδικασίες ανά Χρήστη";
+
+const columns: DataTableColumn<ReportByUserRow>[] = [
+  { key: "userName", header: "Χρήστης", cell: (row) => <span className="font-medium">{row.userName}</span> },
+  { key: "email", header: "Email", cell: (row) => row.email },
+  { key: "role", header: "Ρόλος", cell: (row) => row.role },
+  { key: "processesStarted", header: "Διαδικασίες που ξεκίνησαν", align: "right", cell: (row) => row.processesStarted },
+  { key: "tasksAssigned", header: "Εργασίες που ανατέθηκαν", align: "right", cell: (row) => row.tasksAssigned },
+  { key: "tasksApproved", header: "Εγκρίθηκαν", align: "right", cell: (row) => row.tasksApproved },
+  { key: "tasksRejected", header: "Απορρίφθηκαν", align: "right", cell: (row) => row.tasksRejected },
+  { key: "tasksInProgress", header: "Σε εξέλιξη", align: "right", cell: (row) => row.tasksInProgress },
+  { key: "tasksPending", header: "Σε αναμονή", align: "right", cell: (row) => row.tasksPending },
+];
 
 export function ReportByUserClient({ data }: { data: ReportByUserRow[] }) {
   const handlePdf = () => exportReportByUserToPdf(data, TITLE);
@@ -43,44 +48,12 @@ export function ReportByUserClient({ data }: { data: ReportByUserRow[] }) {
         </div>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Χρήστης</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Ρόλος</TableHead>
-              <TableHead className="text-right">Διαδικασίες που ξεκίνησαν</TableHead>
-              <TableHead className="text-right">Εργασίες που ανατέθηκαν</TableHead>
-              <TableHead className="text-right">Εγκρίθηκαν</TableHead>
-              <TableHead className="text-right">Απορρίφθηκαν</TableHead>
-              <TableHead className="text-right">Σε εξέλιξη</TableHead>
-              <TableHead className="text-right">Σε αναμονή</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={9} className="text-center text-muted-foreground">
-                  Χωρίς δεδομένα
-                </TableCell>
-              </TableRow>
-            ) : (
-              data.map((row) => (
-                <TableRow key={row.userId ?? row.email}>
-                  <TableCell className="font-medium">{row.userName}</TableCell>
-                  <TableCell>{row.email}</TableCell>
-                  <TableCell>{row.role}</TableCell>
-                  <TableCell className="text-right">{row.processesStarted}</TableCell>
-                  <TableCell className="text-right">{row.tasksAssigned}</TableCell>
-                  <TableCell className="text-right">{row.tasksApproved}</TableCell>
-                  <TableCell className="text-right">{row.tasksRejected}</TableCell>
-                  <TableCell className="text-right">{row.tasksInProgress}</TableCell>
-                  <TableCell className="text-right">{row.tasksPending}</TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+        <DataTable
+          columns={columns}
+          data={data}
+          rowKey={(row) => String(row.userId ?? row.email)}
+          emptyMessage="Χωρίς δεδομένα"
+        />
       </CardContent>
     </Card>
   );

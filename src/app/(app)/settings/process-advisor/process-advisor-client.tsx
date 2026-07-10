@@ -33,12 +33,12 @@ const EXAMPLES = [
 
 /** Παλέτα χρωμάτων για τις κάρτες προτεινόμενων διαδικασιών (κυκλική ανά κάρτα). */
 const CARD_ACCENTS = [
-  { bar: "bg-blue-500", tint: "bg-blue-500/10 text-blue-600 dark:text-blue-400", selRing: "ring-blue-500/40 border-blue-500" },
-  { bar: "bg-emerald-500", tint: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400", selRing: "ring-emerald-500/40 border-emerald-500" },
-  { bar: "bg-amber-500", tint: "bg-amber-500/10 text-amber-600 dark:text-amber-400", selRing: "ring-amber-500/40 border-amber-500" },
-  { bar: "bg-violet-500", tint: "bg-violet-500/10 text-violet-600 dark:text-violet-400", selRing: "ring-violet-500/40 border-violet-500" },
-  { bar: "bg-rose-500", tint: "bg-rose-500/10 text-rose-600 dark:text-rose-400", selRing: "ring-rose-500/40 border-rose-500" },
-  { bar: "bg-cyan-500", tint: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400", selRing: "ring-cyan-500/40 border-cyan-500" },
+  { bar: "bg-gradient-to-r from-blue-500 to-indigo-500", tint: "bg-blue-500/10 text-blue-600 dark:text-blue-400", selRing: "ring-blue-500/40 border-blue-500", selBg: "bg-blue-500/5" },
+  { bar: "bg-gradient-to-r from-emerald-500 to-teal-500", tint: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400", selRing: "ring-emerald-500/40 border-emerald-500", selBg: "bg-emerald-500/5" },
+  { bar: "bg-gradient-to-r from-amber-500 to-orange-500", tint: "bg-amber-500/10 text-amber-600 dark:text-amber-400", selRing: "ring-amber-500/40 border-amber-500", selBg: "bg-amber-500/5" },
+  { bar: "bg-gradient-to-r from-violet-500 to-fuchsia-500", tint: "bg-violet-500/10 text-violet-600 dark:text-violet-400", selRing: "ring-violet-500/40 border-violet-500", selBg: "bg-violet-500/5" },
+  { bar: "bg-gradient-to-r from-rose-500 to-pink-500", tint: "bg-rose-500/10 text-rose-600 dark:text-rose-400", selRing: "ring-rose-500/40 border-rose-500", selBg: "bg-rose-500/5" },
+  { bar: "bg-gradient-to-r from-cyan-500 to-sky-500", tint: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400", selRing: "ring-cyan-500/40 border-cyan-500", selBg: "bg-cyan-500/5" },
 ] as const;
 
 export function ProcessAdvisorClient() {
@@ -115,9 +115,9 @@ export function ProcessAdvisorClient() {
   return (
     <div className="space-y-6 pb-24">
       {/* ---------- Input panel ---------- */}
-      <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
-        <div className="flex items-start gap-3 border-b bg-muted/40 px-5 py-4">
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+      <div className="overflow-hidden rounded-xl border bg-card shadow-sm ring-1 ring-violet-500/5">
+        <div className="flex items-start gap-3 border-b border-violet-500/10 bg-gradient-to-r from-violet-500/10 via-indigo-500/10 to-sky-500/10 px-5 py-4">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 text-white shadow-sm shadow-violet-500/30">
             <Sparkles className="size-5" />
           </div>
           <div className="min-w-0">
@@ -147,7 +147,7 @@ export function ProcessAdvisorClient() {
                 type="button"
                 disabled={generating}
                 onClick={() => setDescription(ex)}
-                className="rounded-full border bg-background px-3 py-1 text-xs text-muted-foreground transition hover:border-primary/40 hover:text-foreground disabled:opacity-50"
+                className="rounded-full border bg-background px-3 py-1 text-xs text-muted-foreground transition hover:border-violet-400/60 hover:bg-violet-500/10 hover:text-violet-700 disabled:opacity-50 dark:hover:text-violet-300"
               >
                 {ex}
               </button>
@@ -166,7 +166,12 @@ export function ProcessAdvisorClient() {
           </div>
 
           <div className="flex items-center justify-between gap-3">
-            <Button onClick={handleGenerate} disabled={generating || !description.trim()} size="lg">
+            <Button
+              onClick={handleGenerate}
+              disabled={generating || !description.trim()}
+              size="lg"
+              className="border-0 bg-gradient-to-r from-violet-600 via-indigo-600 to-sky-500 text-white shadow-md shadow-indigo-500/25 transition-all hover:shadow-lg hover:shadow-indigo-500/40 hover:brightness-110 disabled:opacity-60"
+            >
               {generating ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
@@ -181,9 +186,11 @@ export function ProcessAdvisorClient() {
 
       {/* ---------- Success banner ---------- */}
       {createdCount !== null && (
-        <div className="flex flex-col gap-3 rounded-xl border border-green-500/30 bg-green-500/10 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2 text-sm">
-            <CheckCircle2 className="h-5 w-5 text-green-600" />
+        <div className="flex flex-col gap-3 rounded-xl border border-emerald-500/30 bg-gradient-to-r from-emerald-500/15 to-teal-500/10 px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-2.5 text-sm">
+            <span className="flex size-8 items-center justify-center rounded-full bg-emerald-500 text-white shadow-sm shadow-emerald-500/40">
+              <CheckCircle2 className="h-5 w-5" />
+            </span>
             <span className="font-medium">Δημιουργήθηκαν {createdCount} πρότυπα διαδικασιών.</span>
           </div>
           <Button asChild variant="outline" size="sm">
@@ -205,13 +212,20 @@ export function ProcessAdvisorClient() {
       {!generating && processes.length > 0 && (
         <div className="space-y-4">
           {/* summary toolbar */}
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card px-4 py-3 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card px-4 py-3 shadow-sm ring-1 ring-violet-500/5">
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-              <span className="font-semibold">{processes.length} προτεινόμενες διαδικασίες</span>
+              <span className="font-semibold">
+                <span className="bg-gradient-to-r from-violet-600 to-sky-500 bg-clip-text text-transparent">
+                  {processes.length}
+                </span>{" "}
+                προτεινόμενες διαδικασίες
+              </span>
               <span className="text-muted-foreground">·</span>
               <span className="text-muted-foreground">{totalSteps} βήματα συνολικά</span>
               {selected.size > 0 && (
-                <Badge className="ml-1">{selected.size} επιλεγμένες</Badge>
+                <Badge className="ml-1 border-0 bg-gradient-to-r from-violet-600 to-indigo-600 text-white">
+                  {selected.size} επιλεγμένες
+                </Badge>
               )}
             </div>
             <div className="flex gap-2">
@@ -236,12 +250,12 @@ export function ProcessAdvisorClient() {
                   className={cn(
                     "flex flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition-all",
                     isSel
-                      ? cn("ring-1 shadow-md", accent.selRing)
-                      : "hover:border-border hover:shadow-md",
+                      ? cn("ring-1 shadow-md", accent.selRing, accent.selBg)
+                      : "hover:-translate-y-0.5 hover:border-border hover:shadow-md",
                   )}
                 >
                   {/* colored accent bar */}
-                  <div className={cn("h-1 w-full", accent.bar)} />
+                  <div className={cn("h-1.5 w-full", accent.bar)} />
 
                   {/* card head */}
                   <div
@@ -356,7 +370,12 @@ export function ProcessAdvisorClient() {
                 ? `${selected.size} διαδικασίες θα δημιουργηθούν ως πρότυπα`
                 : "Επιλέξτε διαδικασίες για δημιουργία"}
             </p>
-            <Button onClick={handleCreate} disabled={creating || selected.size === 0} size="lg">
+            <Button
+              onClick={handleCreate}
+              disabled={creating || selected.size === 0}
+              size="lg"
+              className="border-0 bg-gradient-to-r from-emerald-600 to-teal-500 text-white shadow-md shadow-emerald-500/25 transition-all hover:shadow-lg hover:shadow-emerald-500/40 hover:brightness-110 disabled:opacity-60"
+            >
               {creating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Δημιουργία επιλεγμένων ({selected.size})
             </Button>

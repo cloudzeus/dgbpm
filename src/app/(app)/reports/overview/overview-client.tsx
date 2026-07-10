@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -9,14 +11,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { roleLabel } from "@/lib/role-labels";
 import type {
   OverviewData,
@@ -134,6 +129,56 @@ function DelayBadge({ item }: { item: DelayedItem }) {
 }
 
 function DelayedSection({ delayed }: { delayed: DelayedItem[] }) {
+  const columns: DataTableColumn<DelayedItem>[] = [
+    {
+      key: "status",
+      header: "Κατάσταση",
+      cell: (d) => <DelayBadge item={d} />,
+    },
+    {
+      key: "process",
+      header: "Διαδικασία",
+      cell: (d) => (
+        <>
+          <div className="font-medium">{d.instanceName}</div>
+          <div className="text-xs text-muted-foreground">{d.templateName}</div>
+        </>
+      ),
+    },
+    {
+      key: "step",
+      header: "Βήμα",
+      cell: (d) => (
+        <>
+          <span className="text-muted-foreground text-xs tabular-nums mr-1">#{d.order}</span>
+          {d.stepName}
+        </>
+      ),
+    },
+    {
+      key: "assignee",
+      header: "Υπεύθυνος",
+      cell: (d) => <span className="text-sm">{d.assigneeName ?? "—"}</span>,
+    },
+    {
+      key: "age",
+      header: "Ηλικία",
+      align: "right",
+      cell: (d) => <span className="tabular-nums text-sm">{d.ageDays}μ</span>,
+    },
+    {
+      key: "open",
+      header: "",
+      cell: (d) => (
+        <Link
+          href={`/process-instances/${d.instanceId}`}
+          className="text-primary text-sm underline underline-offset-2"
+        >
+          Άνοιγμα
+        </Link>
+      ),
+    },
+  ];
   return (
     <div className="rounded-lg border bg-card">
       <div className="flex items-center justify-between p-4 border-b">
@@ -148,47 +193,11 @@ function DelayedSection({ delayed }: { delayed: DelayedItem[] }) {
           Καμία καθυστερημένη εργασία — όλα εντός προθεσμίας. 🎉
         </p>
       ) : (
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Κατάσταση</TableHead>
-                <TableHead>Διαδικασία</TableHead>
-                <TableHead>Βήμα</TableHead>
-                <TableHead>Υπεύθυνος</TableHead>
-                <TableHead className="text-right">Ηλικία</TableHead>
-                <TableHead className="w-[90px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {delayed.map((d, i) => (
-                <TableRow key={`${d.instanceId}-${d.stepName}-${i}`}>
-                  <TableCell>
-                    <DelayBadge item={d} />
-                  </TableCell>
-                  <TableCell>
-                    <div className="font-medium">{d.instanceName}</div>
-                    <div className="text-xs text-muted-foreground">{d.templateName}</div>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-muted-foreground text-xs tabular-nums mr-1">#{d.order}</span>
-                    {d.stepName}
-                  </TableCell>
-                  <TableCell className="text-sm">{d.assigneeName ?? "—"}</TableCell>
-                  <TableCell className="text-right tabular-nums text-sm">{d.ageDays}μ</TableCell>
-                  <TableCell>
-                    <Link
-                      href={`/process-instances/${d.instanceId}`}
-                      className="text-primary text-sm underline underline-offset-2"
-                    >
-                      Άνοιγμα
-                    </Link>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <DataTable
+          columns={columns}
+          data={delayed}
+          rowKey={(d) => `${d.instanceId}-${d.stepName}-${d.order}`}
+        />
       )}
     </div>
   );
@@ -196,6 +205,64 @@ function DelayedSection({ delayed }: { delayed: DelayedItem[] }) {
 
 function BottlenecksSection({ bottlenecks }: { bottlenecks: Bottleneck[] }) {
   const rows = bottlenecks.filter((b) => b.totalHandled > 0).slice(0, 10);
+  const columns: DataTableColumn<Bottleneck>[] = [
+    {
+      key: "step",
+      header: "Βήμα",
+      cell: (b) => (
+        <>
+          <div className="font-medium">{b.stepName}</div>
+          <div className="text-xs text-muted-foreground">{b.templateName}</div>
+        </>
+      ),
+    },
+    {
+      key: "active",
+      header: "Ενεργά",
+      align: "right",
+      cell: (b) => <span className="tabular-nums">{b.activeCount}</span>,
+    },
+    {
+      key: "overdue",
+      header: "Καθυστ/να",
+      align: "right",
+      cell: (b) => (
+        <span className="tabular-nums">
+          {b.overdueCount > 0 ? (
+            <span className="text-destructive font-medium">{b.overdueCount}</span>
+          ) : (
+            "0"
+          )}
+        </span>
+      ),
+    },
+    {
+      key: "avg",
+      header: "Μέσος χρόνος",
+      align: "right",
+      cell: (b) => (
+        <span className="tabular-nums">
+          {b.avgProcessingDays == null ? "—" : `${b.avgProcessingDays}μ`}
+        </span>
+      ),
+    },
+    {
+      key: "rejections",
+      header: "Απορρίψεις",
+      align: "right",
+      cell: (b) => (
+        <span className="tabular-nums">
+          {b.rejectionRatePct > 0 ? (
+            <span className={b.rejectionRatePct >= 30 ? "text-destructive font-medium" : ""}>
+              {b.rejectionRatePct}%
+            </span>
+          ) : (
+            "0%"
+          )}
+        </span>
+      ),
+    },
+  ];
   return (
     <div className="rounded-lg border bg-card">
       <div className="p-4 border-b">
@@ -207,49 +274,7 @@ function BottlenecksSection({ bottlenecks }: { bottlenecks: Bottleneck[] }) {
       {rows.length === 0 ? (
         <p className="text-sm text-muted-foreground p-6 text-center">Δεν υπάρχουν δεδομένα ακόμη.</p>
       ) : (
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Βήμα</TableHead>
-                <TableHead className="text-right">Ενεργά</TableHead>
-                <TableHead className="text-right">Καθυστ/να</TableHead>
-                <TableHead className="text-right">Μέσος χρόνος</TableHead>
-                <TableHead className="text-right">Απορρίψεις</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((b) => (
-                <TableRow key={b.templateTaskId}>
-                  <TableCell>
-                    <div className="font-medium">{b.stepName}</div>
-                    <div className="text-xs text-muted-foreground">{b.templateName}</div>
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">{b.activeCount}</TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {b.overdueCount > 0 ? (
-                      <span className="text-destructive font-medium">{b.overdueCount}</span>
-                    ) : (
-                      "0"
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {b.avgProcessingDays == null ? "—" : `${b.avgProcessingDays}μ`}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {b.rejectionRatePct > 0 ? (
-                      <span className={b.rejectionRatePct >= 30 ? "text-destructive font-medium" : ""}>
-                        {b.rejectionRatePct}%
-                      </span>
-                    ) : (
-                      "0%"
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <DataTable columns={columns} data={rows} rowKey={(b) => String(b.templateTaskId)} />
       )}
     </div>
   );
@@ -257,6 +282,44 @@ function BottlenecksSection({ bottlenecks }: { bottlenecks: Bottleneck[] }) {
 
 function WorkloadUsers({ users }: { users: WorkloadUser[] }) {
   const rows = users.slice(0, 10);
+  const columns: DataTableColumn<WorkloadUser>[] = [
+    {
+      key: "user",
+      header: "Χρήστης",
+      cell: (u) => (
+        <>
+          <div className="font-medium">{u.userName}</div>
+          <div className="text-xs text-muted-foreground">{roleLabel(u.role)}</div>
+        </>
+      ),
+    },
+    {
+      key: "pending",
+      header: "Αναμονή",
+      align: "right",
+      cell: (u) => <span className="tabular-nums">{u.pending}</span>,
+    },
+    {
+      key: "inProgress",
+      header: "Σε εξέλιξη",
+      align: "right",
+      cell: (u) => <span className="tabular-nums">{u.inProgress}</span>,
+    },
+    {
+      key: "overdue",
+      header: "Καθυστ/να",
+      align: "right",
+      cell: (u) => (
+        <span className="tabular-nums">
+          {u.overdue > 0 ? (
+            <span className="text-destructive font-medium">{u.overdue}</span>
+          ) : (
+            "0"
+          )}
+        </span>
+      ),
+    },
+  ];
   return (
     <div className="rounded-lg border bg-card">
       <div className="p-4 border-b">
@@ -265,43 +328,51 @@ function WorkloadUsers({ users }: { users: WorkloadUser[] }) {
       {rows.length === 0 ? (
         <p className="text-sm text-muted-foreground p-6 text-center">Καμία ενεργή ανάθεση.</p>
       ) : (
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Χρήστης</TableHead>
-                <TableHead className="text-right">Αναμονή</TableHead>
-                <TableHead className="text-right">Σε εξέλιξη</TableHead>
-                <TableHead className="text-right">Καθυστ/να</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((u) => (
-                <TableRow key={u.userId}>
-                  <TableCell>
-                    <div className="font-medium">{u.userName}</div>
-                    <div className="text-xs text-muted-foreground">{roleLabel(u.role)}</div>
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">{u.pending}</TableCell>
-                  <TableCell className="text-right tabular-nums">{u.inProgress}</TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {u.overdue > 0 ? (
-                      <span className="text-destructive font-medium">{u.overdue}</span>
-                    ) : (
-                      "0"
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <DataTable columns={columns} data={rows} rowKey={(u) => String(u.userId)} />
       )}
     </div>
   );
 }
 
 function WorkloadDepts({ depts }: { depts: WorkloadDept[] }) {
+  const columns: DataTableColumn<WorkloadDept>[] = [
+    {
+      key: "dept",
+      header: "Τμήμα",
+      cell: (d) => (
+        <span className="flex items-center gap-2 font-medium">
+          <span className="size-2.5 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
+          {d.name}
+        </span>
+      ),
+    },
+    {
+      key: "pending",
+      header: "Αναμονή",
+      align: "right",
+      cell: (d) => <span className="tabular-nums">{d.pending}</span>,
+    },
+    {
+      key: "inProgress",
+      header: "Σε εξέλιξη",
+      align: "right",
+      cell: (d) => <span className="tabular-nums">{d.inProgress}</span>,
+    },
+    {
+      key: "overdue",
+      header: "Καθυστ/να",
+      align: "right",
+      cell: (d) => (
+        <span className="tabular-nums">
+          {d.overdue > 0 ? (
+            <span className="text-destructive font-medium">{d.overdue}</span>
+          ) : (
+            "0"
+          )}
+        </span>
+      ),
+    },
+  ];
   return (
     <div className="rounded-lg border bg-card">
       <div className="p-4 border-b">
@@ -310,42 +381,7 @@ function WorkloadDepts({ depts }: { depts: WorkloadDept[] }) {
       {depts.length === 0 ? (
         <p className="text-sm text-muted-foreground p-6 text-center">Καμία ενεργή ανάθεση.</p>
       ) : (
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Τμήμα</TableHead>
-                <TableHead className="text-right">Αναμονή</TableHead>
-                <TableHead className="text-right">Σε εξέλιξη</TableHead>
-                <TableHead className="text-right">Καθυστ/να</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {depts.map((d) => (
-                <TableRow key={d.departmentId}>
-                  <TableCell>
-                    <span className="flex items-center gap-2 font-medium">
-                      <span
-                        className="size-2.5 rounded-full shrink-0"
-                        style={{ backgroundColor: d.color }}
-                      />
-                      {d.name}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">{d.pending}</TableCell>
-                  <TableCell className="text-right tabular-nums">{d.inProgress}</TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {d.overdue > 0 ? (
-                      <span className="text-destructive font-medium">{d.overdue}</span>
-                    ) : (
-                      "0"
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <DataTable columns={columns} data={depts} rowKey={(d) => String(d.departmentId)} />
       )}
     </div>
   );

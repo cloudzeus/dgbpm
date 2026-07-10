@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": "2026-07-09T15:25:14.955Z",
+  "timestamp": "2026-07-10T04:41:15.928Z",
   "source": "auto-postool",
   "partial": false,
   "phase": null,
@@ -22,7 +22,51 @@
     },
     {
       "status": "M",
-      "path": "src/app/(app)/process-templates/actions.ts"
+      "path": "prisma/schema.prisma"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/departments/departments-client.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/my-tasks/page.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/positions/positions-client.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/process-templates/[id]/results/results-client.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/process-templates/process-templates-client.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/reports/by-task/report-by-task-client.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/reports/by-user/report-by-user-client.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/reports/overview/overview-client.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/reports/summary/report-summary-client.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/settings/connectors/connectors-client.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/settings/lookup-lists/lookup-lists-client.tsx"
     },
     {
       "status": "M",
@@ -30,9 +74,45 @@
     },
     {
       "status": "M",
+      "path": "src/app/(app)/users/page.tsx"
+    },
+    {
+      "status": "M",
       "path": "src/app/(app)/users/users-client.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/connectors/registry.ts"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/connectors/test.ts"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/nav-config.ts"
+    },
+    {
+      "status": "??",
+      "path": "src/app/(app)/my-tasks/my-tasks-table.tsx"
+    },
+    {
+      "status": "??",
+      "path": "src/app/(app)/reports/mailgun-data.ts"
+    },
+    {
+      "status": "??",
+      "path": "src/app/(app)/reports/mailgun/"
+    },
+    {
+      "status": "??",
+      "path": "src/components/ui/data-table.tsx"
+    },
+    {
+      "status": "??",
+      "path": "src/lib/connectors/read.ts"
     }
   ],
   "next_action": null,
-  "context_notes": "Recent commits:\n2cdd350 feat(settings): Connectors — διασυνδέσεις με τρίτες εφαρμογές (eshop & ERP)\nba9b9ae style(dashboard): align process launcher + Kanban board with app design\n9b48b3f feat: BPMS dashboard overview + AI business process advisor tool\n2908305 fix: self-heal stale session via email; clarify approval comment is optional\n960eeff fix(process-instances): guard against stale session user (P2003 on currentAssigneeId)"
+  "context_notes": "Recent commits:\na2225f4 feat(users+advisor): advanced users table & BPM-oriented AI advisor\n2cdd350 feat(settings): Connectors — διασυνδέσεις με τρίτες εφαρμογές (eshop & ERP)\nba9b9ae style(dashboard): align process launcher + Kanban board with app design\n9b48b3f feat: BPMS dashboard overview + AI business process advisor tool\n2908305 fix: self-heal stale session via email; clarify approval comment is optional"
 }

@@ -28,6 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -37,7 +38,7 @@ import {
   deleteLookupList,
   importLookupItems,
 } from "./actions";
-import { ArrowUp, ArrowDown, Trash2, Upload, Loader2 } from "lucide-react";
+import { ArrowUp, ArrowDown, Trash2, Upload, Loader2, Pencil } from "lucide-react";
 
 type LookupItem = { id: string; value: string; label: string; order: number };
 
@@ -182,58 +183,61 @@ export function LookupListsClient({ lists }: { lists: LookupList[] }) {
     }
   }
 
+  const columns: DataTableColumn<LookupList>[] = [
+    {
+      key: "name",
+      header: "Όνομα",
+      cell: (list) => <span className="font-medium">{list.name}</span>,
+    },
+    {
+      key: "description",
+      header: "Περιγραφή",
+      hideable: true,
+      cell: (list) => (
+        <span className="text-muted-foreground">{list.description ?? "—"}</span>
+      ),
+    },
+    {
+      key: "items",
+      header: "Τιμές",
+      align: "right",
+      cell: (list) => list.items.length,
+    },
+    {
+      key: "usage",
+      header: "Χρήση",
+      align: "right",
+      cell: (list) =>
+        list._count.fields > 0 ? `${list._count.fields} πεδία` : "—",
+    },
+  ];
+
   return (
     <>
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Όνομα</TableHead>
-              <TableHead>Περιγραφή</TableHead>
-              <TableHead className="text-right">Τιμές</TableHead>
-              <TableHead className="text-right">Χρήση</TableHead>
-              <TableHead className="text-right">Ενέργειες</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {lists.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-muted-foreground text-center py-6">
-                  Δεν υπάρχουν λίστες τιμών ακόμη.
-                </TableCell>
-              </TableRow>
-            ) : (
-              lists.map((list) => (
-                <TableRow key={list.id}>
-                  <TableCell className="font-medium">{list.name}</TableCell>
-                  <TableCell className="text-muted-foreground">{list.description ?? "—"}</TableCell>
-                  <TableCell className="text-right">{list.items.length}</TableCell>
-                  <TableCell className="text-right">
-                    {list._count.fields > 0 ? `${list._count.fields} πεδία` : "—"}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button variant="outline" size="sm" onClick={() => openEdit(list)}>
-                        Επεξεργασία
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => {
-                          setDeleteError(null);
-                          setDeleteId(list.id);
-                        }}
-                      >
-                        Διαγραφή
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable
+        columns={columns}
+        data={lists}
+        rowKey={(list) => list.id}
+        columnToggle
+        emptyMessage="Δεν υπάρχουν λίστες τιμών ακόμη."
+        actions={(list) => [
+          {
+            label: "Επεξεργασία",
+            icon: <Pencil className="size-4" />,
+            onSelect: () => openEdit(list),
+          },
+          {
+            label: "Διαγραφή",
+            icon: <Trash2 className="size-4" />,
+            destructive: true,
+            separatorBefore: true,
+            onSelect: () => {
+              setDeleteError(null);
+              setDeleteId(list.id);
+            },
+          },
+        ]}
+      />
 
       <Dialog
         open={open}

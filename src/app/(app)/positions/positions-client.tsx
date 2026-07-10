@@ -1,21 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
@@ -57,6 +49,17 @@ export function PositionsClient({
 
   const editing = editId ? positions.find((p) => p.id === editId) : null;
 
+  const columns: DataTableColumn<Position>[] = [
+    { key: "name", header: "Όνομα", cell: (p) => p.name },
+    { key: "department", header: "Τμήμα", cell: (p) => p.department.name },
+    {
+      key: "manager",
+      header: "Προϊστάμενος",
+      cell: (p) =>
+        p.manager ? `${p.manager.firstName} ${p.manager.lastName}` : "—",
+    },
+  ];
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
@@ -92,52 +95,32 @@ export function PositionsClient({
 
   return (
     <>
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Όνομα</TableHead>
-              <TableHead>Τμήμα</TableHead>
-              <TableHead>Προϊστάμενος</TableHead>
-              <TableHead className="w-[120px]">Ενέργειες</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {positions.map((p) => (
-              <TableRow key={p.id}>
-                <TableCell>{p.name}</TableCell>
-                <TableCell>{p.department.name}</TableCell>
-                <TableCell>
-                  {p.manager
-                    ? `${p.manager.firstName} ${p.manager.lastName}`
-                    : "—"}
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setEditId(p.id);
-                        setOpen(true);
-                      }}
-                    >
-                      Επεξεργασία
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => setDeleteId(p.id)}
-                    >
-                      Διαγραφή
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      <DataTable
+        columns={columns}
+        data={positions}
+        rowKey={(p) => p.id}
+        columnToggle
+        actions={(p) => [
+          {
+            label: "Επεξεργασία",
+            onSelect: () => {
+              setEditId(p.id);
+              setOpen(true);
+            },
+          },
+          {
+            label: "Διαγραφή",
+            destructive: true,
+            separatorBefore: true,
+            onSelect: () => setDeleteId(p.id),
+          },
+        ]}
+        toolbar={
+          <Button onClick={() => setOpen(true)}>
+            Δημιουργία θέσης εργασίας
+          </Button>
+        }
+      />
 
       <Dialog
         open={open}
@@ -146,9 +129,6 @@ export function PositionsClient({
           if (!o) setEditId(null);
         }}
       >
-        <DialogTrigger asChild>
-          <Button onClick={() => setOpen(true)}>Δημιουργία θέσης εργασίας</Button>
-        </DialogTrigger>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editId ? "Επεξεργασία θέσης εργασίας" : "Δημιουργία θέσης εργασίας"}</DialogTitle>

@@ -384,6 +384,7 @@ enum ConnectorType {
   WOOCOMMERCE
   MAGENTO
   OPENCARD
+  MAILGUN
 }
 
 model Connector {

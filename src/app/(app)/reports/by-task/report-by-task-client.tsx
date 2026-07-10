@@ -2,14 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   exportReportByTaskToExcel,
@@ -19,6 +12,17 @@ import {
 import { FiDownload, FiFileText } from "react-icons/fi";
 
 const TITLE = "Εργασίες ανά Εργασία";
+
+const columns: DataTableColumn<ReportByTaskRow>[] = [
+  { key: "taskName", header: "Εργασία", cell: (row) => <span className="font-medium">{row.taskName}</span> },
+  { key: "processTemplateName", header: "Πρότυπο Διαδικασίας", cell: (row) => row.processTemplateName },
+  { key: "totalAssignments", header: "Σύνολο", align: "right", cell: (row) => row.totalAssignments },
+  { key: "pending", header: "Σε αναμονή", align: "right", cell: (row) => row.pending },
+  { key: "inProgress", header: "Σε εξέλιξη", align: "right", cell: (row) => row.inProgress },
+  { key: "approved", header: "Εγκρίθηκε", align: "right", cell: (row) => row.approved },
+  { key: "rejected", header: "Απορρίφθηκε", align: "right", cell: (row) => row.rejected },
+  { key: "skipped", header: "Παραλείφθηκε", align: "right", cell: (row) => row.skipped },
+];
 
 export function ReportByTaskClient({ data }: { data: ReportByTaskRow[] }) {
   const handlePdf = () => exportReportByTaskToPdf(data, TITLE);
@@ -45,42 +49,12 @@ export function ReportByTaskClient({ data }: { data: ReportByTaskRow[] }) {
         </div>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Εργασία</TableHead>
-              <TableHead>Πρότυπο Διαδικασίας</TableHead>
-              <TableHead className="text-right">Σύνολο</TableHead>
-              <TableHead className="text-right">Σε αναμονή</TableHead>
-              <TableHead className="text-right">Σε εξέλιξη</TableHead>
-              <TableHead className="text-right">Εγκρίθηκε</TableHead>
-              <TableHead className="text-right">Απορρίφθηκε</TableHead>
-              <TableHead className="text-right">Παραλείφθηκε</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center text-muted-foreground">
-                  Χωρίς δεδομένα
-                </TableCell>
-              </TableRow>
-            ) : (
-              data.map((row, i) => (
-                <TableRow key={row.templateTaskId ?? `${row.taskName}-${i}`}>
-                  <TableCell className="font-medium">{row.taskName}</TableCell>
-                  <TableCell>{row.processTemplateName}</TableCell>
-                  <TableCell className="text-right">{row.totalAssignments}</TableCell>
-                  <TableCell className="text-right">{row.pending}</TableCell>
-                  <TableCell className="text-right">{row.inProgress}</TableCell>
-                  <TableCell className="text-right">{row.approved}</TableCell>
-                  <TableCell className="text-right">{row.rejected}</TableCell>
-                  <TableCell className="text-right">{row.skipped}</TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+        <DataTable
+          columns={columns}
+          data={data}
+          rowKey={(row) => String(row.templateTaskId ?? row.taskName)}
+          emptyMessage="Χωρίς δεδομένα"
+        />
       </CardContent>
     </Card>
   );

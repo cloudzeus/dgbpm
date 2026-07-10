@@ -2,14 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   exportReportSummaryToExcel,
@@ -19,6 +12,17 @@ import {
 import { FiDownload, FiFileText } from "react-icons/fi";
 
 const TITLE = "Σύνοψη Διαδικασιών";
+
+const columns: DataTableColumn<ReportSummaryRow>[] = [
+  { key: "instanceName", header: "Διαδικασία", cell: (row) => <span className="font-medium">{row.instanceName}</span> },
+  { key: "processTemplateName", header: "Πρότυπο", cell: (row) => row.processTemplateName },
+  { key: "status", header: "Κατάσταση", cell: (row) => row.status },
+  { key: "startedByName", header: "Εκκίνηση από", cell: (row) => row.startedByName },
+  { key: "startDate", header: "Ημερομηνία έναρξης", cell: (row) => row.startDate },
+  { key: "endDate", header: "Ημερομηνία λήξης", cell: (row) => row.endDate ?? "—" },
+  { key: "taskCount", header: "Εργασίες", align: "right", cell: (row) => row.taskCount },
+  { key: "completedTaskCount", header: "Ολοκληρώθηκαν", align: "right", cell: (row) => row.completedTaskCount },
+];
 
 export function ReportSummaryClient({ data }: { data: ReportSummaryRow[] }) {
   const handlePdf = () => exportReportSummaryToPdf(data, TITLE);
@@ -43,42 +47,12 @@ export function ReportSummaryClient({ data }: { data: ReportSummaryRow[] }) {
         </div>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Διαδικασία</TableHead>
-              <TableHead>Πρότυπο</TableHead>
-              <TableHead>Κατάσταση</TableHead>
-              <TableHead>Εκκίνηση από</TableHead>
-              <TableHead>Ημερομηνία έναρξης</TableHead>
-              <TableHead>Ημερομηνία λήξης</TableHead>
-              <TableHead className="text-right">Εργασίες</TableHead>
-              <TableHead className="text-right">Ολοκληρώθηκαν</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8} className="text-center text-muted-foreground">
-                  Χωρίς δεδομένα
-                </TableCell>
-              </TableRow>
-            ) : (
-              data.map((row) => (
-                <TableRow key={row.instanceId ?? row.instanceName}>
-                  <TableCell className="font-medium">{row.instanceName}</TableCell>
-                  <TableCell>{row.processTemplateName}</TableCell>
-                  <TableCell>{row.status}</TableCell>
-                  <TableCell>{row.startedByName}</TableCell>
-                  <TableCell>{row.startDate}</TableCell>
-                  <TableCell>{row.endDate ?? "—"}</TableCell>
-                  <TableCell className="text-right">{row.taskCount}</TableCell>
-                  <TableCell className="text-right">{row.completedTaskCount}</TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+        <DataTable
+          columns={columns}
+          data={data}
+          rowKey={(row) => String(row.instanceId ?? row.instanceName)}
+          emptyMessage="Χωρίς δεδομένα"
+        />
       </CardContent>
     </Card>
   );
