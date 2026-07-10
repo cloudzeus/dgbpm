@@ -38,8 +38,8 @@ export default async function MyTasksPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Οι Εργασίες μου</h1>
-        <p className="text-muted-foreground">Εργασίες που σας έχουν ανατεθεί (τρέχουσες και εκπρόθεσμες).</p>
+        <h1 className="ui-page-title">Οι Εργασίες μου</h1>
+        <p className="ui-page-subtitle">Εργασίες που σας έχουν ανατεθεί (τρέχουσες και εκπρόθεσμες).</p>
       </div>
       <MyTasksTable tasks={rows} />
     </div>

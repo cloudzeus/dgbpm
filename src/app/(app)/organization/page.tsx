@@ -33,8 +33,8 @@ export default async function OrganizationPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold">Οργανόγραμμα</h1>
-        <p className="text-muted-foreground">
+        <h1 className="ui-page-title">Οργανόγραμμα</h1>
+        <p className="ui-page-subtitle">
           Στήσε την ιεραρχία τμημάτων, τις θέσεις εργασίας και τις αναθέσεις χρηστών.
         </p>
       </div>

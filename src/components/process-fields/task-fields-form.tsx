@@ -109,11 +109,11 @@ export function TaskFieldsForm({
     <div className="space-y-4">
       {readOnly.length > 0 && (
         <div className="space-y-2">
-          <h4 className="text-sm font-medium">Στοιχεία προηγούμενων βημάτων</h4>
+          <h4 className="ui-subsection-title">Στοιχεία προηγούμενων βημάτων</h4>
           <dl className="grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
             {readOnly.map((f) => (
               <div key={f.id} className="flex flex-col">
-                <dt className="text-xs text-muted-foreground">{f.name}</dt>
+                <dt className="ui-meta">{f.name}</dt>
                 <dd>{toDisplay(f.type, f.value)}</dd>
               </div>
             ))}
@@ -123,7 +123,7 @@ export function TaskFieldsForm({
 
       {editable.length > 0 && (
         <div className="space-y-3">
-          <h4 className="text-sm font-medium">Στοιχεία αυτού του βήματος</h4>
+          <h4 className="ui-subsection-title">Στοιχεία αυτού του βήματος</h4>
           {editable.map((f) => (
             <div key={f.id} className="space-y-1">
               <Label className="flex items-center gap-1">
@@ -145,7 +145,7 @@ export function TaskFieldsForm({
                 {saving ? "Αποθήκευση..." : "Αποθήκευση στοιχείων"}
               </Button>
               {saved && !error && (
-                <span className="text-xs text-muted-foreground">Αποθηκεύτηκε.</span>
+                <span className="ui-meta">Αποθηκεύτηκε.</span>
               )}
             </div>
           )}

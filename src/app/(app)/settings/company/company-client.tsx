@@ -256,9 +256,9 @@ export function CompanyClient({ company }: { company: CompanyData }) {
                 <li key={`${a.code}-${i}`} className="flex items-start gap-3 py-2.5">
                   <span className="font-mono text-sm font-medium">{a.code}</span>
                   <div className="flex-1">
-                    <p className="text-sm">{a.description}</p>
+                    <p className="ui-body">{a.description}</p>
                     {a.kind && (
-                      <p className="text-xs text-muted-foreground">{a.kind}</p>
+                      <p className="ui-meta">{a.kind}</p>
                     )}
                   </div>
                   {a.isPrimary && <Badge>Κύρια</Badge>}

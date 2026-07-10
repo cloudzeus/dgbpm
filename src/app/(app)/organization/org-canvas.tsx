@@ -65,9 +65,9 @@ function NodeBox({
       >
         <div className="flex items-center gap-2">
           <span className="size-2 rounded-full" style={{ backgroundColor: dept.color }} />
-          <div className="text-sm font-semibold text-foreground">{dept.name}</div>
+          <div className="ui-subsection-title">{dept.name}</div>
         </div>
-        <div className="mt-1.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+        <div className="ui-meta mt-1.5 flex items-center gap-1.5">
           <span className="rounded-full bg-muted px-1.5 py-0.5 font-medium tabular-nums">
             {dept.positions.length} θέσεις
           </span>
@@ -335,7 +335,7 @@ export function OrgCanvas({
         <button className="rounded p-1 hover:bg-muted" onClick={() => zoomBy(1.2)} title="Μεγέθυνση"><Plus className="size-4" /></button>
         <button className="rounded p-1 hover:bg-muted" onClick={fit} title="Προσαρμογή"><Maximize2 className="size-4" /></button>
       </div>
-      <div className="pointer-events-none absolute bottom-2 left-3 z-20 text-[10px] text-muted-foreground">
+      <div className="ui-meta pointer-events-none absolute bottom-2 left-3 z-20">
         Ροδέλα ποντικιού: zoom · Σύρε το φόντο: μετακίνηση · Σύρε κουτί πάνω σε άλλο: αλλαγή γονέα
       </div>
 

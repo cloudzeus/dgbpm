@@ -184,7 +184,7 @@ function StaticKanbanColumn({
   });
   return (
     <div className="rounded-xl border bg-muted/30 min-h-[200px] p-2.5 transition-colors">
-      <h3 className="font-semibold text-sm mb-3 flex items-center justify-between px-1">
+      <h3 className="ui-subsection-title mb-3 flex items-center justify-between px-1">
         <span className="flex items-center gap-2 text-foreground">
           <span className={cn("size-2 rounded-full", STATUS_DOT[status])} />
           {taskStatusMeta(status).label}
@@ -242,7 +242,7 @@ function DroppableColumn({
         isOver && "ring-2 ring-primary/40 bg-primary/5"
       )}
     >
-      <h3 className="font-semibold text-sm mb-3 flex items-center justify-between px-1">
+      <h3 className="ui-subsection-title mb-3 flex items-center justify-between px-1">
         <span className="flex items-center gap-2 text-foreground">
           <span className={cn("size-2 rounded-full", STATUS_DOT[status])} />
           {taskStatusMeta(status).label}
@@ -522,7 +522,7 @@ export function DashboardProcessSection({
     <>
       {allowedTemplates.length > 0 && (
         <section className="space-y-4">
-          <h2 className="text-lg font-semibold">Έναρξη διαδικασίας</h2>
+          <h2 className="ui-section-title">Έναρξη διαδικασίας</h2>
           <TooltipProvider>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {allowedTemplates.map((t) => {
@@ -566,7 +566,7 @@ export function DashboardProcessSection({
       )}
 
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold">Εργασίες ανά κατάσταση</h2>
+        <h2 className="ui-section-title">Εργασίες ανά κατάσταση</h2>
         {!dndMounted ? (
           <div className="rounded-xl border bg-muted/20 p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 overflow-x-auto pb-4">
             {KANBAN_COLUMNS.map((status) => (

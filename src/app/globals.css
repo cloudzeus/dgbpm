@@ -124,3 +124,56 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Semantic typography scale — single source of truth.
+   Calibrated to the data-table gauge (dense data = text-xs, column heads =
+   text-[11px] uppercase). Use these classes for every page-level heading,
+   label, value and helper text so sizes stay consistent across all pages.
+   --------------------------------------------------------------------------- */
+@layer components {
+  /* Page header block */
+  .ui-page-title {
+    @apply text-2xl font-semibold tracking-tight text-foreground;
+  }
+  .ui-page-subtitle {
+    @apply text-sm text-muted-foreground;
+  }
+
+  /* Section & card headings */
+  .ui-section-title {
+    @apply text-base font-semibold text-foreground;
+  }
+  .ui-subsection-title {
+    @apply text-sm font-semibold text-foreground;
+  }
+
+  /* Eyebrow / stat labels / column-head style (matches the data table head) */
+  .ui-eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-wide text-muted-foreground;
+  }
+
+  /* Body & data text */
+  .ui-body {
+    @apply text-sm text-foreground;
+  }
+  .ui-body-muted {
+    @apply text-sm text-muted-foreground;
+  }
+  .ui-data {
+    @apply text-xs text-foreground;
+  }
+  .ui-meta {
+    @apply text-xs text-muted-foreground;
+  }
+
+  /* Form field label (like ui-eyebrow but NOT uppercase — for input labels) */
+  .ui-field-label {
+    @apply text-xs font-medium text-muted-foreground;
+  }
+
+  /* KPI / metric numbers */
+  .ui-metric {
+    @apply text-2xl font-bold tabular-nums text-foreground;
+  }
+}

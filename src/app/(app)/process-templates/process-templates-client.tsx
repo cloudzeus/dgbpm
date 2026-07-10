@@ -181,7 +181,7 @@ export function TaskTimelineModal({ tasks }: { tasks: TaskInput[] }) {
   return (
     <div className="mb-6 rounded-xl border bg-card p-4 shadow-sm">
       <div className="mb-4 flex items-center gap-2">
-        <h3 className="text-sm font-semibold text-foreground">Ροή διαδικασίας</h3>
+        <h3 className="ui-subsection-title">Ροή διαδικασίας</h3>
         <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
           {tasks.length} {tasks.length === 1 ? "βήμα" : "βήματα"}
         </span>
@@ -251,7 +251,7 @@ function TaskFlowVisual({ tasks }: { tasks: TemplateTask[] }) {
                   {task.order + 1}
                 </span>
                 <div className="min-w-0 space-y-1">
-                  <div className="text-[9px] font-medium uppercase tracking-wide text-muted-foreground">
+                  <div className="ui-eyebrow">
                     Βήμα {task.order + 1}
                   </div>
                   <div className="text-xs font-medium leading-snug text-foreground">
@@ -386,7 +386,7 @@ export function SortableTaskItem({
       <AccordionContent>
         <div className="space-y-5 px-4 pt-1 pb-4">
           <section className="space-y-3">
-            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Λεπτομέρειες βήματος</h4>
+            <h4 className="ui-eyebrow">Λεπτομέρειες βήματος</h4>
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">Όνομα εργασίας</Label>
               <Input
@@ -457,7 +457,7 @@ export function SortableTaskItem({
             </div>
           </section>
           <section className="space-y-3">
-            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Εγκρίνοντες</h4>
+            <h4 className="ui-eyebrow">Εγκρίνοντες</h4>
           <div className="space-y-2">
             <Label className="text-xs text-muted-foreground">Ποιος μπορεί να εγκρίνει αυτή την εργασία</Label>
             <PositionMultiSelect
@@ -485,10 +485,10 @@ export function SortableTaskItem({
           </div>
           </section>
           <section className="space-y-3">
-            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Ειδοποιήσεις</h4>
+            <h4 className="ui-eyebrow">Ειδοποιήσεις</h4>
           <div className="space-y-2">
             <Label className="text-xs text-muted-foreground">Ειδοποίηση όταν ξεκινά η εργασία</Label>
-            <p className="text-muted-foreground text-xs">Θέσεις εργασίας ή/και κανόνες προς ειδοποίηση όταν ξεκινά αυτή η εργασία</p>
+            <p className="ui-meta">Θέσεις εργασίας ή/και κανόνες προς ειδοποίηση όταν ξεκινά αυτή η εργασία</p>
             <PositionMultiSelect
               positions={positions}
               selectedIds={task.notifyOnStartPositionIds}
@@ -521,7 +521,7 @@ export function SortableTaskItem({
           </div>
           <div className="space-y-2">
             <Label className="text-xs text-muted-foreground">Ειδοποίηση όταν ολοκληρωθεί η εργασία</Label>
-            <p className="text-muted-foreground text-xs">Θέσεις εργασίας ή/και κανόνες προς ειδοποίηση όταν αυτή η εργασία εγκριθεί ή απορριφθεί</p>
+            <p className="ui-meta">Θέσεις εργασίας ή/και κανόνες προς ειδοποίηση όταν αυτή η εργασία εγκριθεί ή απορριφθεί</p>
             <PositionMultiSelect
               positions={positions}
               selectedIds={task.notifyOnCompletePositionIds}
@@ -735,7 +735,7 @@ export function ProcessTemplatesClient({
                           </span>
                         </div>
                         {t.description && (
-                          <p className="truncate text-xs text-muted-foreground">{t.description}</p>
+                          <p className="truncate ui-meta">{t.description}</p>
                         )}
                         <p className="truncate text-xs text-muted-foreground/80">
                           {t.allowedDepartments.length

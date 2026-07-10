@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { taskStatusMeta } from "@/lib/process-status";
 import { formatDateTime } from "@/lib/format";
-import { Paperclip } from "lucide-react";
+import { Paperclip, User, Activity, ChevronRight, Lock } from "lucide-react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -136,246 +137,346 @@ export function ProcessInstanceDetail({
 
   return (
     <>
-      <ol className="relative">
+      <ol className="relative max-w-3xl">
         {[...instance.tasks]
           .sort((a, b) => a.templateTask.order - b.templateTask.order)
           .map((t, idx, arr) => {
             const meta = taskStatusMeta(t.status);
             const isLast = idx === arr.length - 1;
+            const isActive = t.status === "IN_PROGRESS";
+            const isResolved = t.status === "APPROVED" || t.status === "SKIPPED";
+            // Μπλοκαρισμένο: μη ολοκληρωμένο βήμα με εκκρεμές προηγούμενο (σειριακή ροή).
+            const blocked =
+              !isResolved &&
+              t.status !== "REJECTED" &&
+              arr
+                .slice(0, idx)
+                .some((p) => p.status !== "APPROVED" && p.status !== "SKIPPED");
             const Icon = meta.Icon;
+            const open = () => {
+              setTaskModalId(t.id);
+              setTaskComment("");
+            };
             return (
-              <li key={t.id} className="relative flex gap-4 pb-4 last:pb-0">
-                {/* connector line */}
+              <li key={t.id} className="relative flex gap-3 pb-4 last:pb-0">
+                {/* connector — centered on the 32px node (center x = 16px) */}
                 {!isLast && (
                   <span
-                    className="absolute left-[15px] top-8 bottom-0 w-px bg-border"
+                    className={`absolute left-4 top-8 bottom-0 w-0.5 -translate-x-1/2 ${
+                      isResolved ? "bg-emerald-500" : "bg-border"
+                    }`}
                     aria-hidden
                   />
                 )}
-                {/* status node */}
+                {/* node */}
                 <div
-                  className={`relative z-10 flex size-8 shrink-0 items-center justify-center rounded-full border ${meta.node} ${
-                    t.status === "IN_PROGRESS" ? "ring-4 ring-blue-500/15" : ""
-                  }`}
+                  className={`relative z-10 flex size-8 shrink-0 items-center justify-center rounded-full border text-xs font-semibold tabular-nums transition-colors ${
+                    blocked
+                      ? "border-dashed border-border bg-muted text-muted-foreground/60"
+                      : meta.node
+                  } ${isActive ? "ring-4 ring-blue-500/15" : ""}`}
                 >
-                  <Icon className="size-4" />
+                  {blocked ? (
+                    <Lock className="size-3.5" />
+                  ) : isResolved || t.status === "REJECTED" ? (
+                    <Icon className="size-4" />
+                  ) : (
+                    t.templateTask.order + 1
+                  )}
                 </div>
 
-                {/* card */}
-                <div className="flex-1 min-w-0 rounded-lg border bg-card p-3 hover:border-primary/40 transition-colors">
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs text-muted-foreground tabular-nums">
-                          Βήμα {t.templateTask.order + 1}
-                        </span>
-                        <span className="font-medium">{t.templateTask.name}</span>
-                      </div>
-                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                        <span
-                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${meta.badge}`}
-                        >
-                          {meta.label}
-                        </span>
-                        {t.templateTask.mandatory && (
-                          <Badge variant="outline" className="text-xs">Υποχρεωτικό</Badge>
-                        )}
-                        {t.templateTask.needFile && (
-                          <Badge variant="outline" className="text-xs gap-1">
-                            <Paperclip className="size-3" /> Αρχείο
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setTaskModalId(t.id);
-                        setTaskComment("");
-                      }}
+                {/* content — flat, clickable, no card border */}
+                <button
+                  type="button"
+                  onClick={open}
+                  className="group -mt-1 min-w-0 flex-1 rounded-lg px-3 py-1.5 text-left transition-colors hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {/* title row */}
+                  <div className="flex items-center gap-2">
+                    <span className="ui-meta shrink-0 tabular-nums">
+                      {t.templateTask.order + 1}.
+                    </span>
+                    <span
+                      className={`truncate text-sm font-medium ${
+                        isResolved || blocked ? "text-muted-foreground" : "text-foreground"
+                      }`}
                     >
-                      Άνοιγμα
-                    </Button>
+                      {t.templateTask.name}
+                    </span>
+                    <span
+                      className={`inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${meta.badge}`}
+                    >
+                      {meta.label}
+                    </span>
+                    <ChevronRight className="ml-auto size-4 shrink-0 text-muted-foreground/40 transition-transform group-hover:translate-x-0.5 group-hover:text-muted-foreground" />
                   </div>
 
-                  <div className="mt-2 grid gap-x-6 gap-y-1 text-xs text-muted-foreground sm:grid-cols-2">
-                    <div className="truncate">
-                      <span className="text-muted-foreground/70">Υπεύθυνος: </span>
-                      {t.currentAssignee
-                        ? `${t.currentAssignee.firstName} ${t.currentAssignee.lastName}`
-                        : "—"}
-                    </div>
-                    <div className="truncate">
-                      <span className="text-muted-foreground/70">Τελευταία ενέργεια: </span>
-                      {t.actions[0]
-                        ? `${t.actions[0].action} · ${t.actions[0].user.firstName} ${t.actions[0].user.lastName}`
-                        : "—"}
-                    </div>
+                  {/* meta line: assignee · last action · requirement chips */}
+                  <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1 ui-meta">
+                    <span className="flex min-w-0 items-center gap-1">
+                      <User className="size-3 shrink-0 text-muted-foreground/50" />
+                      <span className="truncate">
+                        {t.currentAssignee
+                          ? `${t.currentAssignee.firstName} ${t.currentAssignee.lastName}`
+                          : "Χωρίς υπεύθυνο"}
+                      </span>
+                    </span>
+                    {t.actions[0] && (
+                      <>
+                        <span className="text-muted-foreground/30">·</span>
+                        <span className="flex min-w-0 items-center gap-1">
+                          <Activity className="size-3 shrink-0 text-muted-foreground/50" />
+                          <span className="truncate">
+                            {t.actions[0].action} · {t.actions[0].user.firstName}{" "}
+                            {t.actions[0].user.lastName}
+                          </span>
+                        </span>
+                      </>
+                    )}
+                    {t.templateTask.mandatory && (
+                      <span className="text-muted-foreground/70">· Υποχρεωτικό</span>
+                    )}
+                    {t.templateTask.needFile && (
+                      <span className="flex items-center gap-1 text-muted-foreground/70">
+                        · <Paperclip className="size-3" /> Αρχείο
+                      </span>
+                    )}
                   </div>
-                </div>
+                </button>
               </li>
             );
           })}
       </ol>
 
       <Dialog open={!!taskModalId} onOpenChange={() => setTaskModalId(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{task?.templateTask.name}</DialogTitle>
-          </DialogHeader>
-          {task && (
-            <div className="space-y-4">
-              {task.templateTask.description && (
-                <p className="text-sm text-muted-foreground">{task.templateTask.description}</p>
-              )}
-              <div className="flex flex-wrap gap-2">
-                {task.templateTask.mandatory && (
-                  <Badge variant="success">Υποχρεωτικό</Badge>
-                )}
-                {task.templateTask.needFile && (
-                  <Badge variant="info">Απαιτείται αρχείο</Badge>
-                )}
-              </div>
-
-              {taskFields[task.id] &&
-                (taskFields[task.id].editable.length > 0 ||
-                  taskFields[task.id].readOnly.length > 0) && (
-                  <div className="rounded-lg border bg-muted/30 p-3">
-                    <TaskFieldsForm
-                      taskId={task.id}
-                      editable={taskFields[task.id].editable}
-                      readOnly={taskFields[task.id].readOnly}
-                      canEdit={
-                        (isSuperOrAdmin ||
-                          task.possibleAssignees.some((u) => u.id === currentUserId)) &&
-                        task.status !== "APPROVED" &&
-                        task.status !== "REJECTED"
-                      }
-                    />
-                  </div>
-                )}
-
-              {(task.status === "REJECTED" && task.comment) && (
-                <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3">
-                  <h4 className="text-sm font-semibold text-destructive mb-1">Λόγος απόρριψης</h4>
-                  <CommentDisplay content={task.comment} />
-                </div>
-              )}
-              {(task.status === "APPROVED" && task.comment) && (
-                <div className="rounded-lg border bg-muted/50 p-3">
-                  <h4 className="text-sm font-semibold text-foreground mb-1">Σχόλιο έγκρισης</h4>
-                  <CommentDisplay content={task.comment} />
-                </div>
-              )}
-
-              {(isSuperOrAdmin || task.possibleAssignees.some((u) => u.id === currentUserId)) &&
-                task.status !== "APPROVED" &&
-                task.status !== "REJECTED" && (
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-medium">Σχόλιο</h4>
-                    <p className="text-muted-foreground text-xs">Προσθέστε σχόλιο (υποχρεωτικό στην απόρριψη, προαιρετικό στην έγκριση).</p>
-                    <RichTextComment
-                      key={taskModalId ?? "modal"}
-                      value={taskComment}
-                      onChange={setTaskComment}
-                      minHeight="280px"
-                    />
-                  </div>
-                )}
-
-              {task.templateTask.needFile && (
-                <div className="space-y-2">
-                  <h4 className="text-sm font-medium">Συνημμένο αρχείο</h4>
-                  {task.fileUrl ? (
-                    <p className="text-sm">
-                      <a
-                        href={task.fileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary underline"
-                      >
-                        Προβολή αρχείου
-                      </a>
-                    </p>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">Δεν έχει μεταφορτωθεί αρχείο ακόμη.</p>
-                  )}
-                  {(isSuperOrAdmin || task.possibleAssignees.some((u) => u.id === currentUserId)) &&
-                    task.status !== "APPROVED" &&
-                    task.status !== "REJECTED" && (
-                      <form
-                        onSubmit={(e) => handleFileUpload(task.id, e)}
-                        className="flex flex-wrap items-end gap-2"
-                      >
-                        <input
-                          type="file"
-                          name="file"
-                          className="text-sm file:mr-2 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-primary-foreground file:text-sm"
-                        />
-                        <Button type="submit" variant="outline" size="sm" disabled={uploading}>
-                          {uploading ? "Μεταφόρτωση..." : "Μεταφόρτωση"}
-                        </Button>
-                        {uploadError && (
-                          <p className="w-full text-sm text-destructive">{uploadError}</p>
-                        )}
-                      </form>
-                    )}
-                </div>
-              )}
-
-              <div>
-                <h4 className="text-sm font-medium mb-2">Ιστορικό</h4>
-                <ul className="space-y-1 text-sm">
-                  {task.actions.map((a) => (
-                    <li key={a.createdAt.toString()}>
-                      {a.action} από {a.user.firstName} {a.user.lastName}
-                      {a.message && (
-                        <>
-                          : <CommentDisplay content={a.message} inline />
-                        </>
-                      )}{" "}
-                      — {formatDateTime(a.createdAt)}
-                    </li>
-                  ))}
-                  {task.actions.length === 0 && <li className="text-muted-foreground">Καμία ενέργεια ακόμη</li>}
-                </ul>
-              </div>
-
-              {(isSuperOrAdmin || task.possibleAssignees.some((u) => u.id === currentUserId)) && task.status !== "APPROVED" && task.status !== "REJECTED" && (
-                <div className="flex flex-wrap gap-2 pt-4 border-t">
-                  {task.status === "PENDING" && (
-                    <Button
-                      onClick={() => handleStart(task.id)}
-                      disabled={loading}
+        <DialogContent className="max-w-2xl gap-0 p-0">
+          {task && (() => {
+            const canAct =
+              (isSuperOrAdmin ||
+                task.possibleAssignees.some((u) => u.id === currentUserId)) &&
+              task.status !== "APPROVED" &&
+              task.status !== "REJECTED";
+            const meta = taskStatusMeta(task.status);
+            // Σειριακή ροή: κλείδωμα ενεργειών όσο εκκρεμεί προηγούμενο βήμα.
+            const priorBlocking = instance.tasks
+              .filter((x) => x.templateTask.order < task.templateTask.order)
+              .sort((a, b) => a.templateTask.order - b.templateTask.order)
+              .find((x) => x.status !== "APPROVED" && x.status !== "SKIPPED");
+            const locked = !!priorBlocking;
+            return (
+              <>
+                {/* header */}
+                <DialogHeader className="gap-2 border-b px-6 py-4 text-left">
+                  <div className="flex items-center gap-2">
+                    <span className="ui-eyebrow tabular-nums">
+                      Βήμα {task.templateTask.order + 1}
+                    </span>
+                    <span
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${meta.badge}`}
                     >
-                      Έναρξη εργασίας
-                    </Button>
+                      {meta.label}
+                    </span>
+                  </div>
+                  <DialogTitle>{task.templateTask.name}</DialogTitle>
+                  {task.templateTask.description && (
+                    <DialogDescription>{task.templateTask.description}</DialogDescription>
                   )}
-                  {(task.status === "PENDING" || task.status === "IN_PROGRESS") && (
-                    <div className="flex flex-col gap-3">
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          variant="default"
-                          onClick={() => handleApprove(task.id)}
-                          disabled={loading}
-                        >
-                          Έγκριση
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          onClick={() => handleReject(task.id)}
-                          disabled={loading || !taskComment.trim() || taskComment.replace(/<[^>]*>/g, "").trim() === ""}
-                        >
-                          Απόρριψη (απαιτείται σχόλιο)
-                        </Button>
-                      </div>
+                  {(task.templateTask.mandatory || task.templateTask.needFile) && (
+                    <div className="flex flex-wrap gap-1.5 pt-0.5">
+                      {task.templateTask.mandatory && (
+                        <Badge variant="outline" className="text-xs">Υποχρεωτικό</Badge>
+                      )}
+                      {task.templateTask.needFile && (
+                        <Badge variant="outline" className="gap-1 text-xs">
+                          <Paperclip className="size-3" /> Απαιτείται αρχείο
+                        </Badge>
+                      )}
                     </div>
                   )}
+                </DialogHeader>
+
+                {/* body */}
+                <div className="space-y-5 px-6 py-5">
+                  {/* overview — always visible so the step is never a mystery */}
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-3 rounded-lg border bg-muted/20 p-4 sm:grid-cols-3">
+                    <div>
+                      <div className="ui-eyebrow">Υπεύθυνος</div>
+                      <div className="mt-0.5 truncate text-sm">
+                        {task.currentAssignee
+                          ? `${task.currentAssignee.firstName} ${task.currentAssignee.lastName}`
+                          : "—"}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="ui-eyebrow">Έναρξη</div>
+                      <div className="mt-0.5 text-sm tabular-nums">
+                        {task.startedAt ? formatDateTime(task.startedAt) : "—"}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="ui-eyebrow">Ολοκλήρωση</div>
+                      <div className="mt-0.5 text-sm tabular-nums">
+                        {task.completedAt ? formatDateTime(task.completedAt) : "—"}
+                      </div>
+                    </div>
+                  </div>
+
+                  {taskFields[task.id] &&
+                    (taskFields[task.id].editable.length > 0 ||
+                      taskFields[task.id].readOnly.length > 0) && (
+                      <div className="rounded-lg border bg-muted/30 p-4">
+                        <TaskFieldsForm
+                          taskId={task.id}
+                          editable={taskFields[task.id].editable}
+                          readOnly={taskFields[task.id].readOnly}
+                          canEdit={canAct}
+                        />
+                      </div>
+                    )}
+
+                  {task.status === "REJECTED" && task.comment && (
+                    <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+                      <h4 className="ui-eyebrow mb-1.5 text-destructive">Λόγος απόρριψης</h4>
+                      <CommentDisplay content={task.comment} />
+                    </div>
+                  )}
+                  {task.status === "APPROVED" && task.comment && (
+                    <div className="rounded-lg border bg-muted/40 p-4">
+                      <h4 className="ui-eyebrow mb-1.5">Σχόλιο έγκρισης</h4>
+                      <CommentDisplay content={task.comment} />
+                    </div>
+                  )}
+
+                  {canAct && !locked && (
+                    <section className="space-y-2">
+                      <div>
+                        <h4 className="ui-eyebrow">Σχόλιο</h4>
+                        <p className="ui-meta mt-0.5">
+                          Υποχρεωτικό στην απόρριψη, προαιρετικό στην έγκριση.
+                        </p>
+                      </div>
+                      <RichTextComment
+                        key={taskModalId ?? "modal"}
+                        value={taskComment}
+                        onChange={setTaskComment}
+                        minHeight="180px"
+                      />
+                    </section>
+                  )}
+
+                  {task.templateTask.needFile && (
+                    <section className="space-y-2">
+                      <h4 className="ui-eyebrow">Συνημμένο αρχείο</h4>
+                      {task.fileUrl ? (
+                        <a
+                          href={task.fileUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
+                        >
+                          <Paperclip className="size-3.5" /> Προβολή αρχείου
+                        </a>
+                      ) : (
+                        <p className="ui-body-muted">Δεν έχει μεταφορτωθεί αρχείο ακόμη.</p>
+                      )}
+                      {canAct && (
+                        <form
+                          onSubmit={(e) => handleFileUpload(task.id, e)}
+                          className="flex flex-wrap items-center gap-2 pt-1"
+                        >
+                          <input
+                            type="file"
+                            name="file"
+                            className="text-sm file:mr-2 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-sm file:text-primary-foreground"
+                          />
+                          <Button type="submit" variant="outline" size="sm" disabled={uploading}>
+                            {uploading ? "Μεταφόρτωση..." : "Μεταφόρτωση"}
+                          </Button>
+                          {uploadError && (
+                            <p className="w-full text-sm text-destructive">{uploadError}</p>
+                          )}
+                        </form>
+                      )}
+                    </section>
+                  )}
+
+                  <section className="space-y-2">
+                    <h4 className="ui-eyebrow">Ιστορικό</h4>
+                    {task.actions.length === 0 ? (
+                      <p className="ui-body-muted">Καμία ενέργεια ακόμη.</p>
+                    ) : (
+                      <ul className="space-y-2.5">
+                        {task.actions.map((a) => (
+                          <li key={a.createdAt.toString()} className="flex gap-3 text-sm">
+                            <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-muted-foreground/40" />
+                            <div className="min-w-0">
+                              <div>
+                                <span className="font-medium">{a.action}</span>{" "}
+                                <span className="text-muted-foreground">
+                                  · {a.user.firstName} {a.user.lastName}
+                                </span>
+                              </div>
+                              {a.message && (
+                                <div className="ui-body-muted">
+                                  <CommentDisplay content={a.message} inline />
+                                </div>
+                              )}
+                              <div className="ui-meta mt-0.5 tabular-nums">
+                                {formatDateTime(a.createdAt)}
+                              </div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </section>
                 </div>
-              )}
-            </div>
-          )}
+
+                {/* footer */}
+                {canAct &&
+                  (task.status === "PENDING" || task.status === "IN_PROGRESS") &&
+                  (locked ? (
+                    <div className="flex items-center gap-2 border-t bg-muted/20 px-6 py-4 text-sm text-muted-foreground">
+                      <Lock className="size-4 shrink-0" />
+                      <span>
+                        Ολοκληρώστε πρώτα το προηγούμενο βήμα{" "}
+                        <span className="font-medium text-foreground">
+                          «{priorBlocking!.templateTask.name}» (Βήμα{" "}
+                          {priorBlocking!.templateTask.order + 1})
+                        </span>
+                        .
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap justify-end gap-2 border-t px-6 py-4">
+                      {task.status === "PENDING" && (
+                        <Button
+                          variant="outline"
+                          onClick={() => handleStart(task.id)}
+                          disabled={loading}
+                        >
+                          Έναρξη εργασίας
+                        </Button>
+                      )}
+                      <Button
+                        variant="destructive"
+                        onClick={() => handleReject(task.id)}
+                        disabled={
+                          loading ||
+                          !taskComment.trim() ||
+                          taskComment.replace(/<[^>]*>/g, "").trim() === ""
+                        }
+                      >
+                        Απόρριψη
+                      </Button>
+                      <Button onClick={() => handleApprove(task.id)} disabled={loading}>
+                        Έγκριση
+                      </Button>
+                    </div>
+                  ))}
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </>

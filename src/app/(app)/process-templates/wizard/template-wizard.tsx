@@ -321,7 +321,7 @@ export function TemplateWizard(props: {
             <section className="overflow-hidden rounded-xl border border-primary/30 bg-gradient-to-br from-primary/5 via-primary/5 to-transparent">
               <div className="flex items-center gap-2 border-b border-primary/20 bg-primary/10 px-4 py-2.5">
                 <Wand2 className="size-4 text-primary" />
-                <h3 className="text-sm font-semibold text-foreground">Δημιουργία με AI</h3>
+                <h3 className="ui-subsection-title">Δημιουργία με AI</h3>
                 <span className="rounded-full bg-primary/15 px-2 py-0.5 text-[11px] font-medium text-primary">
                   προτεινόμενο
                 </span>
@@ -355,7 +355,7 @@ export function TemplateWizard(props: {
                     {aiLoading ? "Δημιουργία..." : "Δημιουργία διαδικασίας"}
                   </Button>
                   {(state.tasks.length > 0 || state.fields.length > 0) && !aiLoading && (
-                    <span className="text-xs text-muted-foreground">
+                    <span className="ui-meta">
                       ✓ Προτάθηκαν {state.tasks.length} βήματα & {state.fields.length} πεδία — δείτε τα
                       επόμενα βήματα.
                     </span>
@@ -365,7 +365,7 @@ export function TemplateWizard(props: {
             </section>
 
             <section className="space-y-3">
-              <h3 className="text-sm font-semibold text-foreground border-b pb-1">Γενικά</h3>
+              <h3 className="ui-subsection-title border-b pb-1">Γενικά</h3>
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Όνομα</Label>
                 <Input
@@ -387,7 +387,7 @@ export function TemplateWizard(props: {
               </div>
             </section>
             <section className="space-y-3">
-              <h3 className="text-sm font-semibold text-foreground border-b pb-1">Εικονίδιο</h3>
+              <h3 className="ui-subsection-title border-b pb-1">Εικονίδιο</h3>
               <p className="text-muted-foreground text-sm">Επιλέξτε ένα εικονίδιο για αυτή τη διαδικασία</p>
               <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2 py-1">
                 {PROCESS_ICON_OPTIONS.map((opt) => {
@@ -415,7 +415,7 @@ export function TemplateWizard(props: {
         {/* Step 1 — Τμήματα */}
         {step === 1 && (
           <section className="space-y-3">
-            <h3 className="text-sm font-semibold text-foreground border-b pb-1">
+            <h3 className="ui-subsection-title border-b pb-1">
               Ποιος μπορεί να ξεκινήσει αυτή τη διαδικασία
             </h3>
             <p className="text-muted-foreground text-sm">
@@ -454,7 +454,7 @@ export function TemplateWizard(props: {
             <TaskTimelineModal tasks={state.tasks} />
             <section>
               <div className="flex justify-between items-center mb-3">
-                <h3 className="text-sm font-semibold text-foreground">Λίστα εργασιών</h3>
+                <h3 className="ui-subsection-title">Λίστα εργασιών</h3>
                 <Button type="button" variant="outline" size="sm" onClick={addTask}>
                   Προσθήκη εργασίας
                 </Button>
@@ -502,7 +502,7 @@ export function TemplateWizard(props: {
         {step === 4 && (
           <div className="space-y-5">
             <section className="space-y-2">
-              <h3 className="text-sm font-semibold text-foreground border-b pb-1">Επισκόπηση</h3>
+              <h3 className="ui-subsection-title border-b pb-1">Επισκόπηση</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                 <div className="flex items-center gap-2">
                   <ProcessIcon icon={state.icon} className="size-5 text-muted-foreground" />
@@ -522,7 +522,7 @@ export function TemplateWizard(props: {
             </section>
 
             <section className="space-y-2">
-              <h4 className="text-sm font-semibold text-foreground">Βήματα ({state.tasks.length})</h4>
+              <h4 className="ui-subsection-title">Βήματα ({state.tasks.length})</h4>
               <ol className="list-decimal pl-5 text-sm space-y-1">
                 {state.tasks.map((t) => (
                   <li key={t.id}>
@@ -536,7 +536,7 @@ export function TemplateWizard(props: {
             </section>
 
             <section className="space-y-2">
-              <h4 className="text-sm font-semibold text-foreground">Πεδία δεδομένων ({state.fields.length})</h4>
+              <h4 className="ui-subsection-title">Πεδία δεδομένων ({state.fields.length})</h4>
               {state.fields.length === 0 ? (
                 <p className="text-muted-foreground text-sm">Δεν έχουν οριστεί πεδία.</p>
               ) : (
@@ -544,14 +544,14 @@ export function TemplateWizard(props: {
                   {state.fields.map((f, i) => (
                     <div key={i} className="flex flex-wrap items-center gap-2 px-3 py-2">
                       <span className="font-medium">{f.name.trim() || "—"}</span>
-                      <span className="text-muted-foreground text-xs">({fieldTypeLabel(f.type)})</span>
-                      {f.required && <span className="text-xs text-muted-foreground">· υποχρεωτικό</span>}
-                      <span className="text-xs text-muted-foreground">
+                      <span className="ui-meta">({fieldTypeLabel(f.type)})</span>
+                      {f.required && <span className="ui-meta">· υποχρεωτικό</span>}
+                      <span className="ui-meta">
                         · βήμα{" "}
                         {f.captureTaskOrder == null ? "—" : `${f.captureTaskOrder + 1}`}
                       </span>
                       {f.type === "SELECT" && (
-                        <span className="text-xs text-muted-foreground">· λίστα: {listName(f.lookupListId)}</span>
+                        <span className="ui-meta">· λίστα: {listName(f.lookupListId)}</span>
                       )}
                     </div>
                   ))}
@@ -575,7 +575,7 @@ export function TemplateWizard(props: {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <span className="mr-1 hidden text-xs text-muted-foreground sm:inline">
+            <span className="mr-1 hidden ui-meta sm:inline">
               Βήμα {step + 1} από {STEPS.length}
             </span>
             {step > 0 && (

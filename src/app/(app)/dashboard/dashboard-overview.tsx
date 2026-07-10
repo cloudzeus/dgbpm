@@ -39,13 +39,13 @@ function StatTile({
   return (
     <div className="rounded-xl border bg-card p-4 shadow-sm">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-muted-foreground">{label}</span>
+        <span className="ui-eyebrow">{label}</span>
         <span className={cn("flex size-7 items-center justify-center rounded-lg", t.chip)}>
           <Icon className="size-4" />
         </span>
       </div>
-      <div className={cn("mt-2 text-2xl font-bold tabular-nums", t.value)}>{value}</div>
-      {sub && <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>}
+      <div className={cn("mt-2 ui-metric", t.value)}>{value}</div>
+      {sub && <p className="mt-0.5 ui-meta">{sub}</p>}
     </div>
   );
 }
@@ -64,7 +64,7 @@ function StatusBar({ running, completed, cancelled }: { running: number; complet
           <div key={i} className={s.cls} style={{ width: `${(s.n / total) * 100}%` }} />
         ))}
       </div>
-      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+      <div className="flex flex-wrap gap-x-4 gap-y-1 ui-meta">
         {seg.map((s, i) => (
           <span key={i} className="flex items-center gap-1.5">
             <span className={cn("size-2 rounded-full", s.cls)} />
@@ -96,7 +96,7 @@ function TrendChart({ trends }: { trends: OverviewData["trends"] }) {
           <span key={t.month}>{t.label}</span>
         ))}
       </div>
-      <div className="mt-2 flex gap-4 text-xs text-muted-foreground">
+      <div className="mt-2 flex gap-4 ui-meta">
         <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 rounded bg-primary" /> Ξεκίνησαν</span>
         <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 rounded bg-emerald-500" /> Ολοκληρώθηκαν</span>
       </div>
@@ -138,24 +138,24 @@ export function DashboardOverview({ data }: { data: OverviewData }) {
       {/* charts + delayed */}
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="rounded-xl border bg-card p-4 shadow-sm">
-          <h3 className="mb-3 text-sm font-semibold">Κατάσταση διαδικασιών</h3>
+          <h3 className="mb-3 ui-section-title">Κατάσταση διαδικασιών</h3>
           <StatusBar running={kpis.running} completed={kpis.completed} cancelled={kpis.cancelled} />
           <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
             <div className="rounded-lg bg-muted/40 p-2.5">
-              <p className="text-xs text-muted-foreground">Εκπρόθεσμες διαδικασίες</p>
+              <p className="ui-eyebrow">Εκπρόθεσμες διαδικασίες</p>
               <p className={cn("text-lg font-bold", kpis.overdueInstances > 0 && "text-red-600 dark:text-red-500")}>
                 {kpis.overdueInstances}
               </p>
             </div>
             <div className="rounded-lg bg-muted/40 p-2.5">
-              <p className="text-xs text-muted-foreground">Ποσοστό απορρίψεων</p>
+              <p className="ui-eyebrow">Ποσοστό απορρίψεων</p>
               <p className="text-lg font-bold">{kpis.rejectionRatePct}%</p>
             </div>
           </div>
         </div>
 
         <div className="rounded-xl border bg-card p-4 shadow-sm">
-          <h3 className="mb-3 flex items-center gap-1.5 text-sm font-semibold">
+          <h3 className="mb-3 flex items-center gap-1.5 ui-section-title">
             <TrendingUp className="size-4 text-muted-foreground" /> Τάση (6 μήνες)
           </h3>
           <TrendChart trends={data.trends} />
@@ -163,7 +163,7 @@ export function DashboardOverview({ data }: { data: OverviewData }) {
 
         <div className="rounded-xl border bg-card p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="flex items-center gap-1.5 text-sm font-semibold">
+            <h3 className="flex items-center gap-1.5 ui-section-title">
               <TimerReset className="size-4 text-muted-foreground" /> Καθυστερήσεις
             </h3>
             <Link href="/reports/overview" className="text-xs text-primary hover:underline">
@@ -191,7 +191,7 @@ export function DashboardOverview({ data }: { data: OverviewData }) {
                     <span className="text-muted-foreground"> · {d.instanceName}</span>
                   </span>
                   {d.assigneeName && (
-                    <span className="shrink-0 truncate text-xs text-muted-foreground">{d.assigneeName}</span>
+                    <span className="shrink-0 truncate ui-meta">{d.assigneeName}</span>
                   )}
                 </li>
               ))}

@@ -121,8 +121,8 @@ export function ProcessAdvisorClient() {
             <Sparkles className="size-5" />
           </div>
           <div className="min-w-0">
-            <h2 className="text-sm font-semibold">Περιγράψτε την επιχείρησή σας</h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">
+            <h2 className="ui-section-title">Περιγράψτε την επιχείρησή σας</h2>
+            <p className="mt-0.5 ui-meta">
               Το AI συνδυάζει την περιγραφή με τους ΚΑΔ της εταιρίας για να προτείνει ένα πλήρες
               σύνολο εσωτερικών διαδικασιών (~20).
             </p>
@@ -140,7 +140,7 @@ export function ProcessAdvisorClient() {
           />
 
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs text-muted-foreground">Παραδείγματα:</span>
+            <span className="ui-meta">Παραδείγματα:</span>
             {EXAMPLES.map((ex) => (
               <button
                 key={ex}
@@ -272,7 +272,7 @@ export function ProcessAdvisorClient() {
                   >
                     <Checkbox checked={isSel} className="mt-0.5 pointer-events-none" />
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-sm font-semibold leading-snug">
+                      <h3 className="ui-subsection-title leading-snug">
                         {p.name || "Διαδικασία"}
                       </h3>
                       <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
@@ -292,7 +292,7 @@ export function ProcessAdvisorClient() {
                   {p.description && (
                     <div className="mx-4 mb-3 flex gap-2 rounded-lg bg-muted/40 px-3 py-2">
                       <Info className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
-                      <p className="text-xs leading-relaxed text-muted-foreground">
+                      <p className="ui-meta leading-relaxed">
                         {p.description}
                       </p>
                     </div>
@@ -313,7 +313,7 @@ export function ProcessAdvisorClient() {
                     {isOpen && (
                       <div className="space-y-3 px-4 pb-4">
                         <div>
-                          <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          <p className="mb-1 ui-eyebrow">
                             Βήματα
                           </p>
                           <ol className="list-decimal space-y-1 pl-4 text-xs">
@@ -332,7 +332,7 @@ export function ProcessAdvisorClient() {
                         </div>
                         {p.fields.length > 0 && (
                           <div>
-                            <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                            <p className="mb-1 ui-eyebrow">
                               Πεδία
                             </p>
                             <ul className="space-y-1 text-xs">

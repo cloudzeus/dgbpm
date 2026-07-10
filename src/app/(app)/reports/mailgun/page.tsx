@@ -26,8 +26,8 @@ export default async function ReportsMailgunPage({
   return (
     <div className="space-y-6 p-4">
       <div>
-        <h1 className="text-2xl font-semibold">Emails ενημέρωσης (Mailgun)</h1>
-        <p className="text-muted-foreground text-sm">
+        <h1 className="ui-page-title">Emails ενημέρωσης (Mailgun)</h1>
+        <p className="ui-page-subtitle">
           Στατιστικά αποστολής: παραδόθηκαν, ανοίχτηκαν, κλικ και αποτυχίες.
         </p>
       </div>

@@ -87,8 +87,8 @@ export default async function ProcessInstancePage({
               <Link href="/process-instances">← Πίσω</Link>
             </Button>
           </div>
-          <h1 className="text-2xl font-bold mt-2">{instance.name}</h1>
-          <p className="text-muted-foreground flex items-center gap-2">
+          <h1 className="ui-page-title mt-2">{instance.name}</h1>
+          <p className="ui-page-subtitle flex items-center gap-2">
             <ProcessIcon icon={instance.processTemplate.icon} className="size-4" />
             {instance.processTemplate.name}
           </p>

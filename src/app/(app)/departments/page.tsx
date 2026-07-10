@@ -20,8 +20,8 @@ export default async function DepartmentsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Τμήματα</h1>
-        <p className="text-muted-foreground">Διαχείριση τμημάτων και ιεραρχίας.</p>
+        <h1 className="ui-page-title">Τμήματα</h1>
+        <p className="ui-page-subtitle">Διαχείριση τμημάτων και ιεραρχίας.</p>
       </div>
       <DepartmentsClient
         departments={departments}

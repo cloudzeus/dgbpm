@@ -26,16 +26,41 @@ export function ProcessInstancesClient({
   instances,
   allowedTemplates,
   currentUserId,
+  currentUserName,
   isSuperOrAdmin,
 }: {
   instances: ProcessInstanceWithTasks[];
   allowedTemplates: Template[];
   currentUserId: string;
+  currentUserName: string;
   isSuperOrAdmin: boolean;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Φιλικό default όνομα: «Πρότυπο — Χρήστης — ημερομηνία» αντί για κωδικό/timestamp.
+  const buildName = (templateName: string) => {
+    const date = new Date().toLocaleDateString("el-GR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+    const parts = [templateName, currentUserName, date].filter(Boolean);
+    return parts.join(" — ");
+  };
+
+  const firstTemplate = allowedTemplates[0];
+  const [templateId, setTemplateId] = useState(firstTemplate?.id ?? "");
+  const [name, setName] = useState(
+    firstTemplate ? buildName(firstTemplate.name) : ""
+  );
+
+  const handleTemplateChange = (id: string) => {
+    setTemplateId(id);
+    const tpl = allowedTemplates.find((t) => t.id === id);
+    setName(tpl ? buildName(tpl.name) : "");
+  };
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -52,11 +77,6 @@ export function ProcessInstancesClient({
       setLoading(false);
     }
   }
-
-  const defaultName =
-    allowedTemplates.length > 0
-      ? `${allowedTemplates[0]?.name ?? ""} – ${new Date().toISOString().slice(0, 16)}`
-      : "";
 
   return (
     <>
@@ -82,6 +102,8 @@ export function ProcessInstancesClient({
                   name="processTemplateId"
                   className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs"
                   required
+                  value={templateId}
+                  onChange={(e) => handleTemplateChange(e.target.value)}
                 >
                   <option value="">Επιλέξτε πρότυπο</option>
                   {allowedTemplates.map((t) => (
@@ -95,8 +117,9 @@ export function ProcessInstancesClient({
                 <Label>Όνομα διαδικασίας</Label>
                 <Input
                   name="name"
-                  defaultValue={defaultName}
-                  placeholder="π.χ. Αίτημα Άδειας – 2025-02-18"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="π.χ. Αίτημα Άδειας — Γιάννης Κοζύρης — 18/02/2025"
                   required
                 />
               </div>

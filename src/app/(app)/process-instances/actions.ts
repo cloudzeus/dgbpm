@@ -157,6 +157,8 @@ export async function startTask(taskId: string) {
     task.possibleAssignees.some((u) => u.id === session.user!.id);
   if (!canAct) throw new Error("Δεν επιτρέπεται");
 
+  await assertPriorTasksComplete(taskId);
+
   await prisma.$transaction([
     prisma.processTaskAssignment.update({
       where: { id: taskId },
@@ -293,9 +295,41 @@ export async function assertRequiredFieldsFilled(taskId: string) {
   }
 }
 
+/**
+ * Επιβάλλει τη σειριακή ροή: κάθε βήμα με μικρότερο `order` πρέπει να έχει
+ * ολοκληρωθεί (APPROVED ή SKIPPED) πριν επιτραπεί ενέργεια στο τρέχον βήμα.
+ * Έτσι δεν μπορεί κανείς να εγκρίνει/απορρίψει βήμα ενώ εκκρεμούν προηγούμενα.
+ */
+async function assertPriorTasksComplete(taskId: string) {
+  const task = await prisma.processTaskAssignment.findUnique({
+    where: { id: taskId },
+    include: { templateTask: { select: { order: true } } },
+  });
+  if (!task) throw new Error("Η εργασία δεν βρέθηκε");
+
+  const priors = await prisma.processTaskAssignment.findMany({
+    where: {
+      processInstanceId: task.processInstanceId,
+      templateTask: { order: { lt: task.templateTask.order } },
+    },
+    include: { templateTask: { select: { name: true, order: true } } },
+    orderBy: { templateTask: { order: "asc" } },
+  });
+
+  const blocking = priors.find(
+    (p) => p.status !== "APPROVED" && p.status !== "SKIPPED"
+  );
+  if (blocking) {
+    throw new Error(
+      `Ολοκληρώστε πρώτα το προηγούμενο βήμα «${blocking.templateTask.name}» (Βήμα ${blocking.templateTask.order + 1}).`
+    );
+  }
+}
+
 export async function approveTask(taskId: string, comment?: string) {
   const session = await requireActiveSession();
 
+  await assertPriorTasksComplete(taskId);
   await assertRequiredFieldsFilled(taskId);
 
   const task = await prisma.processTaskAssignment.findUnique({
@@ -394,13 +428,30 @@ export async function rejectTask(taskId: string, comment: string) {
 
   if (!comment?.trim()) throw new Error("Απαιτείται σχόλιο για την απόρριψη");
 
+  await assertPriorTasksComplete(taskId);
+
+  const now = new Date();
   await prisma.$transaction([
     prisma.processTaskAssignment.update({
       where: { id: taskId },
-      data: { status: "REJECTED", completedAt: new Date(), currentAssigneeId: session.user.id, comment },
+      data: { status: "REJECTED", completedAt: now, currentAssigneeId: session.user.id, comment },
     }),
     prisma.taskAction.create({
       data: { taskId, userId: session.user.id, action: "REJECT", message: comment },
+    }),
+    // Απόρριψη = τερματισμός της διαδικασίας: κλείνουμε τα υπόλοιπα εκκρεμή βήματα…
+    prisma.processTaskAssignment.updateMany({
+      where: {
+        processInstanceId: task.processInstanceId,
+        status: { in: ["PENDING", "IN_PROGRESS"] },
+        id: { not: taskId },
+      },
+      data: { status: "SKIPPED" },
+    }),
+    // …και σημειώνουμε ολόκληρη τη διαδικασία ως ακυρωμένη.
+    prisma.processInstance.update({
+      where: { id: task.processInstanceId },
+      data: { status: "CANCELLED", endDateTime: now },
     }),
   ]);
 

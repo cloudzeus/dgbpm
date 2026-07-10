@@ -35,8 +35,8 @@ export default async function MyProcessesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Οι Διαδικασίες μου</h1>
-        <p className="text-muted-foreground">Διαδικασίες που έχετε ξεκινήσει.</p>
+        <h1 className="ui-page-title">Οι Διαδικασίες μου</h1>
+        <p className="ui-page-subtitle">Διαδικασίες που έχετε ξεκινήσει.</p>
       </div>
       <MyProcessesClient
         instances={instances}

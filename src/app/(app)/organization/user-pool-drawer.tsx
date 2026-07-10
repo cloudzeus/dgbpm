@@ -43,7 +43,7 @@ export function UserPoolDrawer({
         <SheetHeader><SheetTitle>Ανάθεση χρηστών</SheetTitle></SheetHeader>
         <div className="space-y-2 p-4">
           <Input placeholder="🔍 Αναζήτηση" value={q} onChange={(e) => setQ(e.target.value)} />
-          <p className="text-xs text-muted-foreground">Σύρε έναν χρήστη πάνω σε μια θέση.</p>
+          <p className="ui-meta">Σύρε έναν χρήστη πάνω σε μια θέση.</p>
           <div className="space-y-1.5">
             {filtered.map((u) => (
               <DraggableUser key={u.id} user={u} dimmed={assignedUserIds.has(u.id)} />

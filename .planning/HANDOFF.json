@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": "2026-07-10T04:41:15.928Z",
+  "timestamp": "2026-07-10T05:38:12.459Z",
   "source": "auto-postool",
   "partial": false,
   "phase": null,
@@ -22,11 +22,23 @@
     },
     {
       "status": "M",
-      "path": "prisma/schema.prisma"
+      "path": "src/app/(app)/dashboard/dashboard-overview.tsx"
     },
     {
       "status": "M",
-      "path": "src/app/(app)/departments/departments-client.tsx"
+      "path": "src/app/(app)/dashboard/dashboard-process-section.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/dashboard/page.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/departments/page.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/my-processes/page.tsx"
     },
     {
       "status": "M",
@@ -34,11 +46,55 @@
     },
     {
       "status": "M",
-      "path": "src/app/(app)/positions/positions-client.tsx"
+      "path": "src/app/(app)/organization/department-detail-panel.tsx"
     },
     {
       "status": "M",
-      "path": "src/app/(app)/process-templates/[id]/results/results-client.tsx"
+      "path": "src/app/(app)/organization/org-canvas.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/organization/page.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/organization/user-pool-drawer.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/positions/page.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/process-instances/[id]/page.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/process-instances/[id]/process-instance-detail.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/process-instances/actions.ts"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/process-instances/page.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/process-instances/process-instances-accordion.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/process-instances/process-instances-client.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/process-templates/[id]/results/page.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/process-templates/page.tsx"
     },
     {
       "status": "M",
@@ -46,11 +102,27 @@
     },
     {
       "status": "M",
-      "path": "src/app/(app)/reports/by-task/report-by-task-client.tsx"
+      "path": "src/app/(app)/process-templates/wizard/step-fields.tsx"
     },
     {
       "status": "M",
-      "path": "src/app/(app)/reports/by-user/report-by-user-client.tsx"
+      "path": "src/app/(app)/process-templates/wizard/template-wizard.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/reports/by-task/page.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/reports/by-user/page.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/reports/mailgun/mailgun-client.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/reports/mailgun/page.tsx"
     },
     {
       "status": "M",
@@ -58,7 +130,19 @@
     },
     {
       "status": "M",
-      "path": "src/app/(app)/reports/summary/report-summary-client.tsx"
+      "path": "src/app/(app)/reports/overview/page.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/reports/summary/page.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/settings/company/company-client.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/settings/company/page.tsx"
     },
     {
       "status": "M",
@@ -66,7 +150,19 @@
     },
     {
       "status": "M",
+      "path": "src/app/(app)/settings/connectors/page.tsx"
+    },
+    {
+      "status": "M",
       "path": "src/app/(app)/settings/lookup-lists/lookup-lists-client.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/settings/lookup-lists/page.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/settings/process-advisor/page.tsx"
     },
     {
       "status": "M",
@@ -82,37 +178,21 @@
     },
     {
       "status": "M",
-      "path": "src/lib/connectors/registry.ts"
+      "path": "src/app/globals.css"
     },
     {
       "status": "M",
-      "path": "src/lib/connectors/test.ts"
+      "path": "src/components/app-topbar.tsx"
     },
     {
       "status": "M",
-      "path": "src/lib/nav-config.ts"
+      "path": "src/components/process-fields/task-fields-form.tsx"
     },
     {
-      "status": "??",
-      "path": "src/app/(app)/my-tasks/my-tasks-table.tsx"
-    },
-    {
-      "status": "??",
-      "path": "src/app/(app)/reports/mailgun-data.ts"
-    },
-    {
-      "status": "??",
-      "path": "src/app/(app)/reports/mailgun/"
-    },
-    {
-      "status": "??",
-      "path": "src/components/ui/data-table.tsx"
-    },
-    {
-      "status": "??",
-      "path": "src/lib/connectors/read.ts"
+      "status": "M",
+      "path": "src/components/site-header.tsx"
     }
   ],
   "next_action": null,
-  "context_notes": "Recent commits:\na2225f4 feat(users+advisor): advanced users table & BPM-oriented AI advisor\n2cdd350 feat(settings): Connectors — διασυνδέσεις με τρίτες εφαρμογές (eshop & ERP)\nba9b9ae style(dashboard): align process launcher + Kanban board with app design\n9b48b3f feat: BPMS dashboard overview + AI business process advisor tool\n2908305 fix: self-heal stale session via email; clarify approval comment is optional"
+  "context_notes": "Recent commits:\n8e4a62f feat(ui): professional redesign of process-template step flow + assorted updates\na2225f4 feat(users+advisor): advanced users table & BPM-oriented AI advisor\n2cdd350 feat(settings): Connectors — διασυνδέσεις με τρίτες εφαρμογές (eshop & ERP)\nba9b9ae style(dashboard): align process launcher + Kanban board with app design\n9b48b3f feat: BPMS dashboard overview + AI business process advisor tool"
 }

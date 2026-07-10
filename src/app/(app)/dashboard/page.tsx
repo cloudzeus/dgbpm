@@ -93,8 +93,8 @@ export default async function DashboardPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold">Πίνακας Ελέγχου</h1>
-          <p className="text-muted-foreground">Ζωντανή επισκόπηση ροών εργασίας, εργασιών και απόδοσης διαδικασιών.</p>
+          <h1 className="ui-page-title">Πίνακας Ελέγχου</h1>
+          <p className="ui-page-subtitle">Ζωντανή επισκόπηση ροών εργασίας, εργασιών και απόδοσης διαδικασιών.</p>
         </div>
 
         <DashboardOverview data={overview} />
@@ -103,11 +103,11 @@ export default async function DashboardPage() {
           {entityStats.map((s) => (
             <Card key={s.label} className="shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
-                <CardTitle className="text-xs font-medium text-muted-foreground">{s.label}</CardTitle>
+                <CardTitle className="ui-eyebrow">{s.label}</CardTitle>
                 <s.icon className="size-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-xl font-bold">{s.value}</div>
+                <div className="ui-metric">{s.value}</div>
               </CardContent>
             </Card>
           ))}
@@ -153,8 +153,8 @@ export default async function DashboardPage() {
     return (
       <div className="space-y-8">
         <div>
-          <h1 className="text-2xl font-bold">Πίνακας Ελέγχου Προϊσταμένου</h1>
-          <p className="text-muted-foreground">Οι διαδικασίες του τμήματός μου και οι εργασίες της ομάδας.</p>
+          <h1 className="ui-page-title">Πίνακας Ελέγχου Προϊσταμένου</h1>
+          <p className="ui-page-subtitle">Οι διαδικασίες του τμήματός μου και οι εργασίες της ομάδας.</p>
         </div>
         <div className="grid gap-4 md:grid-cols-2">
           <Card>
@@ -163,7 +163,7 @@ export default async function DashboardPage() {
               <CardDescription>Διαδικασίες σε εξέλιξη, σε καθυστέρηση και ολοκληρωμένες</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{myDeptProcesses}</div>
+              <div className="ui-metric">{myDeptProcesses}</div>
               <a href="/process-instances" className="text-sm text-primary underline">
                 Προβολή όλων
               </a>
@@ -175,7 +175,7 @@ export default async function DashboardPage() {
               <CardDescription>Εργασίες που μπορούν να εγκρίνουν οι θέσεις σας</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{myTeamTasks}</div>
+              <div className="ui-metric">{myTeamTasks}</div>
               <a href="/my-tasks" className="text-sm text-primary underline">
                 Προβολή εργασιών
               </a>
@@ -206,8 +206,8 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold">Πίνακας Ελέγχου Υπαλλήλου</h1>
-        <p className="text-muted-foreground">Οι εργασίες και οι διαδικασίες μου.</p>
+        <h1 className="ui-page-title">Πίνακας Ελέγχου Υπαλλήλου</h1>
+        <p className="ui-page-subtitle">Οι εργασίες και οι διαδικασίες μου.</p>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
@@ -216,7 +216,7 @@ export default async function DashboardPage() {
             <CardDescription>Τρέχουσες και εκπρόθεσμες εργασίες</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{myTasks}</div>
+            <div className="ui-metric">{myTasks}</div>
             <a href="/my-tasks" className="text-sm text-primary underline">
               Προβολή εργασιών
             </a>
@@ -228,7 +228,7 @@ export default async function DashboardPage() {
             <CardDescription>Διαδικασίες που ξεκίνησα</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{myProcesses}</div>
+            <div className="ui-metric">{myProcesses}</div>
             <a href="/my-processes" className="text-sm text-primary underline">
               Προβολή διαδικασιών
             </a>

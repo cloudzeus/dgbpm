@@ -47,9 +47,9 @@ function StatCard({
         <Icon className="size-5" />
       </div>
       <div className="min-w-0">
-        <div className="text-xs text-muted-foreground truncate">{label}</div>
-        <div className={`text-2xl font-semibold tabular-nums ${toneCls[tone]}`}>{value}</div>
-        {hint && <div className="text-xs text-muted-foreground truncate">{hint}</div>}
+        <div className="ui-eyebrow truncate">{label}</div>
+        <div className={`ui-metric ${toneCls[tone]}`}>{value}</div>
+        {hint && <div className="ui-meta truncate">{hint}</div>}
       </div>
     </div>
   );
@@ -60,7 +60,7 @@ function VolumeChart({ points }: { points: MailgunStatPoint[] }) {
   return (
     <div className="rounded-lg border bg-card p-4">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold text-sm">Ημερήσια δραστηριότητα</h3>
+        <h3 className="ui-section-title">Ημερήσια δραστηριότητα</h3>
         <div className="flex items-center gap-4 text-xs">
           <span className="flex items-center gap-1.5">
             <span className="size-2.5 rounded-sm bg-emerald-500" /> Παραδόθηκαν
@@ -139,8 +139,8 @@ export function MailgunClient({ data }: { data: MailgunStatsData }) {
     return (
       <div className="rounded-lg border bg-card p-8 text-center">
         <Link2 className="mx-auto mb-3 size-8 text-muted-foreground" />
-        <h3 className="font-semibold">Δεν έχει ρυθμιστεί το Mailgun</h3>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <h3 className="ui-section-title">Δεν έχει ρυθμιστεί το Mailgun</h3>
+        <p className="mt-1 ui-meta">
           Ρυθμίστε το domain και το API Key για να δείτε στατιστικά αποστολής.
         </p>
         <Link

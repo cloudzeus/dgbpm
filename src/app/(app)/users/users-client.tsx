@@ -376,7 +376,7 @@ export function UsersClient({
                 {/* photo */}
                 <div className="flex shrink-0 flex-col items-center gap-2">
                   <AvatarUploader user={u} size="lg" />
-                  <span className="text-[10px] text-muted-foreground">Αλλαγή φωτο</span>
+                  <span className="ui-meta">Αλλαγή φωτο</span>
                 </div>
 
                 {/* fields */}
@@ -449,7 +449,7 @@ export function UsersClient({
 
                   {/* positions */}
                   <div className="sm:col-span-2 lg:col-span-3">
-                    <div className="mb-1 flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+                    <div className="mb-1 flex items-center gap-1.5 ui-field-label">
                       <Briefcase className="size-3" />
                       Θέσεις εργασίας
                     </div>
@@ -605,7 +605,7 @@ function Field({
 }) {
   return (
     <div className={cn("space-y-1", className)}>
-      <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+      <div className="flex items-center gap-1.5 ui-field-label">
         {icon}
         {label}
       </div>

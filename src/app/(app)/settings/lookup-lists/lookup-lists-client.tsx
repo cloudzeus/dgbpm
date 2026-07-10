@@ -277,7 +277,7 @@ export function LookupListsClient({ lists }: { lists: LookupList[] }) {
 
             <section className="space-y-3">
               <div className="flex justify-between items-center">
-                <h3 className="text-sm font-semibold text-foreground">Τιμές</h3>
+                <h3 className="ui-subsection-title">Τιμές</h3>
                 <div className="flex gap-2">
                   <Button
                     type="button"

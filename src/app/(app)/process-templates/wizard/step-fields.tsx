@@ -65,7 +65,7 @@ export function StepFields(props: {
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1">
-          <h3 className="text-sm font-semibold text-foreground">Πεδία δεδομένων</h3>
+          <h3 className="ui-subsection-title">Πεδία δεδομένων</h3>
           <p className="max-w-prose text-sm text-muted-foreground">
             Ορίστε τα δεδομένα που θα συμπληρώνονται κατά την εκτέλεση της διαδικασίας και σε
             ποιο βήμα καταχωρούνται. Τα αποτελέσματα αποθηκεύονται δομημένα ανά διαδικασία.
@@ -252,7 +252,7 @@ function FieldRow(props: {
             className="h-9 max-w-xs font-mono text-xs"
             onChange={(e) => handleKeyChange(e.target.value)}
           />
-          <p className="text-xs text-muted-foreground">
+          <p className="ui-meta">
             Δημιουργείται αυτόματα από το όνομα. Χρησιμοποιείται στις στήλες αποτελεσμάτων/export.
           </p>
         </div>
@@ -279,7 +279,7 @@ function FieldRow(props: {
             </SelectContent>
           </Select>
           {lookupLists.length === 0 ? (
-            <p className="text-xs text-muted-foreground">
+            <p className="ui-meta">
               Δεν υπάρχουν λίστες τιμών. Δημιουργήστε μία από τις Ρυθμίσεις → Λίστες Τιμών.
             </p>
           ) : (

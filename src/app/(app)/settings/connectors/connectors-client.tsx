@@ -113,7 +113,7 @@ function ConnectorPanel({ def, initial }: { def: ConnectorDef; initial: Connecto
                   <Label htmlFor={`${def.type}-${f.key}`}>
                     {f.label}
                     {f.optional && (
-                      <span className="ml-1 text-xs text-muted-foreground">(προαιρετικό)</span>
+                      <span className="ml-1 ui-meta">(προαιρετικό)</span>
                     )}
                   </Label>
                   <Input
@@ -126,7 +126,7 @@ function ConnectorPanel({ def, initial }: { def: ConnectorDef; initial: Connecto
                     value={values[f.key] ?? ""}
                     onChange={(e) => set(f.key, e.target.value)}
                   />
-                  {f.help && <p className="text-xs text-muted-foreground">{f.help}</p>}
+                  {f.help && <p className="ui-meta">{f.help}</p>}
                 </div>
               );
             })}

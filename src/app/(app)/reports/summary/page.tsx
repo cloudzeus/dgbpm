@@ -11,7 +11,7 @@ export default async function ReportSummaryPage() {
   const data = await getReportSummaryData();
   return (
     <div className="space-y-6 p-4">
-      <h1 className="text-2xl font-semibold text-zinc-200">Αναφορές</h1>
+      <h1 className="ui-page-title">Αναφορές</h1>
       <Suspense fallback={<ReportSummarySkeleton />}>
         <ReportSummaryClient data={data} />
       </Suspense>

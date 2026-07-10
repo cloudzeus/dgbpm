@@ -69,8 +69,8 @@ export default async function ProcessTemplatesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Πρότυπα Διαδικασιών</h1>
-        <p className="text-muted-foreground">Ορίστε επαναχρησιμοποιήσιμα πρότυπα διαδικασιών με εργασίες και εγκρίνοντες.</p>
+        <h1 className="ui-page-title">Πρότυπα Διαδικασιών</h1>
+        <p className="ui-page-subtitle">Ορίστε επαναχρησιμοποιήσιμα πρότυπα διαδικασιών με εργασίες και εγκρίνοντες.</p>
       </div>
       <ProcessTemplatesClient
         templates={templates}

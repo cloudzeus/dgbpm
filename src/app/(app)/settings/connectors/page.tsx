@@ -19,8 +19,8 @@ export default async function ConnectorsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">Connectors</h1>
-        <p className="text-muted-foreground">
+        <h1 className="ui-page-title">Connectors</h1>
+        <p className="ui-page-subtitle">
           Στοιχεία διασύνδεσης της εφαρμογής με τρίτες εφαρμογές (eshop &amp; ERP). Οι
           διασυνδέσεις αυτές θα τροφοδοτούν λίστες που χρησιμοποιούνται στις διαδικασίες.
           Η αντιστοίχιση αντικειμένων (πελάτες, προμηθευτές, προϊόντα κ.λπ.) θα προστεθεί σε

@@ -21,8 +21,8 @@ export default async function CompanyPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold">Εταιρία</h1>
-        <p className="text-muted-foreground">
+        <h1 className="ui-page-title">Εταιρία</h1>
+        <p className="ui-page-subtitle">
           Στοιχεία της εταιρίας μας. Συμπληρώστε το ΑΦΜ και πατήστε «Λήψη από ΑΑΔΕ» για
           αυτόματη συμπλήρωση των στοιχείων και των ΚΑΔ.
         </p>

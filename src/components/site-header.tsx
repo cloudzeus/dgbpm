@@ -74,7 +74,7 @@ export function SiteHeader({ user }: SiteHeaderProps) {
               </Avatar>
               <span className="hidden text-sm sm:inline-block">{user.name ?? user.email}</span>
               {user.role && (
-                <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+                <span className="rounded bg-muted px-1.5 py-0.5 ui-meta">
                   {roleLabel(user.role)}
                 </span>
               )}
@@ -84,7 +84,7 @@ export function SiteHeader({ user }: SiteHeaderProps) {
             <DropdownMenuLabel>
               <div className="flex flex-col">
                 <span>{user.name}</span>
-                <span className="text-xs font-normal text-muted-foreground">{user.email}</span>
+                <span className="ui-meta font-normal">{user.email}</span>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />

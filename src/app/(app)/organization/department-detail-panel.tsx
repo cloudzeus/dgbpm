@@ -69,7 +69,7 @@ function PositionCard({
           <GripVertical className="size-4" />
         </button>
         <button className="flex flex-1 items-center justify-between" onClick={() => setOpen((o) => !o)}>
-          <span className="flex items-center gap-1 text-sm font-semibold">
+          <span className="ui-subsection-title flex items-center gap-1">
             {open ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
             {position.name}
           </span>
@@ -84,7 +84,7 @@ function PositionCard({
             <button className="hover:text-destructive" onClick={() => onRequestDelete(position.id, position.name)}><Trash2 className="size-3.5" /></button>
           </div>
 
-          <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Προϊστάμενος</div>
+          <div className="ui-eyebrow">Προϊστάμενος</div>
           {manager ? (
             <div className="mt-1 flex items-center gap-2 rounded-md border bg-card p-1.5">
               <OrgAvatar user={manager} />
@@ -100,7 +100,7 @@ function PositionCard({
             </button>
           )}
 
-          <div className="mt-3 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Υπάλληλοι · {employees.length}</div>
+          <div className="ui-eyebrow mt-3">Υπάλληλοι · {employees.length}</div>
           {employees.map((u) => (
             <div key={u.id} className="mt-1 flex items-center gap-2 rounded-md border bg-card p-1.5">
               <OrgAvatar user={u} />
@@ -149,8 +149,8 @@ export function DepartmentDetailPanel({
     <div className="flex h-full flex-col gap-2 overflow-auto p-4">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <div className="truncate text-lg font-bold">{department.name}</div>
-          <div className="text-[11px] text-muted-foreground">{parentName ? `${parentName} › ` : ""}{department.name}</div>
+          <div className="ui-section-title truncate">{department.name}</div>
+          <div className="ui-meta">{parentName ? `${parentName} › ` : ""}{department.name}</div>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Ενέργειες τμήματος">

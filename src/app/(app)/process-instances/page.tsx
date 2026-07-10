@@ -60,13 +60,14 @@ export default async function ProcessInstancesPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Διαδικασίες</h1>
-        <p className="text-muted-foreground">Προβολή και διαχείριση διαδικασιών σε εξέλιξη και ολοκληρωμένων.</p>
+        <h1 className="ui-page-title">Διαδικασίες</h1>
+        <p className="ui-page-subtitle">Προβολή και διαχείριση διαδικασιών σε εξέλιξη και ολοκληρωμένων.</p>
       </div>
       <ProcessInstancesClient
         instances={instances}
         allowedTemplates={allowedTemplates}
         currentUserId={session.user.id}
+        currentUserName={session.user.name ?? session.user.email ?? ""}
         isSuperOrAdmin={isSuperOrAdmin}
       />
     </div>

@@ -14,8 +14,8 @@ export default async function ReportsOverviewPage() {
   return (
     <div className="space-y-6 p-4">
       <div>
-        <h1 className="text-2xl font-semibold">Επισκόπηση</h1>
-        <p className="text-muted-foreground text-sm">
+        <h1 className="ui-page-title">Επισκόπηση</h1>
+        <p className="ui-page-subtitle">
           Κέντρο ελέγχου: καθυστερήσεις, απόδοση, σημεία συμφόρησης και φόρτος εργασίας.
         </p>
       </div>

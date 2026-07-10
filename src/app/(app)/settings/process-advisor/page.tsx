@@ -15,8 +15,8 @@ export default async function ProcessAdvisorPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">AI Σύμβουλος Διαδικασιών</h1>
-        <p className="text-muted-foreground">
+        <h1 className="ui-page-title">AI Σύμβουλος Διαδικασιών</h1>
+        <p className="ui-page-subtitle">
           Περιγράψτε την επιχείρησή σας και το AI θα προτείνει εσωτερικές διαδικασίες, λαμβάνοντας
           υπόψη και τους ΚΑΔ της εταιρίας (Ρυθμίσεις → Εταιρία) που περιγράφουν το αντικείμενό της.
           Επιλέξτε ποιες θέλετε να δημιουργηθούν ως πρότυπα διαδικασιών.

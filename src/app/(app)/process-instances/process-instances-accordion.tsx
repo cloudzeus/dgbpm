@@ -124,7 +124,7 @@ export function ProcessInstancesAccordion({
                   </div>
                   <div className="min-w-0">
                     <div className="font-semibold truncate">{i.name}</div>
-                    <div className="text-muted-foreground text-xs truncate">
+                    <div className="ui-meta truncate">
                       {i.processTemplate.name} · {i.startedBy.firstName} {i.startedBy.lastName}
                     </div>
                   </div>

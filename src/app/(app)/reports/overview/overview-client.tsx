@@ -55,9 +55,9 @@ function StatCard({
         <Icon className="size-5" />
       </div>
       <div className="min-w-0">
-        <div className="text-xs text-muted-foreground truncate">{label}</div>
-        <div className={`text-2xl font-semibold tabular-nums ${toneCls[tone]}`}>{value}</div>
-        {hint && <div className="text-xs text-muted-foreground truncate">{hint}</div>}
+        <div className="ui-eyebrow truncate">{label}</div>
+        <div className={`ui-metric ${toneCls[tone]}`}>{value}</div>
+        {hint && <div className="ui-meta truncate">{hint}</div>}
       </div>
     </div>
   );
@@ -70,7 +70,7 @@ function TrendChart({ trends }: { trends: TrendPoint[] }) {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <TrendingUp className="size-4 text-muted-foreground" />
-          <h3 className="font-semibold text-sm">Ροή διαδικασιών (τελευταίοι 6 μήνες)</h3>
+          <h3 className="ui-section-title">Ροή διαδικασιών (τελευταίοι 6 μήνες)</h3>
         </div>
         <div className="flex items-center gap-4 text-xs">
           <span className="flex items-center gap-1.5">
@@ -104,7 +104,7 @@ function TrendChart({ trends }: { trends: TrendPoint[] }) {
                 </span>
               </div>
             </div>
-            <span className="text-xs text-muted-foreground">{t.label}</span>
+            <span className="ui-meta">{t.label}</span>
           </div>
         ))}
       </div>
@@ -141,7 +141,7 @@ function DelayedSection({ delayed }: { delayed: DelayedItem[] }) {
       cell: (d) => (
         <>
           <div className="font-medium">{d.instanceName}</div>
-          <div className="text-xs text-muted-foreground">{d.templateName}</div>
+          <div className="ui-meta">{d.templateName}</div>
         </>
       ),
     },
@@ -150,7 +150,7 @@ function DelayedSection({ delayed }: { delayed: DelayedItem[] }) {
       header: "Βήμα",
       cell: (d) => (
         <>
-          <span className="text-muted-foreground text-xs tabular-nums mr-1">#{d.order}</span>
+          <span className="ui-meta tabular-nums mr-1">#{d.order}</span>
           {d.stepName}
         </>
       ),
@@ -182,7 +182,7 @@ function DelayedSection({ delayed }: { delayed: DelayedItem[] }) {
   return (
     <div className="rounded-lg border bg-card">
       <div className="flex items-center justify-between p-4 border-b">
-        <h3 className="font-semibold text-sm flex items-center gap-2">
+        <h3 className="ui-section-title flex items-center gap-2">
           <AlertTriangle className="size-4 text-destructive" />
           Καθυστερημένες & σε κίνδυνο εργασίες
         </h3>
@@ -212,7 +212,7 @@ function BottlenecksSection({ bottlenecks }: { bottlenecks: Bottleneck[] }) {
       cell: (b) => (
         <>
           <div className="font-medium">{b.stepName}</div>
-          <div className="text-xs text-muted-foreground">{b.templateName}</div>
+          <div className="ui-meta">{b.templateName}</div>
         </>
       ),
     },
@@ -266,7 +266,7 @@ function BottlenecksSection({ bottlenecks }: { bottlenecks: Bottleneck[] }) {
   return (
     <div className="rounded-lg border bg-card">
       <div className="p-4 border-b">
-        <h3 className="font-semibold text-sm flex items-center gap-2">
+        <h3 className="ui-section-title flex items-center gap-2">
           <Timer className="size-4 text-muted-foreground" />
           Σημεία συμφόρησης ανά βήμα
         </h3>
@@ -289,7 +289,7 @@ function WorkloadUsers({ users }: { users: WorkloadUser[] }) {
       cell: (u) => (
         <>
           <div className="font-medium">{u.userName}</div>
-          <div className="text-xs text-muted-foreground">{roleLabel(u.role)}</div>
+          <div className="ui-meta">{roleLabel(u.role)}</div>
         </>
       ),
     },
@@ -323,7 +323,7 @@ function WorkloadUsers({ users }: { users: WorkloadUser[] }) {
   return (
     <div className="rounded-lg border bg-card">
       <div className="p-4 border-b">
-        <h3 className="font-semibold text-sm">Φόρτος ανά χρήστη</h3>
+        <h3 className="ui-section-title">Φόρτος ανά χρήστη</h3>
       </div>
       {rows.length === 0 ? (
         <p className="text-sm text-muted-foreground p-6 text-center">Καμία ενεργή ανάθεση.</p>
@@ -376,7 +376,7 @@ function WorkloadDepts({ depts }: { depts: WorkloadDept[] }) {
   return (
     <div className="rounded-lg border bg-card">
       <div className="p-4 border-b">
-        <h3 className="font-semibold text-sm">Φόρτος ανά τμήμα</h3>
+        <h3 className="ui-section-title">Φόρτος ανά τμήμα</h3>
       </div>
       {depts.length === 0 ? (
         <p className="text-sm text-muted-foreground p-6 text-center">Καμία ενεργή ανάθεση.</p>
@@ -430,7 +430,7 @@ export function OverviewClient({ data }: { data: OverviewData }) {
         <StatCard icon={Activity} label="Ενεργές εργασίες" value={kpis.activeTasks} tone="neutral" />
       </div>
 
-      <p className="text-xs text-muted-foreground">
+      <p className="ui-meta">
         Οι καθυστερήσεις υπολογίζονται από την προθεσμία κάθε βήματος (ή {defaultSlaDays} μέρες όπου δεν έχει
         οριστεί).
       </p>
