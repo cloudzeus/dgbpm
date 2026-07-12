@@ -23,6 +23,7 @@ export type SeedTemplate = {
     name: string;
     type: "STRING" | "TEXT" | "NUMBER" | "DATE" | "FILE_URL" | "BOOLEAN" | "SELECT" | "ENTITY";
     lookupItemIds: string[];
+    entityKind?: string | null;
   }[];
 };
 
@@ -37,6 +38,8 @@ export type SeedParams = {
   now: Date;
   rng: () => number;
   samplePools: { customers: string[]; products: string[] };
+  /** id pools ανά EntityKind για πεδία τύπου ENTITY (προαιρετικό). */
+  entityIdPools?: Partial<Record<string, string[]>>;
 };
 
 // ---------- Τύποι εξόδου (plan) ----------
@@ -61,6 +64,7 @@ export type PlannedFieldValue = {
   valueDate: Date | null;
   valueBool: boolean | null;
   valueListItemId: string | null;
+  valueEntityId: string | null;
 };
 
 export type PlannedInstance = {
@@ -129,11 +133,12 @@ function fieldValueFor(
   instStart: Date,
   instEnd: Date,
   rng: () => number,
-  pools: SeedParams["samplePools"],
+  pools: Pick<SeedParams, "samplePools" | "entityIdPools">,
 ): PlannedFieldValue {
   const base: PlannedFieldValue = {
     fieldDefinitionId: field.id,
     valueString: null, valueNumber: null, valueDate: null, valueBool: null, valueListItemId: null,
+    valueEntityId: null,
   };
   const lname = field.name.toLowerCase();
   switch (field.type) {
@@ -147,13 +152,15 @@ function fieldValueFor(
       return { ...base, valueBool: rng() < 0.5 };
     case "FILE_URL":
       return base; // κενό — δεν ανεβάζουμε αρχεία
-    case "ENTITY":
-      return base; // handled in entities feature
+    case "ENTITY": {
+      const pool = pools.entityIdPools?.[field.entityKind ?? ""] ?? [];
+      return pool.length ? { ...base, valueEntityId: pick(pool, rng) } : base;
+    }
     case "STRING":
     case "TEXT": {
       let v: string;
-      if (/πελάτ|customer|προμηθευτ/.test(lname) && pools.customers.length) v = pick(pools.customers, rng);
-      else if (/προϊόν|είδος|product|υλικ/.test(lname) && pools.products.length) v = pick(pools.products, rng);
+      if (/πελάτ|customer|προμηθευτ/.test(lname) && pools.samplePools.customers.length) v = pick(pools.samplePools.customers, rng);
+      else if (/προϊόν|είδος|product|υλικ/.test(lname) && pools.samplePools.products.length) v = pick(pools.samplePools.products, rng);
       else if (/όνομα|υπάλληλ|αιτ/.test(lname)) v = pick(NAME_POOL, rng);
       else v = pick(TEXT_POOL, rng);
       return { ...base, valueString: v };
@@ -189,7 +196,8 @@ export function planInstances(
   users: SeedUser[],
   params: SeedParams,
 ): PlannedInstance[] {
-  const { rng, samplePools } = params;
+  const { rng, samplePools, entityIdPools = {} } = params;
+  const valuePools = { samplePools, entityIdPools };
   const out: PlannedInstance[] = [];
   if (templates.length === 0 || users.length === 0) return out;
 
@@ -282,7 +290,7 @@ export function planInstances(
       endDateTime,
       status: allApproved ? "COMPLETED" : "RUNNING",
       tasks,
-      fieldValues: template.fields.map((f) => fieldValueFor(f, startDateTime, lastEnd, rng, samplePools)),
+      fieldValues: template.fields.map((f) => fieldValueFor(f, startDateTime, lastEnd, rng, valuePools)),
     });
   }
   return out;

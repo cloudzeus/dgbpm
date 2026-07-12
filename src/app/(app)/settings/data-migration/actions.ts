@@ -7,6 +7,68 @@ import { Role } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { planInstances, mulberry32, type SeedTemplate, type SeedUser } from "@/lib/demo-seeder";
 import { buildSamplePools } from "@/lib/demo-connector-sample";
+import { DEMO_ENTITIES } from "@/lib/demo-entities";
+import { entityDelegate } from "@/lib/entities/resolve";
+import type { EntityKind } from "@prisma/client";
+
+const ENTITY_KINDS: EntityKind[] = ["SUPPLIER", "CUSTOMER", "PRODUCT_CATEGORY", "COLOR", "SIZE", "PRODUCT"];
+
+/**
+ * Δημιουργεί demo οντότητες (isDemo=true) για κάθε kind που είναι εντελώς
+ * κενό (0 ενεργές γραμμές). Τα products τελευταία, με επίλυση FKs ανά code.
+ * Επιστρέφει το πλήθος όσων δημιουργήθηκαν.
+ */
+async function ensureDemoEntities(): Promise<number> {
+  let created = 0;
+  const emptyKinds = new Set<EntityKind>();
+  for (const kind of ENTITY_KINDS) {
+    const rows = await entityDelegate(kind).findMany({ where: { isActive: true }, take: 1, select: { id: true } });
+    if (rows.length === 0) emptyKinds.add(kind);
+  }
+
+  // Πρώτα τα απλά kinds (χωρίς FKs), τα products στο τέλος
+  for (const kind of ENTITY_KINDS.filter((k) => k !== "PRODUCT")) {
+    if (!emptyKinds.has(kind)) continue;
+    const fixtures = DEMO_ENTITIES[kind] ?? [];
+    const { count } = await entityDelegate(kind).createMany({
+      data: fixtures.map((f) => ({
+        code: f.code,
+        name: f.name,
+        ...(f.afm ? { afm: f.afm } : {}),
+        ...(f.city ? { city: f.city } : {}),
+        isDemo: true,
+      })),
+      skipDuplicates: true,
+    });
+    created += count;
+  }
+
+  if (emptyKinds.has("PRODUCT")) {
+    // Επίλυση FKs ανά code από τις μόλις-δημιουργημένες ή υπάρχουσες γραμμές
+    const codeMap = async (kind: EntityKind) => {
+      const rows = await entityDelegate(kind).findMany({ select: { id: true, code: true } });
+      return new Map(rows.map((r) => [String(r.code), String(r.id)]));
+    };
+    const [cats, colors, sizes] = await Promise.all([
+      codeMap("PRODUCT_CATEGORY"), codeMap("COLOR"), codeMap("SIZE"),
+    ]);
+    const { count } = await prisma.product.createMany({
+      data: (DEMO_ENTITIES.PRODUCT ?? []).map((f) => ({
+        code: f.code,
+        name: f.name,
+        priceWholesale: f.priceWholesale ?? null,
+        priceRetail: f.priceRetail ?? null,
+        categoryId: (f.categoryCode && cats.get(f.categoryCode)) || null,
+        colorId: (f.colorCode && colors.get(f.colorCode)) || null,
+        sizeId: (f.sizeCode && sizes.get(f.sizeCode)) || null,
+        isDemo: true,
+      })),
+      skipDuplicates: true,
+    });
+    created += count;
+  }
+  return created;
+}
 
 async function requireSuperAdmin() {
   const session = await auth();
@@ -67,7 +129,7 @@ export async function generateDemoInstances(input: {
   count: number;
   completedRatio: number; // 0..1
 }): Promise<
-  | { ok: true; instances: number; tasks: number; actions: number; fieldValues: number; failedChunks: number }
+  | { ok: true; instances: number; tasks: number; actions: number; fieldValues: number; failedChunks: number; entitiesCreated: number }
   | { ok: false; error: string }
 > {
   await requireSuperAdmin();
@@ -132,16 +194,32 @@ export async function generateDemoInstances(input: {
         name: f.name,
         type: f.type,
         lookupItemIds: f.lookupList?.items.map((i) => i.id) ?? [],
+        entityKind: f.entityKind,
       })),
     }));
   if (templates.length === 0)
     return { ok: false, error: "Κανένα πρότυπο δεν έχει βήματα." };
+
+  // Αν δεν υπάρχουν καθόλου οντότητες, δημιουργούμε demo fixtures
+  const entitiesCreated = await ensureDemoEntities();
+
+  // Pools ids ανά kind για πεδία τύπου ENTITY
+  const entityIdPools: Partial<Record<string, string[]>> = {};
+  await Promise.all(
+    ENTITY_KINDS.map(async (kind) => {
+      const rows = await entityDelegate(kind).findMany({
+        where: { isActive: true }, take: 200, select: { id: true },
+      });
+      entityIdPools[kind] = rows.map((r) => String(r.id));
+    }),
+  );
 
   const samplePools = await buildSamplePools();
   const plan = planInstances(templates, users, {
     start, end: effectiveEnd, count, completedRatio: ratio, now,
     rng: mulberry32(now.getTime() % 2147483647),
     samplePools,
+    entityIdPools,
   });
 
   let instances = 0, tasks = 0, actions = 0, fieldValues = 0, failedChunks = 0;
@@ -197,7 +275,8 @@ export async function generateDemoInstances(input: {
               v.valueNumber !== null ||
               v.valueDate !== null ||
               v.valueBool !== null ||
-              v.valueListItemId !== null,
+              v.valueListItemId !== null ||
+              v.valueEntityId !== null,
           );
           if (fv.length) {
             await tx.processFieldValue.createMany({
@@ -224,12 +303,12 @@ export async function generateDemoInstances(input: {
   revalidatePath("/dashboard");
   revalidatePath("/process-instances");
   revalidatePath("/reports/overview");
-  return { ok: true, instances, tasks, actions, fieldValues, failedChunks };
+  return { ok: true, instances, tasks, actions, fieldValues, failedChunks, entitiesCreated };
 }
 
 /** Reset — διαγραφή ΟΛΩΝ των demo δεδομένων. */
 export async function deleteDemoData(): Promise<
-  { ok: true; instances: number; templates: number } | { ok: false; error: string }
+  { ok: true; instances: number; templates: number; entities: number } | { ok: false; error: string }
 > {
   await requireSuperAdmin();
   const { count: instances } = await prisma.processInstance.deleteMany({ where: { isDemo: true } });
@@ -237,9 +316,49 @@ export async function deleteDemoData(): Promise<
   const { count: templates } = await prisma.processTemplate.deleteMany({
     where: { isDemo: true, instances: { none: {} } },
   });
+
+  // Demo οντότητες — μόνο όσες ΔΕΝ αναφέρονται πλέον από field values.
+  const referenced = await prisma.processFieldValue.findMany({
+    where: { valueEntityId: { not: null } },
+    select: { valueEntityId: true },
+    distinct: ["valueEntityId"],
+  });
+  const referencedIds = referenced.map((r) => r.valueEntityId!).filter(Boolean);
+  let entities = 0;
+  // Products πρώτα (αφαιρεί τα FKs demo products προς categories/colors/sizes)
+  const { count: prodCount } = await prisma.product.deleteMany({
+    where: { isDemo: true, id: { notIn: referencedIds } },
+  });
+  entities += prodCount;
+  type DeletableModel = { deleteMany: (args: { where: Record<string, unknown> }) => Promise<{ count: number }> };
+  // hasProducts: categories/colors/sizes έχουν relation προς Product — guard ώστε
+  // να μη διαγραφούν demo γραμμές που αναφέρονται από ΜΗ-demo products.
+  const rest: { model: DeletableModel; hasProducts: boolean }[] = [
+    { model: prisma.supplier, hasProducts: false },
+    { model: prisma.customer, hasProducts: false },
+    { model: prisma.productCategory, hasProducts: true },
+    { model: prisma.color, hasProducts: true },
+    { model: prisma.size, hasProducts: true },
+  ];
+  for (const { model, hasProducts: isRelated } of rest) {
+    try {
+      const { count } = await model.deleteMany({
+        where: {
+          isDemo: true,
+          id: { notIn: referencedIds },
+          ...(isRelated ? { products: { none: {} } } : {}),
+        },
+      });
+      entities += count;
+    } catch (err) {
+      // FK failure ή άλλο σφάλμα — παραλείπουμε το kind, δεν μπλοκάρουμε το reset
+      console.error("[data-migration] Παράλειψη διαγραφής demo οντοτήτων:", err);
+    }
+  }
+
   revalidatePath("/dashboard");
   revalidatePath("/process-instances");
   revalidatePath("/process-templates");
   revalidatePath("/reports/overview");
-  return { ok: true, instances, templates };
+  return { ok: true, instances, templates, entities };
 }

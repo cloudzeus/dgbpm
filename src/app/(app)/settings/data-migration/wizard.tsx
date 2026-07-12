@@ -108,6 +108,7 @@ export function DataMigrationWizard({ overview }: { overview: MigrationOverview 
     tasks: number;
     actions: number;
     fieldValues: number;
+    entitiesCreated: number;
   }>(null);
 
   const blocked =
@@ -179,6 +180,7 @@ export function DataMigrationWizard({ overview }: { overview: MigrationOverview 
           tasks: r.tasks,
           actions: r.actions,
           fieldValues: r.fieldValues,
+          entitiesCreated: r.entitiesCreated,
         });
         setMsg({
           type: "ok",
@@ -203,7 +205,7 @@ export function DataMigrationWizard({ overview }: { overview: MigrationOverview 
         setResult(null);
         setMsg({
           type: "ok",
-          text: `Διαγράφηκαν ${r.instances} demo διαδικασίες και ${r.templates} demo πρότυπα.`,
+          text: `Διαγράφηκαν ${r.instances} demo διαδικασίες, ${r.templates} demo πρότυπα και ${r.entities} demo οντότητες.`,
         });
         router.refresh();
       } else {
@@ -635,6 +637,11 @@ export function DataMigrationWizard({ overview }: { overview: MigrationOverview 
                     <CountCard label="Ενέργειες" value={result.actions} />
                     <CountCard label="Τιμές πεδίων" value={result.fieldValues} />
                   </div>
+                  {result.entitiesCreated > 0 && (
+                    <p className="ui-body text-muted-foreground">
+                      Δημιουργήθηκαν {result.entitiesCreated} demo οντότητες (προμηθευτές, πελάτες, είδη κ.λπ.).
+                    </p>
+                  )}
                   <div className="flex flex-wrap items-center gap-3">
                     <Button asChild variant="outline">
                       <Link href="/dashboard">

@@ -24,6 +24,7 @@ function tmpl(over: Partial<SeedTemplate> = {}): SeedTemplate {
       { id: "f1", name: "Πελάτης", type: "STRING", lookupItemIds: [] },
       { id: "f2", name: "Ποσό", type: "NUMBER", lookupItemIds: [] },
       { id: "f3", name: "Κατηγορία", type: "SELECT", lookupItemIds: ["li1", "li2"] },
+      { id: "f4", name: "Πελάτης (οντότητα)", type: "ENTITY", lookupItemIds: [], entityKind: "CUSTOMER" },
     ],
     ...over,
   };
@@ -42,6 +43,7 @@ const PARAMS = {
   completedRatio: 0.65,
   now: NOW,
   samplePools: { customers: ["ΑΦΟΙ Παπαδόπουλοι ΟΕ"], products: ["Εκτυπωτής HP"] },
+  entityIdPools: { CUSTOMER: ["e1", "e2"] },
 };
 
 describe("mulberry32", () => {
@@ -113,11 +115,37 @@ describe("planInstances", () => {
 
   it("generates a field value for every field with correct kind", () => {
     for (const p of plan) {
-      expect(p.fieldValues).toHaveLength(3);
+      expect(p.fieldValues).toHaveLength(4);
       const byField = Object.fromEntries(p.fieldValues.map((v) => [v.fieldDefinitionId, v]));
       expect(typeof byField["f1"].valueString).toBe("string");
       expect(typeof byField["f2"].valueNumber).toBe("number");
       expect(["li1", "li2"]).toContain(byField["f3"].valueListItemId);
+      expect(["e1", "e2"]).toContain(byField["f4"].valueEntityId);
+    }
+  });
+
+  it("leaves ENTITY field values null when the pool is empty or missing", () => {
+    const emptyPoolPlan = planInstances([tmpl()], USERS, {
+      ...PARAMS,
+      entityIdPools: {},
+      rng: mulberry32(11),
+    });
+    for (const p of emptyPoolPlan) {
+      const fv = p.fieldValues.find((v) => v.fieldDefinitionId === "f4")!;
+      expect(fv.valueEntityId).toBeNull();
+      expect(fv.valueString).toBeNull();
+      expect(fv.valueNumber).toBeNull();
+      expect(fv.valueDate).toBeNull();
+      expect(fv.valueBool).toBeNull();
+      expect(fv.valueListItemId).toBeNull();
+    }
+  });
+
+  it("works without entityIdPools at all (optional param)", () => {
+    const { entityIdPools: _omit, ...rest } = PARAMS;
+    const noPoolPlan = planInstances([tmpl()], USERS, { ...rest, rng: mulberry32(13) });
+    for (const p of noPoolPlan) {
+      expect(p.fieldValues.find((v) => v.fieldDefinitionId === "f4")!.valueEntityId).toBeNull();
     }
   });
 

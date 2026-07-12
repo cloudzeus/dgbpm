@@ -467,6 +467,7 @@ model Supplier {
   phone      String? @db.VarChar(20)
   email      String? @db.VarChar(128)
   isActive   Boolean @default(true)
+  isDemo     Boolean @default(false)
   softoneKey String?
   wooId      String?
   magentoId  String?
@@ -486,6 +487,7 @@ model Customer {
   phone      String? @db.VarChar(20)
   email      String? @db.VarChar(128)
   isActive   Boolean @default(true)
+  isDemo     Boolean @default(false)
   softoneKey String?
   wooId      String?
   magentoId  String?
@@ -499,6 +501,7 @@ model ProductCategory {
   code       String  @unique @db.VarChar(25)
   name       String  @db.VarChar(128)
   isActive   Boolean @default(true)
+  isDemo     Boolean @default(false)
   softoneKey String?
   wooId      String?
   magentoId  String?
@@ -513,6 +516,7 @@ model Color {
   code       String  @unique @db.VarChar(25)
   name       String  @db.VarChar(128)
   isActive   Boolean @default(true)
+  isDemo     Boolean @default(false)
   softoneKey String?
   wooId      String?
   magentoId  String?
@@ -527,6 +531,7 @@ model Size {
   code       String  @unique @db.VarChar(25)
   name       String  @db.VarChar(128)
   isActive   Boolean @default(true)
+  isDemo     Boolean @default(false)
   softoneKey String?
   wooId      String?
   magentoId  String?
@@ -548,6 +553,7 @@ model Product {
   colorId        String?
   sizeId         String?
   isActive       Boolean @default(true)
+  isDemo     Boolean @default(false)
   softoneKey     String?
   wooId          String?
   magentoId      String?
