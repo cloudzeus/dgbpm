@@ -142,6 +142,7 @@ model ProcessTemplate {
   description String?   @db.Text
   icon        String
   createdById String?
+  isDemo      Boolean   @default(false)
 
   createdBy   User?     @relation(fields: [createdById], references: [id], onDelete: SetNull)
   allowedDepartments ProcessTemplateDepartment[]
@@ -253,6 +254,7 @@ model ProcessInstance {
   endDateTime        DateTime?
   status             ProcessStatus @default(RUNNING)
   cancelReason       String?       @db.Text
+  isDemo             Boolean       @default(false)
 
   processTemplate ProcessTemplate   @relation(fields: [processTemplateId], references: [id], onDelete: Restrict)
   startedBy       User              @relation("ProcessStarter", fields: [startedById], references: [id], onDelete: Restrict)
