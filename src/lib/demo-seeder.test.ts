@@ -93,8 +93,9 @@ describe("planInstances", () => {
         expect(p.endDateTime).not.toBeNull();
       } else {
         expect(p.endDateTime).toBeNull();
+        // RUNNING διαδικασία έχει πάντα ΑΚΡΙΒΩΣ ένα IN_PROGRESS βήμα (clipped ή τρέχον)
         const inProg = p.tasks.filter((t) => t.status === "IN_PROGRESS");
-        expect(inProg.length).toBeLessThanOrEqual(1);
+        expect(inProg.length).toBe(1);
       }
     }
   });
@@ -125,6 +126,29 @@ describe("planInstances", () => {
     expect(overdue.length).toBeGreaterThan(0);
     const rejected = plan.flatMap((p) => p.tasks).flatMap((t) => t.actions).filter((a) => a.action === "REJECT");
     expect(rejected.length).toBeGreaterThan(0);
+  });
+
+  it("never plans a timestamp after now, even when completions would overshoot (clipping)", () => {
+    // Στενό παράθυρο ώστε αρκετά βήματα να «πέφτουν» πάνω στο now και να clipάρονται
+    const NOW2 = new Date("2026-07-01T00:00:00Z");
+    const tightPlan = planInstances([tmpl()], USERS, {
+      ...PARAMS,
+      start: new Date("2026-06-01T00:00:00Z"),
+      end: new Date("2026-06-30T00:00:00Z"),
+      now: NOW2,
+      rng: mulberry32(7),
+    });
+    const nowMs = NOW2.getTime();
+    expect(tightPlan.some((p) => p.status === "RUNNING")).toBe(true);
+    for (const p of tightPlan) {
+      expect(p.startDateTime.getTime()).toBeLessThanOrEqual(nowMs);
+      if (p.endDateTime) expect(p.endDateTime.getTime()).toBeLessThanOrEqual(nowMs);
+      for (const t of p.tasks) {
+        if (t.startedAt) expect(t.startedAt.getTime()).toBeLessThanOrEqual(nowMs);
+        if (t.completedAt) expect(t.completedAt.getTime()).toBeLessThanOrEqual(nowMs);
+        for (const a of t.actions) expect(a.createdAt.getTime()).toBeLessThanOrEqual(nowMs);
+      }
+    }
   });
 
   it("action timestamps match the task simulation", () => {

@@ -159,7 +159,14 @@ function fieldValueFor(
   }
 }
 
-/** Χρήστες που κατέχουν κάποια από τις θέσεις εγκριτών (+ same-department κανόνας). */
+/**
+ * Χρήστες που κατέχουν κάποια από τις θέσεις εγκριτών (+ same-department κανόνας).
+ *
+ * ΣΗΜΕΙΩΣΗ — σκόπιμη χαλάρωση για demo δεδομένα: το fallback «όλοι οι χρήστες»
+ * εγγυάται ότι κάθε βήμα μπορεί να προσομοιωθεί (το πραγματικό workflow θα
+ * άφηνε τα possibleAssignees κενά). Επίσης το `approverDepartmentManager`
+ * αγνοείται σκόπιμα, γιατί ο SeedUser δεν μεταφέρει πληροφορία manager.
+ */
 function eligibleAssignees(
   task: SeedTemplate["tasks"][number],
   starter: SeedUser,
@@ -211,9 +218,10 @@ export function planInstances(
 
       if (shouldComplete) {
         const sla = effectiveSlaDays(tt.slaDays);
-        const exceed = rng() < 0.2; // ~20% σκόπιμα εκπρόθεσμα
+        let exceed = rng() < 0.2; // ~20% σκόπιμα εκπρόθεσμα
         const durationDays = exceed ? sla * (1.3 + rng()) : sla * (0.2 + rng() * 0.7);
-        const startedAt = new Date(cursor.getTime() + rng() * 4 * 3_600_000);
+        // clamp στο now: αν το βήμα clipαριστεί σε IN_PROGRESS, το startedAt δεν επιτρέπεται να είναι μελλοντικό
+        const startedAt = new Date(Math.min(cursor.getTime() + rng() * 4 * 3_600_000, params.now.getTime()));
         let completedAt = new Date(startedAt.getTime() + durationDays * MS_PER_DAY);
         const actions: PlannedAction[] = [
           { action: "START", message: null, createdAt: startedAt, userId: assignee.id },
@@ -223,6 +231,8 @@ export function planInstances(
           const rejectAt = new Date(startedAt.getTime() + 0.4 * (completedAt.getTime() - startedAt.getTime()));
           actions.push({ action: "REJECT", message: pick(REJECT_POOL, rng), createdAt: rejectAt, userId: assignee.id });
           completedAt = new Date(completedAt.getTime() + 1.5 * MS_PER_DAY);
+          // η καθυστέρηση του κύκλου απόρριψης μπορεί να ξεπεράσει το SLA — επανυπολογισμός
+          exceed = completedAt.getTime() - startedAt.getTime() > sla * MS_PER_DAY;
         }
         if (completedAt.getTime() > params.now.getTime()) {
           // δεν προλαβαίνει να ολοκληρωθεί πριν το τώρα — μένει τρέχον βήμα
