@@ -43,6 +43,7 @@ export default async function TemplateResultsPage({
           valueNumber: true,
           valueDate: true,
           valueBool: true,
+          valueEntityId: true,
           listItem: { select: { label: true } },
         },
       },
