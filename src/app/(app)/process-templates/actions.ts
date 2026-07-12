@@ -8,7 +8,7 @@ import { revalidatePath } from "next/cache";
 import { deepseekChat, DeepSeekError } from "@/lib/deepseek";
 import { buildPivotViewSql, sanitizeIdentifier } from "@/lib/process-fields/pivot-view";
 import { slugifyKey } from "@/lib/process-fields/slug";
-import type { FieldType, Prisma } from "@prisma/client";
+import type { EntityKind, FieldType, Prisma } from "@prisma/client";
 
 export type FieldInput = {
   id?: string; // present when editing an existing field def
@@ -19,7 +19,20 @@ export type FieldInput = {
   required: boolean;
   captureTaskOrder: number | null;
   lookupListId: string | null;
+  entityKind: EntityKind | null;
 };
+
+/** Δομικοί έλεγχοι πεδίων (κοινοί σε create/update). */
+function assertValidFields(fields: FieldInput[]) {
+  for (const f of fields) {
+    if (f.type === "ENTITY" && !f.entityKind) {
+      throw new Error(`Το πεδίο «${f.name}» τύπου «Οντότητα» απαιτεί επιλογή είδους οντότητας.`);
+    }
+    if (f.type === "SELECT" && !f.lookupListId) {
+      throw new Error(`Το πεδίο «${f.name}» τύπου «Λίστα τιμών» απαιτεί επιλογή λίστας.`);
+    }
+  }
+}
 
 async function refreshPivotView(tx: Prisma.TransactionClient, templateId: string) {
   const fields = await tx.processFieldDefinition.findMany({
@@ -358,6 +371,7 @@ export async function createProcessTemplatesFromBlueprints(
         required: f.required,
         captureTaskOrder: f.captureTaskOrder,
         lookupListId: null,
+        entityKind: null,
       };
     });
 
@@ -427,6 +441,7 @@ export async function createProcessTemplate(data: {
   requireRole(session.user.role, [Role.SUPER_ADMIN]);
 
   const fields = data.fields ?? [];
+  assertValidFields(fields);
 
   await prisma.$transaction(async (tx) => {
     const template = await tx.processTemplate.create({
@@ -480,6 +495,7 @@ export async function createProcessTemplate(data: {
           required: f.required,
           captureTaskOrder: f.captureTaskOrder,
           lookupListId: f.lookupListId ?? undefined,
+          entityKind: f.entityKind ?? undefined,
         },
       });
     }
@@ -525,6 +541,7 @@ export async function updateProcessTemplate(
   requireRole(session.user.role, [Role.SUPER_ADMIN]);
 
   const fields = data.fields ?? [];
+  assertValidFields(fields);
 
   await prisma.$transaction(async (tx) => {
     await tx.processTemplateDepartment.deleteMany({ where: { processTemplateId: id } });
@@ -602,11 +619,11 @@ export async function updateProcessTemplate(
         }
         await tx.processFieldDefinition.update({
           where: { id: f.id },
-          data: { name: f.name, key: f.key, type: f.type, order: f.order, required: f.required, captureTaskOrder: f.captureTaskOrder, lookupListId: f.lookupListId ?? null },
+          data: { name: f.name, key: f.key, type: f.type, order: f.order, required: f.required, captureTaskOrder: f.captureTaskOrder, lookupListId: f.lookupListId ?? null, entityKind: f.entityKind ?? null },
         });
       } else {
         await tx.processFieldDefinition.create({
-          data: { processTemplateId: id, name: f.name, key: f.key, type: f.type, order: f.order, required: f.required, captureTaskOrder: f.captureTaskOrder, lookupListId: f.lookupListId ?? undefined },
+          data: { processTemplateId: id, name: f.name, key: f.key, type: f.type, order: f.order, required: f.required, captureTaskOrder: f.captureTaskOrder, lookupListId: f.lookupListId ?? undefined, entityKind: f.entityKind ?? undefined },
         });
       }
     }

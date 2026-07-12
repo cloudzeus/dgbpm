@@ -26,6 +26,18 @@ describe("buildPivotRows", () => {
     expect(rows[0].cells.f2).toBe("Αθήνα");
     expect(rows[0].cells.f3).toBe("ent_1");
   });
+  it("prefers resolved entityLabel for ENTITY over raw id", () => {
+    const withLabel = [
+      {
+        id: "i1", name: "Δαπάνη #1",
+        fieldValues: [
+          { fieldDefinitionId: "f3", valueNumber: null, valueString: null, valueDate: null, valueBool: null, valueEntityId: "ent_1", listItem: null, entityLabel: "SUP001 — Προμηθευτής Α" },
+        ],
+      },
+    ];
+    const rows = buildPivotRows(fields, withLabel);
+    expect(rows[0].cells.f3).toBe("SUP001 — Προμηθευτής Α");
+  });
   it("empty cell for missing value", () => {
     const rows = buildPivotRows(fields, [{ id: "i2", name: "Κενή", fieldValues: [] }]);
     expect(rows[0].cells.f1).toBe("");

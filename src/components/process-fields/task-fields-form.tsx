@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import type { FieldType } from "@prisma/client";
+import type { EntityKind, FieldType } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { DynamicFieldInput } from "./dynamic-field-input";
@@ -14,7 +14,10 @@ export type StoredFieldValue = {
   valueDate: Date | string | null;
   valueBool: boolean | null;
   valueListItemId: string | null;
+  valueEntityId: string | null;
   listItem: { label: string } | null;
+  /** Ετικέτα «κωδικός — όνομα» για ENTITY, επιλυμένη server-side. */
+  entityLabel?: string | null;
 } | null;
 
 export type EditableField = {
@@ -23,6 +26,7 @@ export type EditableField = {
   type: FieldType;
   required: boolean;
   options: { id: string; label: string }[];
+  entityKind: EntityKind | null;
   value: StoredFieldValue;
 };
 
@@ -45,6 +49,8 @@ function toInitialString(type: FieldType, v: StoredFieldValue): string {
       return v.valueBool == null ? "false" : v.valueBool ? "true" : "false";
     case "SELECT":
       return v.valueListItemId ?? "";
+    case "ENTITY":
+      return v.valueEntityId ?? "";
     default:
       return v.valueString ?? "";
   }
@@ -62,6 +68,8 @@ function toDisplay(type: FieldType, v: StoredFieldValue): string {
       return v.valueBool == null ? "—" : v.valueBool ? "Ναι" : "Όχι";
     case "SELECT":
       return v.listItem?.label ?? "—";
+    case "ENTITY":
+      return v.entityLabel ?? (v.valueEntityId ? v.valueEntityId : "—");
     default:
       return v.valueString && v.valueString.trim() !== "" ? v.valueString : "—";
   }
@@ -136,6 +144,8 @@ export function TaskFieldsForm({
                 onChange={(v) => setValues((prev) => ({ ...prev, [f.id]: v }))}
                 disabled={!canEdit || saving}
                 options={f.options}
+                entityKind={f.entityKind}
+                entityLabel={f.value?.entityLabel ?? null}
               />
             </div>
           ))}

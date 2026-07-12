@@ -8,7 +8,8 @@ import { ProcessIcon } from "@/lib/process-icons";
 import { instanceStatusMeta } from "@/lib/process-status";
 import { formatDateTime } from "@/lib/format";
 import { ProcessInstanceDetail } from "./process-instance-detail";
-import type { EditableField, PriorField } from "@/components/process-fields/task-fields-form";
+import type { EditableField, PriorField, StoredFieldValue } from "@/components/process-fields/task-fields-form";
+import { resolveEntityLabels } from "@/lib/entities/resolve";
 
 export default async function ProcessInstancePage({
   params,
@@ -54,6 +55,22 @@ export default async function ProcessInstancePage({
   });
   const valueByField = new Map(fieldValues.map((v) => [v.fieldDefinitionId, v]));
 
+  // ENTITY: επίλυση ετικετών «κωδικός — όνομα» server-side (batched ανά kind).
+  const defById = new Map(fieldDefs.map((f) => [f.id, f]));
+  const entityPairs = fieldValues.flatMap((v) => {
+    const def = defById.get(v.fieldDefinitionId);
+    return def?.type === "ENTITY" && def.entityKind && v.valueEntityId
+      ? [{ kind: def.entityKind, id: v.valueEntityId }]
+      : [];
+  });
+  const entityLabels = entityPairs.length > 0 ? await resolveEntityLabels(entityPairs) : new Map<string, string>();
+
+  function storedValue(fieldId: string): StoredFieldValue {
+    const v = valueByField.get(fieldId);
+    if (!v) return null;
+    return { ...v, entityLabel: v.valueEntityId ? entityLabels.get(v.valueEntityId) ?? null : null };
+  }
+
   const taskFields: Record<string, { editable: EditableField[]; readOnly: PriorField[] }> = {};
   for (const t of instance.tasks) {
     const order = t.templateTask.order;
@@ -65,7 +82,8 @@ export default async function ProcessInstancePage({
         type: f.type,
         required: f.required,
         options: f.lookupList?.items.map((it) => ({ id: it.id, label: it.label })) ?? [],
-        value: valueByField.get(f.id) ?? null,
+        entityKind: f.entityKind,
+        value: storedValue(f.id),
       }));
     const readOnly: PriorField[] = fieldDefs
       .filter((f) => f.captureTaskOrder != null && f.captureTaskOrder < order)
@@ -73,7 +91,7 @@ export default async function ProcessInstancePage({
         id: f.id,
         name: f.name,
         type: f.type,
-        value: valueByField.get(f.id) ?? null,
+        value: storedValue(f.id),
       }));
     taskFields[t.id] = { editable, readOnly };
   }

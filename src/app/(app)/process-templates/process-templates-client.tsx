@@ -676,6 +676,7 @@ export function ProcessTemplatesClient({
       required: f.required,
       captureTaskOrder: f.captureTaskOrder,
       lookupListId: f.lookupListId,
+      entityKind: f.entityKind ?? null,
     }));
     if (editId) {
       await updateProcessTemplate(editId, {

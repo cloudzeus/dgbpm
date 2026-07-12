@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { notFound, redirect } from "next/navigation";
 import { ResultsClient } from "./results-client";
+import { resolveEntityLabels } from "@/lib/entities/resolve";
 
 export default async function TemplateResultsPage({
   params,
@@ -24,7 +25,7 @@ export default async function TemplateResultsPage({
       fields: {
         where: { deletedAt: null },
         orderBy: { order: "asc" },
-        select: { id: true, name: true, type: true },
+        select: { id: true, name: true, type: true, entityKind: true },
       },
     },
   });
@@ -50,6 +51,25 @@ export default async function TemplateResultsPage({
     },
   });
 
+  // ENTITY: επίλυση ετικετών «κωδικός — όνομα» server-side, batched ανά kind.
+  const kindByField = new Map(
+    template.fields.filter((f) => f.type === "ENTITY" && f.entityKind).map((f) => [f.id, f.entityKind!])
+  );
+  const entityPairs = instances.flatMap((inst) =>
+    inst.fieldValues.flatMap((v) => {
+      const kind = kindByField.get(v.fieldDefinitionId);
+      return kind && v.valueEntityId ? [{ kind, id: v.valueEntityId }] : [];
+    })
+  );
+  const entityLabels = entityPairs.length > 0 ? await resolveEntityLabels(entityPairs) : new Map<string, string>();
+  const instancesWithLabels = instances.map((inst) => ({
+    ...inst,
+    fieldValues: inst.fieldValues.map((v) => ({
+      ...v,
+      entityLabel: v.valueEntityId ? entityLabels.get(v.valueEntityId) ?? null : null,
+    })),
+  }));
+
   return (
     <div className="space-y-6 p-4">
       <div>
@@ -61,7 +81,7 @@ export default async function TemplateResultsPage({
       <ResultsClient
         title={`Αποτελέσματα-${template.name}`}
         fields={template.fields}
-        instances={instances}
+        instances={instancesWithLabels}
       />
     </div>
   );

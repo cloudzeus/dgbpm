@@ -24,7 +24,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Accordion } from "@/components/ui/accordion";
 import { ArrowRight, Sparkles, Loader2, Wand2 } from "lucide-react";
 import { ProcessIcon, PROCESS_ICON_OPTIONS } from "@/lib/process-icons";
-import { fieldTypeLabel } from "@/lib/process-fields/field-types";
+import { ENTITY_KIND_LABELS, fieldTypeLabel } from "@/lib/process-fields/field-types";
 import { generateProcessBlueprint } from "../actions";
 import type { FieldInput } from "../actions";
 import {
@@ -133,6 +133,7 @@ export function TemplateWizard(props: {
           required: f.required,
           captureTaskOrder: f.captureTaskOrder,
           lookupListId: null,
+          entityKind: null,
         })),
       }));
     } catch {
@@ -206,6 +207,8 @@ export function TemplateWizard(props: {
     if (new Set(keys).size !== keys.length) return "Τα κλειδιά των πεδίων πρέπει να είναι μοναδικά.";
     if (state.fields.some((f) => f.type === "SELECT" && !f.lookupListId))
       return "Τα πεδία τύπου «Λίστα τιμών» απαιτούν επιλογή λίστας.";
+    if (state.fields.some((f) => f.type === "ENTITY" && !f.entityKind))
+      return "Τα πεδία τύπου «Οντότητα» απαιτούν επιλογή είδους οντότητας.";
     return null;
   }
 
@@ -552,6 +555,9 @@ export function TemplateWizard(props: {
                       </span>
                       {f.type === "SELECT" && (
                         <span className="ui-meta">· λίστα: {listName(f.lookupListId)}</span>
+                      )}
+                      {f.type === "ENTITY" && f.entityKind && (
+                        <span className="ui-meta">· οντότητα: {ENTITY_KIND_LABELS[f.entityKind]}</span>
                       )}
                     </div>
                   ))}

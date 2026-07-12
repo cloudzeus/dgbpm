@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Trash2, Plus, Database, AlertCircle, Pencil } from "lucide-react";
 import type { FieldInput } from "../actions";
-import { FIELD_TYPES, fieldTypeLabel } from "@/lib/process-fields/field-types";
+import type { EntityKind } from "@prisma/client";
+import { ENTITY_KIND_LABELS, FIELD_TYPES, fieldTypeLabel } from "@/lib/process-fields/field-types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,6 +46,7 @@ export function StepFields(props: {
         required: false,
         captureTaskOrder: taskOptions[0]?.order ?? null,
         lookupListId: null,
+        entityKind: null,
       },
     ]);
   }
@@ -130,6 +132,7 @@ function FieldRow(props: {
   // Key auto-syncs (Latin slug) from the name until the user edits it manually.
   const [keyEdited, setKeyEdited] = useState(() => f.key.trim() !== "");
   const missingList = f.type === "SELECT" && !f.lookupListId;
+  const missingKind = f.type === "ENTITY" && !f.entityKind;
 
   function handleNameChange(name: string) {
     onUpdate(keyEdited ? { name } : { name, key: name.trim() ? slugifyKey(name) : "" });
@@ -181,6 +184,7 @@ function FieldRow(props: {
               onUpdate({
                 type: v as FieldInput["type"],
                 lookupListId: v === "SELECT" ? f.lookupListId : null,
+                entityKind: v === "ENTITY" ? f.entityKind : null,
               })
             }
           >
@@ -188,8 +192,7 @@ function FieldRow(props: {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {/* ENTITY: ενεργοποιείται όταν προστεθεί επιλογή είδους οντότητας */}
-              {FIELD_TYPES.filter((t) => t !== "ENTITY").map((t) => (
+              {FIELD_TYPES.map((t) => (
                 <SelectItem key={t} value={t}>
                   {fieldTypeLabel(t)}
                 </SelectItem>
@@ -290,6 +293,34 @@ function FieldRow(props: {
                 Τα πεδία τύπου «Λίστα τιμών» απαιτούν επιλογή λίστας.
               </p>
             )
+          )}
+        </div>
+      )}
+
+      {/* entity kind binding (ENTITY only) */}
+      {f.type === "ENTITY" && (
+        <div className="space-y-1.5 border-t bg-primary/5 px-3 py-3">
+          <Label className="text-xs font-medium text-foreground">Είδος οντότητας</Label>
+          <Select
+            value={f.entityKind ?? undefined}
+            onValueChange={(v) => onUpdate({ entityKind: v as EntityKind })}
+          >
+            <SelectTrigger className="h-9 w-full max-w-sm">
+              <SelectValue placeholder="Επιλέξτε είδος οντότητας…" />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.entries(ENTITY_KIND_LABELS) as [EntityKind, string][]).map(([k, label]) => (
+                <SelectItem key={k} value={k}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {missingKind && (
+            <p className="flex items-center gap-1 text-xs text-destructive">
+              <AlertCircle className="size-3" />
+              Τα πεδία τύπου «Οντότητα» απαιτούν επιλογή είδους οντότητας.
+            </p>
           )}
         </div>
       )}

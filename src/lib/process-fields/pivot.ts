@@ -9,6 +9,8 @@ export type PivotValue = {
   valueBool: boolean | null;
   valueEntityId: string | null;
   listItem: { label: string } | null;
+  /** ENTITY: ετικέτα «κωδικός — όνομα», επιλυμένη server-side (resolveEntityLabels). */
+  entityLabel?: string | null;
 };
 export type PivotInstance = { id: string; name: string; fieldValues: PivotValue[] };
 export type PivotRow = { instanceId: string; instanceName: string; cells: Record<string, string> };
@@ -20,9 +22,9 @@ function display(field: PivotField, v: PivotValue | undefined): string {
     case "DATE": return v.valueDate ? new Date(v.valueDate).toLocaleDateString("el-GR") : "";
     case "BOOLEAN": return v.valueBool == null ? "" : v.valueBool ? "Ναι" : "Όχι";
     case "SELECT": return v.listItem?.label ?? "";
-    // ENTITY: εδώ εμφανίζεται μόνο το raw id — η ανάλυση σε «κωδικός — όνομα»
-    // γίνεται server-side (βλ. Task 5), όχι σε αυτό το επίπεδο.
-    case "ENTITY": return v.valueEntityId ?? "";
+    // ENTITY: προτιμάται η server-side επιλυμένη ετικέτα «κωδικός — όνομα»·
+    // fallback στο raw id αν δεν έχει επιλυθεί.
+    case "ENTITY": return v.entityLabel ?? v.valueEntityId ?? "";
     default: return v.valueString ?? "";
   }
 }
