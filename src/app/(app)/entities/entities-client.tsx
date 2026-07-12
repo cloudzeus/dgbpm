@@ -51,6 +51,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ENTITY_KINDS, entityMeta } from "@/lib/entities/registry";
+import { suggestMapping, type WorkbookSheetInfo } from "@/lib/entities/xlsx-mapping";
 import { treeOrder, withDescendants } from "@/lib/entities/tree";
 import {
   createEntity,
@@ -102,6 +103,313 @@ function formatCell(value: unknown, kind: "string" | "number" | "boolean"): stri
   return String(value);
 }
 
+const SKIP = "__skip__";
+
+type SheetConfig = {
+  kind: EntityKind | ""; // "" = παράλειψη
+  mapping: Record<string, string>; // field key → header ("" = καμία)
+};
+
+type MappedSheetResult = {
+  sheetName: string;
+  kind: EntityKind;
+  created: number;
+  updated: number;
+  errors: ImportErrors;
+};
+
+/** Wizard εισαγωγής xlsx 2 βημάτων: ανάλυση φύλλων → mapping → αποτελέσματα. */
+function ImportWizardDialog({
+  open,
+  onOpenChange,
+  defaultKind,
+  onImported,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  defaultKind: EntityKind;
+  onImported: () => void;
+}) {
+  const [step, setStep] = useState<"upload" | "map" | "results">("upload");
+  const [file, setFile] = useState<File | null>(null);
+  const [sheets, setSheets] = useState<WorkbookSheetInfo[]>([]);
+  const [configs, setConfigs] = useState<Record<string, SheetConfig>>({});
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [results, setResults] = useState<MappedSheetResult[]>([]);
+  const wizardFileRef = useRef<HTMLInputElement>(null);
+
+  function reset() {
+    setStep("upload");
+    setFile(null);
+    setSheets([]);
+    setConfigs({});
+    setBusy(false);
+    setError(null);
+    setResults([]);
+  }
+
+  function handleOpenChange(o: boolean) {
+    if (!o) reset();
+    onOpenChange(o);
+  }
+
+  async function handleAnalyze(f: File) {
+    setBusy(true);
+    setError(null);
+    try {
+      const fd = new FormData();
+      fd.set("action", "analyze");
+      fd.set("file", f);
+      const res = await fetch("/api/entities/xlsx", { method: "POST", body: fd });
+      const json = (await res.json()) as { sheets?: WorkbookSheetInfo[]; error?: string };
+      if (!res.ok || !json.sheets) {
+        setError(json.error ?? "Αποτυχία ανάλυσης αρχείου.");
+        return;
+      }
+      const cfgs: Record<string, SheetConfig> = {};
+      for (const s of json.sheets) {
+        // Προεπιλογή: το kind του τρέχοντος tab αν βρεθούν Κωδικός+Όνομα, αλλιώς παράλειψη.
+        const suggested = suggestMapping(defaultKind, s.headers);
+        cfgs[s.name] =
+          suggested.code && suggested.name
+            ? { kind: defaultKind, mapping: suggested }
+            : { kind: "", mapping: {} };
+      }
+      setFile(f);
+      setSheets(json.sheets);
+      setConfigs(cfgs);
+      setStep("map");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Αποτυχία ανάλυσης αρχείου.");
+    } finally {
+      setBusy(false);
+      if (wizardFileRef.current) wizardFileRef.current.value = "";
+    }
+  }
+
+  function setSheetKind(sheet: WorkbookSheetInfo, kind: EntityKind | "") {
+    setConfigs((c) => ({
+      ...c,
+      [sheet.name]: {
+        kind,
+        mapping: kind === "" ? {} : suggestMapping(kind, sheet.headers),
+      },
+    }));
+  }
+
+  function setFieldMapping(sheetName: string, fieldKey: string, header: string) {
+    setConfigs((c) => {
+      const cfg = c[sheetName];
+      if (!cfg) return c;
+      return { ...c, [sheetName]: { ...cfg, mapping: { ...cfg.mapping, [fieldKey]: header } } };
+    });
+  }
+
+  const activeSheets = sheets.filter((s) => configs[s.name]?.kind);
+  const canImport =
+    activeSheets.length > 0 &&
+    activeSheets.every((s) => {
+      const m = configs[s.name].mapping;
+      return m.code && m.name;
+    });
+
+  async function handleImport() {
+    if (!file || !canImport) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const spec = activeSheets.map((s) => ({
+        sheetName: s.name,
+        kind: configs[s.name].kind,
+        mapping: Object.fromEntries(
+          Object.entries(configs[s.name].mapping).filter(([, v]) => v !== "")
+        ),
+      }));
+      const fd = new FormData();
+      fd.set("action", "import-mapped");
+      fd.set("file", file);
+      fd.set("sheets", JSON.stringify(spec));
+      const res = await fetch("/api/entities/xlsx", { method: "POST", body: fd });
+      const json = (await res.json()) as { sheets?: MappedSheetResult[]; error?: string };
+      if (!res.ok || !json.sheets) {
+        setError(json.error ?? "Αποτυχία εισαγωγής.");
+        return;
+      }
+      setResults(json.sheets);
+      setStep("results");
+      onImported();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Αποτυχία εισαγωγής.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>
+            {step === "upload" && "Εισαγωγή xlsx — Επιλογή αρχείου"}
+            {step === "map" && "Εισαγωγή xlsx — Αντιστοίχιση στηλών"}
+            {step === "results" && "Εισαγωγή xlsx — Αποτελέσματα"}
+          </DialogTitle>
+        </DialogHeader>
+
+        {error && (
+          <div className="rounded-md border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-400">
+            {error}
+          </div>
+        )}
+
+        {step === "upload" && (
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Επιλέξτε αρχείο .xlsx. Θα αναλυθούν όλα τα φύλλα εργασίας και θα μπορείτε να
+              αντιστοιχίσετε τις στήλες κάθε φύλλου στα πεδία της αντίστοιχης οντότητας.
+            </p>
+            <input
+              ref={wizardFileRef}
+              type="file"
+              accept=".xlsx"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void handleAnalyze(f);
+              }}
+            />
+            <Button type="button" onClick={() => wizardFileRef.current?.click()} disabled={busy}>
+              {busy ? <FiLoader className="size-4 animate-spin" /> : <FiUpload className="size-4" />}
+              Επιλογή αρχείου…
+            </Button>
+          </div>
+        )}
+
+        {step === "map" && (
+          <div className="space-y-6">
+            {sheets.map((sheet) => {
+              const cfg = configs[sheet.name] ?? { kind: "", mapping: {} };
+              const kindMeta = cfg.kind ? entityMeta(cfg.kind) : null;
+              const headerOptions = sheet.headers.filter((h) => h.trim() !== "");
+              return (
+                <div key={sheet.name} className="rounded-md border p-4 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <span className="font-medium">{sheet.name}</span>{" "}
+                      <span className="text-sm text-muted-foreground">
+                        ({sheet.rowCount} γραμμές)
+                      </span>
+                    </div>
+                    <Select
+                      value={cfg.kind || SKIP}
+                      onValueChange={(v) =>
+                        setSheetKind(sheet, v === SKIP ? "" : (v as EntityKind))
+                      }
+                    >
+                      <SelectTrigger className="w-56">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={SKIP}>— Παράλειψη —</SelectItem>
+                        {ENTITY_KINDS.map((k) => (
+                          <SelectItem key={k} value={k}>
+                            {entityMeta(k).labelGr}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {kindMeta && (
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {kindMeta.columns.map((col) => (
+                        <div key={col.key} className="space-y-1">
+                          <Label className="text-xs">
+                            {col.headerGr}
+                            {col.required && <span className="text-red-600"> *</span>}
+                          </Label>
+                          <Select
+                            value={cfg.mapping[col.key] || NONE}
+                            onValueChange={(v) =>
+                              setFieldMapping(sheet.name, col.key, v === NONE ? "" : v)
+                            }
+                          >
+                            <SelectTrigger className="h-8">
+                              <SelectValue placeholder="— Καμία —" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value={NONE}>— Καμία —</SelectItem>
+                              {headerOptions.map((h) => (
+                                <SelectItem key={h} value={h}>
+                                  {h}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            {!canImport && activeSheets.length > 0 && (
+              <p className="text-sm text-muted-foreground">
+                Σε κάθε φύλλο που δεν παραλείπεται πρέπει να αντιστοιχιστούν τα πεδία «Κωδικός»
+                και «Όνομα».
+              </p>
+            )}
+            <DialogFooter>
+              <Button type="button" variant="secondary" onClick={reset} disabled={busy}>
+                Πίσω
+              </Button>
+              <Button type="button" onClick={handleImport} disabled={busy || !canImport}>
+                {busy && <FiLoader className="size-4 animate-spin" />}
+                Εισαγωγή
+              </Button>
+            </DialogFooter>
+          </div>
+        )}
+
+        {step === "results" && (
+          <div className="space-y-4">
+            {results.map((r) => (
+              <div key={r.sheetName} className="rounded-md border p-4 space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-medium">{r.sheetName}</span>
+                  <Badge variant="outline">{entityMeta(r.kind).labelGr}</Badge>
+                  <span className="text-sm text-muted-foreground">
+                    {r.created} νέες, {r.updated} ενημερώσεις
+                    {r.errors.length > 0 ? `, ${r.errors.length} σφάλματα` : ""}
+                  </span>
+                </div>
+                {r.errors.length > 0 && (
+                  <ul className="list-disc pl-5 text-sm text-red-700 dark:text-red-400 space-y-0.5">
+                    {r.errors.slice(0, 20).map((e, i) => (
+                      <li key={i}>
+                        {e.rowNumber > 0 ? `Γραμμή ${e.rowNumber}: ` : ""}
+                        {e.message}
+                      </li>
+                    ))}
+                    {r.errors.length > 20 && (
+                      <li>… και {r.errors.length - 20} ακόμη σφάλματα.</li>
+                    )}
+                  </ul>
+                )}
+              </div>
+            ))}
+            <DialogFooter>
+              <Button type="button" onClick={() => handleOpenChange(false)}>
+                Κλείσιμο
+              </Button>
+            </DialogFooter>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function EntityPanel({
   kind,
   initialRows,
@@ -138,6 +446,7 @@ function EntityPanel({
   const fileRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
   const [syncing, setSyncing] = useState<SyncSource | null>(null);
+  const [wizardOpen, setWizardOpen] = useState(false);
 
   const isCategory = kind === "PRODUCT_CATEGORY";
   // Οι εικονικές στήλες (π.χ. «Γονικός Κωδικός») αφορούν μόνο το xlsx.
@@ -461,8 +770,20 @@ function EntityPanel({
             size="sm"
             onClick={() => fileRef.current?.click()}
             disabled={importing || syncing !== null}
+            title="Εισαγωγή αρχείου στη μορφή του προτύπου xlsx"
           >
             {importing ? <FiLoader className="size-4 animate-spin" /> : <FiUpload className="size-4" />}
+            Γρήγορη εισαγωγή (πρότυπο)
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => setWizardOpen(true)}
+            disabled={importing || syncing !== null}
+            title="Εισαγωγή οποιουδήποτε xlsx με αντιστοίχιση στηλών ανά φύλλο"
+          >
+            <FiUpload className="size-4" />
             Εισαγωγή xlsx
           </Button>
           <Button type="button" size="sm" onClick={openCreate}>
@@ -584,6 +905,17 @@ function EntityPanel({
           </TableBody>
         </Table>
       </div>
+
+      {/* Wizard εισαγωγής xlsx με αντιστοίχιση στηλών */}
+      <ImportWizardDialog
+        open={wizardOpen}
+        onOpenChange={setWizardOpen}
+        defaultKind={kind}
+        onImported={() => {
+          refresh();
+          router.refresh();
+        }}
+      />
 
       {/* Dialog δημιουργίας/επεξεργασίας */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
