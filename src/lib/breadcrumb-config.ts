@@ -15,6 +15,7 @@ export function getBreadcrumbFromPath(pathname: string): { label: string; href?:
     login: "Sign in",
     register: "Register",
     "forgot-password": "Forgot password",
+    "data-migration": "Data Migration",
   };
 
   const result: { label: string; href?: string }[] = [];

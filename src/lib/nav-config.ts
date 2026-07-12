@@ -19,6 +19,7 @@ import {
   FiHome,
   FiLink,
   FiMail,
+  FiDatabase,
 } from "react-icons/fi";
 
 export interface NavItem {
@@ -53,6 +54,7 @@ export const settingsNavItems: NavItem[] = [
   { href: "/settings/lookup-lists", label: "Λίστες Τιμών", icon: FiSliders, roles: ["SUPER_ADMIN"] },
   { href: "/settings/connectors", label: "Connectors", icon: FiLink, roles: ["SUPER_ADMIN"] },
   { href: "/settings/process-advisor", label: "AI Σύμβουλος", icon: FiCpu, roles: ["SUPER_ADMIN"] },
+  { href: "/settings/data-migration", label: "Data Migration", icon: FiDatabase, roles: ["SUPER_ADMIN"] },
 ];
 
 export function getNavItemsForRole(role: Role | undefined): NavItem[] {
