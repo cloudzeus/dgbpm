@@ -333,6 +333,7 @@ export async function generateBusinessProcesses(input: {
  */
 export async function createProcessTemplatesFromBlueprints(
   blueprints: ProcessBlueprint[],
+  opts: { isDemo?: boolean } = {},
 ): Promise<{ created: number }> {
   const session = await auth();
   if (!session?.user) throw new Error("Μη εξουσιοδοτημένη πρόσβαση");
@@ -385,6 +386,7 @@ export async function createProcessTemplatesFromBlueprints(
         notifyOnCompleteInitiator: true,
       })),
       fields,
+      isDemo: opts.isDemo ?? false,
     });
     created++;
   }
@@ -418,6 +420,7 @@ export async function createProcessTemplate(data: {
     notifyOnCompleteInitiator?: boolean;
   }[];
   fields?: FieldInput[];
+  isDemo?: boolean;
 }) {
   const session = await auth();
   if (!session?.user) throw new Error("Μη εξουσιοδοτημένη πρόσβαση");
@@ -432,6 +435,7 @@ export async function createProcessTemplate(data: {
         description: data.description ?? undefined,
         icon: data.icon,
         createdById: session.user.id,
+        isDemo: data.isDemo ?? false,
         allowedDepartments: {
           create: data.allowedDepartmentIds.map((departmentId) => ({ departmentId })),
         },
