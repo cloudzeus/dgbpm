@@ -75,9 +75,15 @@ export async function generateDemoInstances(input: {
   const start = new Date(`${input.startDate}T00:00:00`);
   const end = new Date(`${input.endDate}T23:59:59`);
   const now = new Date();
-  if (isNaN(start.getTime()) || isNaN(end.getTime()) || start >= end)
+  if (isNaN(start.getTime()) || isNaN(end.getTime()))
     return { ok: false, error: "Μη έγκυρο εύρος ημερομηνιών." };
-  if (end > now) return { ok: false, error: "Η ημερομηνία λήξης δεν μπορεί να είναι μελλοντική." };
+  // Απόρριψη μόνο αν η ΗΜΕΡΑ λήξης είναι μετά τη σημερινή (endDate = σήμερα επιτρέπεται)
+  if (new Date(`${input.endDate}T00:00:00`) > now)
+    return { ok: false, error: "Η ημερομηνία λήξης δεν μπορεί να είναι μελλοντική." };
+  // Clamp του εύρους σχεδιασμού στο τώρα, ώστε endDate = σήμερα να δουλεύει
+  const effectiveEnd = new Date(Math.min(end.getTime(), now.getTime()));
+  if (start >= effectiveEnd)
+    return { ok: false, error: "Μη έγκυρο εύρος ημερομηνιών." };
   const count = Math.floor(input.count);
   if (!Number.isFinite(count) || count < 1 || count > 1000)
     return { ok: false, error: "Το πλήθος πρέπει να είναι 1 έως 1000." };
@@ -133,7 +139,7 @@ export async function generateDemoInstances(input: {
 
   const samplePools = await buildSamplePools();
   const plan = planInstances(templates, users, {
-    start, end, count, completedRatio: ratio, now,
+    start, end: effectiveEnd, count, completedRatio: ratio, now,
     rng: mulberry32(now.getTime() % 2147483647),
     samplePools,
   });
