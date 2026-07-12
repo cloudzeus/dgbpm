@@ -23,7 +23,11 @@ export async function buildTemplateWorkbook(kind: EntityKind): Promise<Buffer> {
 export async function parseEntityWorkbook(
   kind: EntityKind,
   buf: Buffer
-): Promise<{ rows: Record<string, unknown>[]; errors: { rowNumber: number; message: string }[] }> {
+): Promise<{
+  rows: Record<string, unknown>[];
+  rowNumbers: number[]; // αριθμός γραμμής xlsx ανά row (παράλληλο array)
+  errors: { rowNumber: number; message: string }[];
+}> {
   const expectedHeaders = xlsxHeadersFor(kind);
 
   const wb = new ExcelJS.Workbook();
@@ -52,6 +56,7 @@ export async function parseEntityWorkbook(
 
   const columns = entityMeta(kind).columns;
   const rows: Record<string, unknown>[] = [];
+  const rowNumbers: number[] = [];
   const errors: { rowNumber: number; message: string }[] = [];
   const seenCodes = new Set<string>();
 
@@ -85,10 +90,11 @@ export async function parseEntityWorkbook(
       }
       if (code) seenCodes.add(code);
       rows.push(record);
+      rowNumbers.push(rowNumber);
     } catch (err) {
       errors.push({ rowNumber, message: err instanceof Error ? err.message : String(err) });
     }
   }
 
-  return { rows, errors };
+  return { rows, rowNumbers, errors };
 }

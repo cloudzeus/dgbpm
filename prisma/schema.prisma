@@ -507,6 +507,11 @@ model ProductCategory {
   magentoId  String?
   opencardId String?
   products   Product[]
+
+  parentId String?
+  parent   ProductCategory?  @relation("ProductCategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children ProductCategory[] @relation("ProductCategoryTree")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

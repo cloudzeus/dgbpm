@@ -133,7 +133,14 @@ describe("mapWooCustomer", () => {
 
 describe("mapWooCategory", () => {
   it("uses slug as code", () => {
-    expect(mapWooCategory({ id: 9, slug: "epipla", name: "Έπιπλα" })).toEqual({ externalId: "9", code: "epipla", name: "Έπιπλα" });
+    expect(mapWooCategory({ id: 9, slug: "epipla", name: "Έπιπλα" })).toEqual({ externalId: "9", code: "epipla", name: "Έπιπλα", extra: {} });
+  });
+  it("puts a positive parent id into extra.wooParentId as string", () => {
+    expect(mapWooCategory({ id: 10, slug: "karekles", name: "Καρέκλες", parent: 9 }).extra).toEqual({ wooParentId: "9" });
+  });
+  it("treats parent 0 (or missing) as root — no wooParentId", () => {
+    expect(mapWooCategory({ id: 11, slug: "root", name: "Ρίζα", parent: 0 }).extra).toEqual({});
+    expect(mapWooCategory({ id: 12, slug: "root2", name: "Ρίζα 2" }).extra).toEqual({});
   });
 });
 

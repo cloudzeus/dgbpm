@@ -51,6 +51,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ENTITY_KINDS, entityMeta } from "@/lib/entities/registry";
+import { treeOrder, withDescendants } from "@/lib/entities/tree";
 import {
   createEntity,
   deleteEntity,
@@ -69,6 +70,8 @@ export type EntityRow = {
   categoryId?: string | null;
   colorId?: string | null;
   sizeId?: string | null;
+  parentId?: string | null;
+  parent?: { name: string } | null;
   category?: { name: string } | null;
   color?: { name: string } | null;
   size?: { name: string } | null;
@@ -77,7 +80,7 @@ export type EntityRow = {
 type SyncSource = "SOFTONE" | "WOOCOMMERCE";
 type SyncSources = { SOFTONE: EntityKind[]; WOOCOMMERCE: EntityKind[] };
 type Msg = { type: "ok" | "err"; text: string } | null;
-type Option = { id: string; name: string };
+type Option = { id: string; name: string; parentId?: string | null };
 type ImportErrors = { rowNumber: number; message: string }[];
 
 const SOURCE_LABEL: Record<SyncSource, string> = {
@@ -136,8 +139,10 @@ function EntityPanel({
   const [importing, setImporting] = useState(false);
   const [syncing, setSyncing] = useState<SyncSource | null>(null);
 
-  const editableColumns = meta.columns.filter((c) => c.key !== "isActive");
-  const displayColumns = meta.columns.filter((c) => c.key !== "isActive");
+  const isCategory = kind === "PRODUCT_CATEGORY";
+  // Οι εικονικές στήλες (π.χ. «Γονικός Κωδικός») αφορούν μόνο το xlsx.
+  const editableColumns = meta.columns.filter((c) => c.key !== "isActive" && !c.virtual);
+  const displayColumns = meta.columns.filter((c) => c.key !== "isActive" && !c.virtual);
   const availableSources = (Object.keys(SOURCE_LABEL) as SyncSource[]).filter((s) =>
     syncSources[s].includes(kind)
   );
@@ -163,7 +168,23 @@ function EntityPanel({
   }, []);
 
   async function loadOptions() {
-    if (kind !== "PRODUCT" || options) return;
+    if (options) return;
+    if (isCategory) {
+      try {
+        const cats = await listEntities("PRODUCT_CATEGORY", { includeInactive: true });
+        setOptions({
+          parentId: (cats.rows as unknown as EntityRow[]).map((r) => ({
+            id: r.id,
+            name: r.name,
+            parentId: r.parentId ?? null,
+          })),
+        });
+      } catch {
+        setOptions({ parentId: [] });
+      }
+      return;
+    }
+    if (kind !== "PRODUCT") return;
     try {
       const [cats, colors, sizes] = await Promise.all([
         listEntities("PRODUCT_CATEGORY", {}),
@@ -202,6 +223,7 @@ function EntityPanel({
       categoryId: row.categoryId ?? "",
       colorId: row.colorId ?? "",
       sizeId: row.sizeId ?? "",
+      parentId: row.parentId ?? "",
     });
     setDialogOpen(true);
     void loadOptions();
@@ -215,6 +237,7 @@ function EntityPanel({
       if (kind === "PRODUCT") {
         for (const rf of RELATION_FIELDS) data[rf.key] = relations[rf.key] || null;
       }
+      if (isCategory) data.parentId = relations.parentId || null;
       const res = editingId
         ? await updateEntity(kind, editingId, data)
         : await createEntity(kind, data);
@@ -331,6 +354,19 @@ function EntityPanel({
       setSyncing(null);
     }
   }
+
+  // Κατηγορίες: depth-first σειρά δέντρου με βάθος για indented εμφάνιση.
+  const displayRows: (EntityRow & { depth: number })[] = isCategory
+    ? treeOrder((rows ?? []).map((r) => ({ ...r, parentId: r.parentId ?? null })))
+    : (rows ?? []).map((r) => ({ ...r, depth: 0 }));
+
+  // Επιλογές γονέα στο dialog: δέντρο, χωρίς τον εαυτό και τους απογόνους του.
+  const parentOptions = (() => {
+    if (!isCategory) return [];
+    const all = (options?.parentId ?? []).map((o) => ({ ...o, parentId: o.parentId ?? null }));
+    const excluded = editingId ? withDescendants(all, editingId) : new Set<string>();
+    return treeOrder(all).filter((o) => !excluded.has(o.id));
+  })();
 
   return (
     <div className="space-y-4">
@@ -466,11 +502,18 @@ function EntityPanel({
                 </TableCell>
               </TableRow>
             ) : (
-              (rows ?? []).map((row) => (
+              displayRows.map((row) => (
                 <TableRow key={row.id} className={row.isActive ? "" : "opacity-60"}>
                   {displayColumns.map((c) => (
                     <TableCell key={c.key} className={c.key === "code" ? "font-medium" : ""}>
-                      {formatCell(row[c.key], c.kind)}
+                      {isCategory && c.key === "name" && row.depth > 0 ? (
+                        <span style={{ paddingLeft: `${row.depth * 16}px` }} className="text-muted-foreground">
+                          {"— "}
+                          <span className="text-foreground">{formatCell(row[c.key], c.kind)}</span>
+                        </span>
+                      ) : (
+                        formatCell(row[c.key], c.kind)
+                      )}
                     </TableCell>
                   ))}
                   {kind === "PRODUCT" && (
@@ -592,6 +635,29 @@ function EntityPanel({
                   </Select>
                 </div>
               ))}
+            {isCategory && (
+              <div className="space-y-1.5">
+                <Label>Γονική κατηγορία</Label>
+                <Select
+                  value={relations.parentId || NONE}
+                  onValueChange={(v) =>
+                    setRelations((r) => ({ ...r, parentId: v === NONE ? "" : v }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="—" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE}>— Καμία (ρίζα) —</SelectItem>
+                    {parentOptions.map((o) => (
+                      <SelectItem key={o.id} value={o.id}>
+                        {`${"  ".repeat(o.depth)}${o.depth > 0 ? "— " : ""}${o.name}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="flex items-center gap-2 sm:col-span-2">
               <input
                 id={`${kind}-active`}

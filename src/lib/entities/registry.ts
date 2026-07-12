@@ -9,7 +9,18 @@ export type EntityColumn = {
   headerGr: string; // xlsx/table header (χωρίς το "*")
   kind: "string" | "number" | "boolean";
   required?: boolean;
+  /**
+   * Εικονική στήλη xlsx (π.χ. «Γονικός Κωδικός»): συμμετέχει σε
+   * rowFromRecord/recordFromRow αλλά ΔΕΝ είναι πεδίο Prisma — τα CRUD
+   * validation/upserts πρέπει να την αγνοούν.
+   */
+  virtual?: true;
 };
+
+/** Κλειδιά εικονικών στηλών του kind (πρέπει να αφαιρούνται πριν από prisma writes). */
+export function virtualColumnKeys(kind: EntityKind): Set<string> {
+  return new Set(entityMeta(kind).columns.filter((c) => c.virtual).map((c) => c.key));
+}
 
 export type EntityMeta = {
   kind: EntityKind;
@@ -69,7 +80,12 @@ const META: Record<EntityKind, EntityMeta> = {
     labelGr: "Κατηγορίες προϊόντων",
     labelSingularGr: "Κατηγορία προϊόντος",
     prismaModel: "productCategory",
-    columns: [...BASE_COLUMNS, IS_ACTIVE_COLUMN],
+    columns: [
+      ...BASE_COLUMNS,
+      IS_ACTIVE_COLUMN,
+      // Εικονική στήλη xlsx για ιεραρχία — δεν είναι DB πεδίο.
+      { key: "parentCode", headerGr: "Γονικός Κωδικός", kind: "string", virtual: true },
+    ],
   },
   COLOR: {
     kind: "COLOR",

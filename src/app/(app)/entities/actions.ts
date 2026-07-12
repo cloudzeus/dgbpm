@@ -6,6 +6,7 @@ import { requireRole } from "@/lib/rbac";
 import { Prisma, Role, type EntityKind } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { entityMeta } from "@/lib/entities/registry";
+import { withDescendants } from "@/lib/entities/tree";
 import { entityDelegate } from "@/lib/entities/resolve";
 import { planUpserts, type ExistingEntity, type SyncRow } from "@/lib/entities/sync-types";
 import { fetchSoftoneRows, type SoftoneSyncKind } from "@/lib/entities/sync-softone";
@@ -60,6 +61,8 @@ function validateEntityData(kind: EntityKind, input: Record<string, unknown>): V
   const data: Record<string, unknown> = {};
 
   for (const col of meta.columns) {
+    // Οι εικονικές στήλες (π.χ. parentCode) δεν είναι πεδία Prisma — αγνοούνται.
+    if (col.virtual) continue;
     const raw = input[col.key];
 
     if (col.kind === "boolean") {
@@ -96,7 +99,29 @@ function validateEntityData(kind: EntityKind, input: Record<string, unknown>): V
     }
   }
 
+  // Γονική κατηγορία (select στο dialog) — δεν είναι registry column.
+  if (kind === "PRODUCT_CATEGORY" && "parentId" in input) {
+    const raw = input.parentId;
+    const str = raw === undefined || raw === null ? "" : String(raw).trim();
+    data.parentId = str === "" ? null : str;
+  }
+
   return { ok: true, data };
+}
+
+/**
+ * Έλεγχος ότι ο νέος γονέας κατηγορίας δεν είναι ο εαυτός της ή απόγονός της.
+ * Επιστρέφει Greek error string ή null αν όλα καλά.
+ */
+async function validateCategoryParent(id: string | null, parentId: string | null): Promise<string | null> {
+  if (!parentId) return null;
+  const all = await prisma.productCategory.findMany({ select: { id: true, parentId: true } });
+  if (!all.some((c) => c.id === parentId)) return "Η γονική κατηγορία δεν βρέθηκε.";
+  if (id) {
+    if (parentId === id) return "Ο γονέας δεν μπορεί να είναι απόγονος.";
+    if (withDescendants(all, id).has(parentId)) return "Ο γονέας δεν μπορεί να είναι απόγονος.";
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -128,7 +153,9 @@ export async function listEntities(
             size: { select: { name: true } },
           },
         }
-      : {}),
+      : kind === "PRODUCT_CATEGORY"
+        ? { include: { parent: { select: { name: true } } } }
+        : {}),
   });
 
   return { ok: true as const, rows };
@@ -139,6 +166,11 @@ export async function createEntity(kind: EntityKind, data: Record<string, unknow
 
   const valid = validateEntityData(kind, data);
   if (!valid.ok) return valid;
+
+  if (kind === "PRODUCT_CATEGORY") {
+    const err = await validateCategoryParent(null, (valid.data.parentId as string | null) ?? null);
+    if (err) return { ok: false as const, error: err };
+  }
 
   try {
     await entityDelegate(kind).create({ data: valid.data });
@@ -155,6 +187,11 @@ export async function updateEntity(kind: EntityKind, id: string, data: Record<st
 
   const valid = validateEntityData(kind, data);
   if (!valid.ok) return valid;
+
+  if (kind === "PRODUCT_CATEGORY") {
+    const err = await validateCategoryParent(id, (valid.data.parentId as string | null) ?? null);
+    if (err) return { ok: false as const, error: err };
+  }
 
   try {
     await entityDelegate(kind).update({ where: { id }, data: valid.data });
@@ -215,12 +252,13 @@ export async function availableSyncSources(): Promise<{
   };
 }
 
-/** Κρατά από τα extra ΜΟΝΟ κλειδιά που είναι πραγματικές στήλες του kind. */
+/** Κρατά από τα extra ΜΟΝΟ κλειδιά που είναι πραγματικές (μη εικονικές) στήλες του kind. */
 function safeExtras(kind: EntityKind, extra: Record<string, unknown> | undefined): Record<string, unknown> {
   if (!extra) return {};
   const allowed = new Set(
     entityMeta(kind)
-      .columns.map((c) => c.key)
+      .columns.filter((c) => !c.virtual)
+      .map((c) => c.key)
       .filter((k) => k !== "code" && k !== "name" && k !== "isActive")
   );
   const out: Record<string, unknown> = {};
@@ -310,6 +348,29 @@ export async function syncEntities(kind: EntityKind, source: SyncSource) {
     }
   } catch (err) {
     return { ok: false as const, error: errorMessage(err) };
+  }
+
+  // Pass 2: ιεραρχία κατηγοριών Woo — σύνδεση parentId μέσω wooParentId → wooId.
+  if (kind === "PRODUCT_CATEGORY" && source === "WOOCOMMERCE") {
+    try {
+      const cats = await prisma.productCategory.findMany({
+        select: { id: true, wooId: true, parentId: true },
+      });
+      const idByWooId = new Map(cats.filter((c) => c.wooId).map((c) => [c.wooId as string, c.id]));
+
+      for (const row of incoming) {
+        const wooParentId = row.extra?.wooParentId;
+        if (typeof wooParentId !== "string" || wooParentId === "") continue;
+        const childId = idByWooId.get(row.externalId);
+        const parentId = idByWooId.get(wooParentId);
+        if (!childId || !parentId || childId === parentId) continue;
+        const current = cats.find((c) => c.id === childId);
+        if (current?.parentId === parentId) continue;
+        await prisma.productCategory.update({ where: { id: childId }, data: { parentId } });
+      }
+    } catch (err) {
+      return { ok: false as const, error: errorMessage(err) };
+    }
   }
 
   revalidatePath("/entities");

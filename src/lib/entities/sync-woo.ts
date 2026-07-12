@@ -13,7 +13,7 @@ import type { SyncRow } from "./sync-types";
 
 export type WooProductJson = { id: number; sku?: string; name?: string; price?: string; regular_price?: string };
 export type WooCustomerJson = { id: number; first_name?: string; last_name?: string; email?: string };
-export type WooTermJson = { id: number; slug?: string; name?: string };
+export type WooTermJson = { id: number; slug?: string; name?: string; parent?: number };
 
 function toNumber(s: string | undefined): number | null {
   if (!s || s.trim() === "") return null;
@@ -42,9 +42,15 @@ export function mapWooCustomer(c: WooCustomerJson): SyncRow {
   return { externalId: String(c.id), code: String(c.id), name, extra };
 }
 
-/** Κατηγορία προϊόντος: code = slug. */
+/**
+ * Κατηγορία προϊόντος: code = slug. Το Woo `parent` (0 = ρίζα) μπαίνει στο
+ * extra.wooParentId (string) — το safeExtras το κόβει από τα άμεσα prisma
+ * writes· το pass 2 του syncEntities το χρησιμοποιεί για σύνδεση parentId.
+ */
 export function mapWooCategory(t: WooTermJson): SyncRow {
-  return { externalId: String(t.id), code: t.slug ?? String(t.id), name: t.name ?? "" };
+  const extra: Record<string, unknown> = {};
+  if (typeof t.parent === "number" && t.parent > 0) extra.wooParentId = String(t.parent);
+  return { externalId: String(t.id), code: t.slug ?? String(t.id), name: t.name ?? "", extra };
 }
 
 /** Όρος attribute (χρώμα/μέγεθος): code = slug, name = name. */
