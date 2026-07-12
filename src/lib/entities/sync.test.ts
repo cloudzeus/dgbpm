@@ -59,6 +59,13 @@ describe("mapSoftoneTrdrRow", () => {
     const out = mapSoftoneTrdrRow(columns, [456, "", "Name", null, "", null, null, null, null]);
     expect(out).toEqual({ externalId: "456", code: "456", name: "Name", extra: {} });
   });
+  it("maps ISACTIVE to isActive when the column is present", () => {
+    const cols = [...columns, "TRDR.ISACTIVE"];
+    const base = ["1", "C", "N", null, null, null, null, null, null];
+    expect(mapSoftoneTrdrRow(cols, [...base, "1"]).isActive).toBe(true);
+    expect(mapSoftoneTrdrRow(cols, [...base, 0]).isActive).toBe(false);
+    expect(mapSoftoneTrdrRow(columns, base).isActive).toBeUndefined();
+  });
 });
 
 describe("mapSoftoneItemRow", () => {
@@ -75,6 +82,14 @@ describe("mapSoftoneItemRow", () => {
   it("omits missing prices", () => {
     const out = mapSoftoneItemRow(columns, ["8", "PR-2", "Οθόνη", null, ""]);
     expect(out.extra).toEqual({});
+  });
+  it("maps ISACTIVE and prefers the main-table column over other tables", () => {
+    const cols = ["MTRUNIT.CODE", "ITEM.MTRL", "MTRL.CODE", "ITEM.NAME", "MTRL.ISACTIVE"];
+    const out = mapSoftoneItemRow(cols, ["ΤΕΜ", "9", "PR-9", "Server", "0"]);
+    expect(out.code).toBe("PR-9"); // MTRL.CODE κερδίζει το MTRUNIT.CODE
+    expect(out.isActive).toBe(false);
+    expect(mapSoftoneItemRow(cols, ["ΤΕΜ", "9", "PR-9", "Server", "1"]).isActive).toBe(true);
+    expect(mapSoftoneItemRow(columns, ["9", "PR-9", "Server", null, null]).isActive).toBeUndefined();
   });
 });
 

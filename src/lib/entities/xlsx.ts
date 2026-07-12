@@ -42,7 +42,7 @@ export async function parseEntityWorkbook(
 
   const headersMatch =
     actualHeaders.length === expectedHeaders.length &&
-    actualHeaders.every((h, i) => h === expectedHeaders[i]);
+    actualHeaders.every((h, i) => h.trim() === expectedHeaders[i].trim());
 
   if (!headersMatch) {
     throw new Error(

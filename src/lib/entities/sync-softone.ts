@@ -15,8 +15,16 @@ export type SoftoneSyncKind = "SUPPLIER" | "CUSTOMER" | "PRODUCT" | "PRODUCT_CAT
 // Pure mappers — δέχονται τη λίστα στηλών του browser (π.χ. "TRDR.CODE") + το row (array).
 // ---------------------------------------------------------------------------
 
-/** Βρίσκει index στήλης με βάση το όνομα πεδίου ΜΕΤΑ την τελευταία τελεία, case-insensitive. */
-function colIndex(columns: string[], field: string): number {
+/**
+ * Βρίσκει index στήλης: προτιμά exact match στο κύριο table του object
+ * (π.χ. "MTRL.CODE" για ITEM ώστε να μην κερδίσει το "MTRUNIT.CODE"),
+ * αλλιώς fallback σε ταίριασμα του ονόματος πεδίου ΜΕΤΑ την τελευταία τελεία.
+ * Πάντα case-insensitive.
+ */
+function colIndex(columns: string[], mainTable: string, field: string): number {
+  const exact = `${mainTable}.${field}`.toLowerCase();
+  const exactIdx = columns.findIndex((c) => c.toLowerCase() === exact);
+  if (exactIdx >= 0) return exactIdx;
   const f = field.toLowerCase();
   return columns.findIndex((c) => {
     const tail = c.slice(c.lastIndexOf(".") + 1).toLowerCase();
@@ -24,15 +32,24 @@ function colIndex(columns: string[], field: string): number {
   });
 }
 
-function cell(columns: string[], row: unknown[], field: string): string {
-  const i = colIndex(columns, field);
+function cell(columns: string[], row: unknown[], mainTable: string, field: string): string {
+  const i = colIndex(columns, mainTable, field);
   if (i < 0) return "";
   const v = row[i];
   return v === null || v === undefined ? "" : String(v).trim();
 }
 
-function cellNumber(columns: string[], row: unknown[], field: string): number | null {
-  const s = cell(columns, row, field);
+/** ISACTIVE → boolean: "1"/1/true → true, "0"/0/false → false, στήλη απούσα/κενή → undefined. */
+function cellIsActive(columns: string[], row: unknown[], mainTable: string): boolean | undefined {
+  if (colIndex(columns, mainTable, "ISACTIVE") < 0) return undefined;
+  const s = cell(columns, row, mainTable, "ISACTIVE").toLowerCase();
+  if (s === "1" || s === "true") return true;
+  if (s === "0" || s === "false") return false;
+  return undefined;
+}
+
+function cellNumber(columns: string[], row: unknown[], mainTable: string, field: string): number | null {
+  const s = cell(columns, row, mainTable, field);
   if (s === "") return null;
   const n = Number(s.replace(",", "."));
   return Number.isFinite(n) ? n : null;
@@ -40,47 +57,54 @@ function cellNumber(columns: string[], row: unknown[], field: string): number | 
 
 /** TRDR (CUSTOMER/SUPPLIER): externalId=TRDR, extras afm/address/city/zip/phone/email. */
 export function mapSoftoneTrdrRow(columns: string[], row: unknown[]): SyncRow {
-  const externalId = cell(columns, row, "TRDR");
+  const T = "TRDR";
+  const externalId = cell(columns, row, T, "TRDR");
   const extra: Record<string, unknown> = {};
   const pairs: [string, string][] = [
     ["afm", "AFM"], ["address", "ADDRESS"], ["city", "CITY"],
     ["zip", "ZIP"], ["phone", "PHONE01"], ["email", "EMAIL"],
   ];
   for (const [key, field] of pairs) {
-    const v = cell(columns, row, field);
+    const v = cell(columns, row, T, field);
     if (v !== "") extra[key] = v;
   }
+  const isActive = cellIsActive(columns, row, T);
   return {
     externalId,
-    code: cell(columns, row, "CODE") || externalId,
-    name: cell(columns, row, "NAME"),
+    code: cell(columns, row, T, "CODE") || externalId,
+    name: cell(columns, row, T, "NAME"),
     extra,
+    ...(isActive !== undefined ? { isActive } : {}),
   };
 }
 
 /** ITEM: externalId=MTRL, extras priceWholesale (PRICEW) / priceRetail (PRICER). */
 export function mapSoftoneItemRow(columns: string[], row: unknown[]): SyncRow {
-  const externalId = cell(columns, row, "MTRL");
+  const T = "MTRL";
+  const externalId = cell(columns, row, T, "MTRL");
   const extra: Record<string, unknown> = {};
-  const pricew = cellNumber(columns, row, "PRICEW");
-  const pricer = cellNumber(columns, row, "PRICER");
+  const pricew = cellNumber(columns, row, T, "PRICEW");
+  const pricer = cellNumber(columns, row, T, "PRICER");
   if (pricew !== null) extra.priceWholesale = pricew;
   if (pricer !== null) extra.priceRetail = pricer;
+  const isActive = cellIsActive(columns, row, T);
   return {
     externalId,
-    code: cell(columns, row, "CODE") || externalId,
-    name: cell(columns, row, "NAME"),
+    code: cell(columns, row, T, "CODE") || externalId,
+    name: cell(columns, row, T, "NAME"),
     extra,
+    ...(isActive !== undefined ? { isActive } : {}),
   };
 }
 
 /** ITECATEGORY: externalId=MTRCATEGORY, code=CODE ή fallback στο κλειδί. */
 export function mapSoftoneCategoryRow(columns: string[], row: unknown[]): SyncRow {
-  const externalId = cell(columns, row, "MTRCATEGORY");
+  const T = "MTRCATEGORY";
+  const externalId = cell(columns, row, T, "MTRCATEGORY");
   return {
     externalId,
-    code: cell(columns, row, "CODE") || externalId,
-    name: cell(columns, row, "NAME"),
+    code: cell(columns, row, T, "CODE") || externalId,
+    name: cell(columns, row, T, "NAME"),
   };
 }
 
