@@ -21,7 +21,7 @@ export type SeedTemplate = {
   fields: {
     id: string;
     name: string;
-    type: "STRING" | "TEXT" | "NUMBER" | "DATE" | "FILE_URL" | "BOOLEAN" | "SELECT";
+    type: "STRING" | "TEXT" | "NUMBER" | "DATE" | "FILE_URL" | "BOOLEAN" | "SELECT" | "ENTITY";
     lookupItemIds: string[];
   }[];
 };
@@ -147,6 +147,8 @@ function fieldValueFor(
       return { ...base, valueBool: rng() < 0.5 };
     case "FILE_URL":
       return base; // κενό — δεν ανεβάζουμε αρχεία
+    case "ENTITY":
+      return base; // handled in entities feature
     case "STRING":
     case "TEXT": {
       let v: string;
