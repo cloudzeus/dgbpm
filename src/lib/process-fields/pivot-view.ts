@@ -15,6 +15,8 @@ function valueExpr(type: FieldType): string {
     case "DATE": return "fv.valueDate";
     case "BOOLEAN": return "fv.valueBool";
     case "SELECT": return "(SELECT li.label FROM LookupListItem li WHERE li.id = fv.valueListItemId)";
+    // ENTITY: μόνο το raw id εδώ· η ανάλυση σε «κωδικός — όνομα» γίνεται server-side (Task 5).
+    case "ENTITY": return "fv.valueEntityId";
     default: return "fv.valueString";
   }
 }

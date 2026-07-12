@@ -6,6 +6,7 @@ type Columns = {
   valueDate?: Date | null;
   valueBool?: boolean | null;
   valueListItemId?: string | null;
+  valueEntityId?: string | null;
 };
 
 export type CoerceResult =
@@ -21,6 +22,7 @@ export function coerceFieldValue(type: FieldType, raw: string | null | undefined
       case "DATE": return { ok: true, columns: { valueDate: null } };
       case "BOOLEAN": return { ok: true, columns: { valueBool: null } };
       case "SELECT": return { ok: true, columns: { valueListItemId: null } };
+      case "ENTITY": return { ok: true, columns: { valueEntityId: null } };
       default: return { ok: true, columns: { valueString: null } };
     }
   }
@@ -39,6 +41,8 @@ export function coerceFieldValue(type: FieldType, raw: string | null | undefined
       return { ok: true, columns: { valueBool: v === "true" || v === "1" || v === "on" } };
     case "SELECT":
       return { ok: true, columns: { valueListItemId: v } };
+    case "ENTITY":
+      return { ok: true, columns: { valueEntityId: v } };
     default:
       return { ok: true, columns: { valueString: v } };
   }

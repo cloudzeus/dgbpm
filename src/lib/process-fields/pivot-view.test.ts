@@ -17,6 +17,11 @@ describe("pivot-view", () => {
     expect(sql).toContain("`amount`");
     expect(sql).toContain("`store`");
   });
+  it("uses valueEntityId for ENTITY fields", () => {
+    const sql = buildPivotViewSql("tmpl123", [{ id: "f1", key: "supplier", type: "ENTITY" }]);
+    expect(sql).toContain("fv.valueEntityId");
+    expect(sql).toContain("`supplier`");
+  });
   it("throws on a templateId containing a quote/semicolon", () => {
     expect(() =>
       buildPivotViewSql("tmpl'; DROP VIEW x; --", [{ id: "f1", key: "amount", type: "NUMBER" }])

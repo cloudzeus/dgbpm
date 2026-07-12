@@ -1,7 +1,7 @@
-import type { FieldType } from "@prisma/client";
+import type { EntityKind, FieldType } from "@prisma/client";
 
 export const FIELD_TYPES: FieldType[] = [
-  "STRING", "TEXT", "NUMBER", "DATE", "FILE_URL", "BOOLEAN", "SELECT",
+  "STRING", "TEXT", "NUMBER", "DATE", "FILE_URL", "BOOLEAN", "SELECT", "ENTITY",
 ];
 
 const LABELS: Record<FieldType, string> = {
@@ -18,6 +18,15 @@ const LABELS: Record<FieldType, string> = {
 export function fieldTypeLabel(t: FieldType): string {
   return LABELS[t];
 }
+
+export const ENTITY_KIND_LABELS: Record<EntityKind, string> = {
+  SUPPLIER: "Προμηθευτής",
+  CUSTOMER: "Πελάτης",
+  PRODUCT: "Προϊόν",
+  PRODUCT_CATEGORY: "Κατηγορία προϊόντος",
+  COLOR: "Χρώμα",
+  SIZE: "Μέγεθος",
+};
 
 export type ValueColumn =
   | "valueString" | "valueNumber" | "valueDate" | "valueBool" | "valueListItemId" | "valueEntityId";

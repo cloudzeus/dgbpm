@@ -19,6 +19,15 @@ describe("coerceFieldValue", () => {
   it("stores SELECT as list item id", () => {
     expect(coerceFieldValue("SELECT", "item_1", false)).toEqual({ ok: true, columns: { valueListItemId: "item_1" } });
   });
+  it("stores ENTITY as entity id", () => {
+    expect(coerceFieldValue("ENTITY", "ent_1", false)).toEqual({ ok: true, columns: { valueEntityId: "ent_1" } });
+  });
+  it("empty ENTITY optional yields null column", () => {
+    expect(coerceFieldValue("ENTITY", "", false)).toEqual({ ok: true, columns: { valueEntityId: null } });
+  });
+  it("empty ENTITY required fails", () => {
+    expect(coerceFieldValue("ENTITY", "", true).ok).toBe(false);
+  });
   it("stores string types verbatim", () => {
     expect(coerceFieldValue("FILE_URL", "https://x/y.pdf", false)).toEqual({ ok: true, columns: { valueString: "https://x/y.pdf" } });
   });

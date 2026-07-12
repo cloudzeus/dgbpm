@@ -7,6 +7,7 @@ export type PivotValue = {
   valueNumber: number | null;
   valueDate: Date | null;
   valueBool: boolean | null;
+  valueEntityId: string | null;
   listItem: { label: string } | null;
 };
 export type PivotInstance = { id: string; name: string; fieldValues: PivotValue[] };
@@ -19,6 +20,9 @@ function display(field: PivotField, v: PivotValue | undefined): string {
     case "DATE": return v.valueDate ? new Date(v.valueDate).toLocaleDateString("el-GR") : "";
     case "BOOLEAN": return v.valueBool == null ? "" : v.valueBool ? "Ναι" : "Όχι";
     case "SELECT": return v.listItem?.label ?? "";
+    // ENTITY: εδώ εμφανίζεται μόνο το raw id — η ανάλυση σε «κωδικός — όνομα»
+    // γίνεται server-side (βλ. Task 5), όχι σε αυτό το επίπεδο.
+    case "ENTITY": return v.valueEntityId ?? "";
     default: return v.valueString ?? "";
   }
 }
