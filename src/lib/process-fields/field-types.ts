@@ -12,6 +12,7 @@ const LABELS: Record<FieldType, string> = {
   FILE_URL: "Αρχείο (URL)",
   BOOLEAN: "Ναι/Όχι",
   SELECT: "Λίστα τιμών",
+  ENTITY: "Οντότητα",
 };
 
 export function fieldTypeLabel(t: FieldType): string {
@@ -19,7 +20,7 @@ export function fieldTypeLabel(t: FieldType): string {
 }
 
 export type ValueColumn =
-  | "valueString" | "valueNumber" | "valueDate" | "valueBool" | "valueListItemId";
+  | "valueString" | "valueNumber" | "valueDate" | "valueBool" | "valueListItemId" | "valueEntityId";
 
 export function valueColumnFor(t: FieldType): ValueColumn {
   switch (t) {
@@ -27,6 +28,7 @@ export function valueColumnFor(t: FieldType): ValueColumn {
     case "DATE": return "valueDate";
     case "BOOLEAN": return "valueBool";
     case "SELECT": return "valueListItemId";
+    case "ENTITY": return "valueEntityId";
     default: return "valueString"; // STRING, TEXT, FILE_URL
   }
 }

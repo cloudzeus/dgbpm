@@ -318,6 +318,7 @@ enum FieldType {
   FILE_URL
   BOOLEAN
   SELECT
+  ENTITY
 }
 
 model ProcessFieldDefinition {
@@ -330,6 +331,7 @@ model ProcessFieldDefinition {
   required          Boolean   @default(false)
   captureTaskOrder  Int?      // matches ProcessTaskTemplate.order at runtime
   lookupListId      String?
+  entityKind        EntityKind?
   deletedAt         DateTime?
 
   processTemplate ProcessTemplate     @relation(fields: [processTemplateId], references: [id], onDelete: Cascade)
@@ -350,6 +352,7 @@ model ProcessFieldValue {
   valueDate         DateTime?
   valueBool         Boolean?
   valueListItemId   String?
+  valueEntityId     String?
 
   processInstance ProcessInstance        @relation(fields: [processInstanceId], references: [id], onDelete: Cascade)
   fieldDefinition ProcessFieldDefinition @relation(fields: [fieldDefinitionId], references: [id], onDelete: Cascade)
@@ -440,4 +443,120 @@ model CompanyActivity {
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@index([companyId])
+}
+
+// ============== Entities (Οντότητες) ==============
+
+enum EntityKind {
+  SUPPLIER
+  CUSTOMER
+  PRODUCT
+  PRODUCT_CATEGORY
+  COLOR
+  SIZE
+}
+
+model Supplier {
+  id         String  @id @default(cuid())
+  code       String  @unique @db.VarChar(25)
+  name       String  @db.VarChar(128)
+  afm        String? @db.VarChar(20)
+  address    String? @db.VarChar(100)
+  city       String? @db.VarChar(30)
+  zip        String? @db.VarChar(10)
+  phone      String? @db.VarChar(20)
+  email      String? @db.VarChar(128)
+  isActive   Boolean @default(true)
+  softoneKey String?
+  wooId      String?
+  magentoId  String?
+  opencardId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Customer {
+  id         String  @id @default(cuid())
+  code       String  @unique @db.VarChar(25)
+  name       String  @db.VarChar(128)
+  afm        String? @db.VarChar(20)
+  address    String? @db.VarChar(100)
+  city       String? @db.VarChar(30)
+  zip        String? @db.VarChar(10)
+  phone      String? @db.VarChar(20)
+  email      String? @db.VarChar(128)
+  isActive   Boolean @default(true)
+  softoneKey String?
+  wooId      String?
+  magentoId  String?
+  opencardId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ProductCategory {
+  id         String  @id @default(cuid())
+  code       String  @unique @db.VarChar(25)
+  name       String  @db.VarChar(128)
+  isActive   Boolean @default(true)
+  softoneKey String?
+  wooId      String?
+  magentoId  String?
+  opencardId String?
+  products   Product[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Color {
+  id         String  @id @default(cuid())
+  code       String  @unique @db.VarChar(25)
+  name       String  @db.VarChar(128)
+  isActive   Boolean @default(true)
+  softoneKey String?
+  wooId      String?
+  magentoId  String?
+  opencardId String?
+  products   Product[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Size {
+  id         String  @id @default(cuid())
+  code       String  @unique @db.VarChar(25)
+  name       String  @db.VarChar(128)
+  isActive   Boolean @default(true)
+  softoneKey String?
+  wooId      String?
+  magentoId  String?
+  opencardId String?
+  products   Product[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Product {
+  id             String  @id @default(cuid())
+  code           String  @unique @db.VarChar(50)
+  name           String  @db.VarChar(128)
+  categoryId     String?
+  priceWholesale Float?
+  priceRetail    Float?
+  vatPct         Float?
+  unit           String? @db.VarChar(20)
+  colorId        String?
+  sizeId         String?
+  isActive       Boolean @default(true)
+  softoneKey     String?
+  wooId          String?
+  magentoId      String?
+  opencardId     String?
+
+  category ProductCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  color    Color?           @relation(fields: [colorId], references: [id], onDelete: SetNull)
+  size     Size?            @relation(fields: [sizeId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
