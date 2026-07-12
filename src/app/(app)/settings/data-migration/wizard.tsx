@@ -153,6 +153,7 @@ export function DataMigrationWizard({ overview }: { overview: MigrationOverview 
         setCreatedTemplates((c) => c + r.created);
         setMsg({ type: "ok", text: `Δημιουργήθηκαν ${r.created} πρότυπα.` });
         setStep(3);
+        router.refresh();
       } catch (e) {
         setMsg({
           type: "err",
@@ -182,6 +183,7 @@ export function DataMigrationWizard({ overview }: { overview: MigrationOverview 
           type: "ok",
           text: `Δημιουργήθηκαν ${r.instances} demo διαδικασίες με ${r.tasks} βήματα.`,
         });
+        router.refresh();
       } else {
         setMsg({ type: "err", text: r.error });
       }
