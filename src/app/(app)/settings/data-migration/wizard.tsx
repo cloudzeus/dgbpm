@@ -110,7 +110,8 @@ export function DataMigrationWizard({ overview }: { overview: MigrationOverview 
     fieldValues: number;
   }>(null);
 
-  const blocked = overview.users.length === 0 || overview.departments.length === 0;
+  const blocked =
+    !overview.users.some((u) => u.positions.length > 0) || overview.departments.length === 0;
   const hasTemplates = overview.templates.length > 0;
   const usableTemplates = hasTemplates || createdTemplates > 0;
 
@@ -181,7 +182,11 @@ export function DataMigrationWizard({ overview }: { overview: MigrationOverview 
         });
         setMsg({
           type: "ok",
-          text: `Δημιουργήθηκαν ${r.instances} demo διαδικασίες με ${r.tasks} βήματα.`,
+          text:
+            `Δημιουργήθηκαν ${r.instances} demo διαδικασίες με ${r.tasks} βήματα.` +
+            (r.failedChunks > 0
+              ? " Ορισμένα τμήματα απέτυχαν — δείτε τα logs ή κάντε επαναφορά."
+              : ""),
         });
         router.refresh();
       } else {
@@ -298,7 +303,7 @@ export function DataMigrationWizard({ overview }: { overview: MigrationOverview 
               <div className="flex items-start gap-3 rounded-md border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-400">
                 <FiAlertTriangle className="mt-0.5 size-4 shrink-0" />
                 <div>
-                  Απαιτούνται χρήστες με θέσεις και τμήματα για τη δημιουργία demo δεδομένων.{" "}
+                  Απαιτούνται χρήστες με θέσεις εργασίας και τμήματα για τη δημιουργία demo δεδομένων.{" "}
                   <Link href="/users" className="underline underline-offset-2">
                     Χρήστες
                   </Link>{" "}

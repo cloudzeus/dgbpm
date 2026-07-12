@@ -67,7 +67,7 @@ export async function generateDemoInstances(input: {
   count: number;
   completedRatio: number; // 0..1
 }): Promise<
-  | { ok: true; instances: number; tasks: number; actions: number; fieldValues: number }
+  | { ok: true; instances: number; tasks: number; actions: number; fieldValues: number; failedChunks: number }
   | { ok: false; error: string }
 > {
   await requireSuperAdmin();
@@ -144,67 +144,87 @@ export async function generateDemoInstances(input: {
     samplePools,
   });
 
-  let instances = 0, tasks = 0, actions = 0, fieldValues = 0;
+  let instances = 0, tasks = 0, actions = 0, fieldValues = 0, failedChunks = 0;
   for (let i = 0; i < plan.length; i += CHUNK) {
     const chunk = plan.slice(i, i + CHUNK);
-    await prisma.$transaction(async (tx) => {
-      for (const p of chunk) {
-        const inst = await tx.processInstance.create({
-          data: {
-            name: p.name,
-            processTemplateId: p.templateId,
-            startedById: p.startedById,
-            startDateTime: p.startDateTime,
-            endDateTime: p.endDateTime,
-            status: p.status,
-            isDemo: true,
-            createdAt: p.startDateTime,
-          },
-        });
-        instances++;
-        for (const t of p.tasks) {
-          const ta = await tx.processTaskAssignment.create({
+    try {
+      // Μετρητές ανά chunk — προστίθενται μόνο αν το transaction επιτύχει
+      const c = await prisma.$transaction(async (tx) => {
+        const cc = { instances: 0, tasks: 0, actions: 0, fieldValues: 0 };
+        for (const p of chunk) {
+          const inst = await tx.processInstance.create({
             data: {
-              processInstanceId: inst.id,
-              templateTaskId: t.templateTaskId,
-              status: t.status,
-              currentAssigneeId: t.assigneeId,
-              startedAt: t.startedAt,
-              completedAt: t.completedAt,
-              comment: t.comment,
+              name: p.name,
+              processTemplateId: p.templateId,
+              startedById: p.startedById,
+              startDateTime: p.startDateTime,
+              endDateTime: p.endDateTime,
+              status: p.status,
+              isDemo: true,
               createdAt: p.startDateTime,
-              possibleAssignees: {
-                create: t.possibleAssigneeIds.map((userId) => ({ userId })),
-              },
             },
           });
-          tasks++;
-          if (t.actions.length) {
-            await tx.taskAction.createMany({
-              data: t.actions.map((a) => ({
-                taskId: ta.id, userId: a.userId, action: a.action, message: a.message, createdAt: a.createdAt,
-              })),
+          cc.instances++;
+          for (const t of p.tasks) {
+            const ta = await tx.processTaskAssignment.create({
+              data: {
+                processInstanceId: inst.id,
+                templateTaskId: t.templateTaskId,
+                status: t.status,
+                currentAssigneeId: t.assigneeId,
+                startedAt: t.startedAt,
+                completedAt: t.completedAt,
+                comment: t.comment,
+                createdAt: p.startDateTime,
+                possibleAssignees: {
+                  create: t.possibleAssigneeIds.map((userId) => ({ userId })),
+                },
+              },
             });
-            actions += t.actions.length;
+            cc.tasks++;
+            if (t.actions.length) {
+              await tx.taskAction.createMany({
+                data: t.actions.map((a) => ({
+                  taskId: ta.id, userId: a.userId, action: a.action, message: a.message, createdAt: a.createdAt,
+                })),
+              });
+              cc.actions += t.actions.length;
+            }
+          }
+          const fv = p.fieldValues.filter(
+            (v) =>
+              v.valueString !== null ||
+              v.valueNumber !== null ||
+              v.valueDate !== null ||
+              v.valueBool !== null ||
+              v.valueListItemId !== null,
+          );
+          if (fv.length) {
+            await tx.processFieldValue.createMany({
+              data: fv.map((v) => ({ processInstanceId: inst.id, ...v })),
+            });
+            cc.fieldValues += fv.length;
           }
         }
-        const fv = p.fieldValues.filter(
-          (v) => v.valueString ?? v.valueNumber ?? v.valueDate ?? v.valueBool ?? v.valueListItemId,
-        );
-        if (fv.length) {
-          await tx.processFieldValue.createMany({
-            data: fv.map((v) => ({ processInstanceId: inst.id, ...v })),
-          });
-          fieldValues += fv.length;
-        }
-      }
-    }, { timeout: 120_000, maxWait: 15_000 });
+        return cc;
+      }, { timeout: 120_000, maxWait: 15_000 });
+      instances += c.instances;
+      tasks += c.tasks;
+      actions += c.actions;
+      fieldValues += c.fieldValues;
+    } catch (err) {
+      failedChunks++;
+      console.error(`[data-migration] Αποτυχία chunk ${i / CHUNK + 1}:`, err);
+    }
   }
+
+  if (failedChunks > 0 && instances === 0)
+    return { ok: false, error: "Η δημιουργία απέτυχε. Δοκιμάστε ξανά ή διαγράψτε τα demo δεδομένα." };
 
   revalidatePath("/dashboard");
   revalidatePath("/process-instances");
   revalidatePath("/reports/overview");
-  return { ok: true, instances, tasks, actions, fieldValues };
+  return { ok: true, instances, tasks, actions, fieldValues, failedChunks };
 }
 
 /** Reset — διαγραφή ΟΛΩΝ των demo δεδομένων. */
