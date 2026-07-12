@@ -188,7 +188,8 @@ function FieldRow(props: {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {FIELD_TYPES.map((t) => (
+              {/* ENTITY: ενεργοποιείται όταν προστεθεί επιλογή είδους οντότητας */}
+              {FIELD_TYPES.filter((t) => t !== "ENTITY").map((t) => (
                 <SelectItem key={t} value={t}>
                   {fieldTypeLabel(t)}
                 </SelectItem>
