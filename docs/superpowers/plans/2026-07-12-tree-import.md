@@ -52,3 +52,14 @@ Verify `npm test && npx tsc --noEmit && npm run build`. Commit intended files on
 - Check SELECT field dropdowns (`dynamic-field-input.tsx` options building): keep flat but if trivial, indent option labels with `"— ".repeat(depth)`; do NOT change stored values.
 
 Verify `npm test && npx tsc --noEmit && npm run build`. Commit intended files only (lookup-lists files are clean; verify with git diff before editing).
+
+---
+
+### Task C: Multi-sheet workbooks + column mapping import wizard (entities)
+
+**Files:**
+- Modify: `src/lib/entities/xlsx.ts` (+test): add `analyzeWorkbook(buf)` → `{ sheets: { name: string; headers: string[]; sampleRows: string[][] /*first 3*/; rowCount: number }[] }`; add `parseSheetWithMapping(kind, buf, sheetName, mapping)` where `mapping: Record<string /*field key incl. virtual parentCode*/, string /*header name*/>` — validates mapped headers exist, requires code+name mapped, reuses recordFromRow semantics per cell (build a row in registry column order from mapped cells), returns same `{rows, rowNumbers, errors}` shape. Add `suggestMapping(kind, headers)` — auto-guess by normalized header similarity (case/accents-insensitive contains match against headerGr and English synonyms: code/κωδικός/sku, name/όνομα/επωνυμία/περιγραφή, afm/αφμ/vat, email, τηλ/phone, πόλη/city, τκ/zip, διεύθυνση/address, τιμή χονδρικής/wholesale, τιμή λιανικής/retail/price, γονικός/parent). TDD for all three.
+- Modify: `src/app/api/entities/xlsx/route.ts`: POST supports `action=analyze` (returns analyzeWorkbook result) and `action=import-mapped` with fields `sheets` = JSON `[{ sheetName, kind, mapping }]` — imports each mapped sheet sequentially (kind order: PRODUCT_CATEGORY, COLOR, SIZE, SUPPLIER, CUSTOMER, PRODUCT so products can link), running pass-2 parent linking for PRODUCT_CATEGORY; response per sheet `{sheetName, kind, created, updated, errors}`. Existing template GET + simple POST stay.
+- Modify: `src/app/(app)/entities/entities-client.tsx`: replace the plain «Εισαγωγή xlsx» with a 2-step import Dialog: (1) file upload → analyze → per-sheet table: kind Select (with «— Παράλειψη —»), auto `suggestMapping` shown as editable Selects (entity field → sheet column) with required markers for Κωδικός/Όνομα; (2) «Εισαγωγή» → import-mapped → per-sheet results with per-row errors. Keep a «Γρήγορη εισαγωγή προτύπου» path for template-format files (existing behavior). The mapping UI is per-sheet; multiple sheets import in one action. Greek throughout.
+
+Verify + commit as usual (only intended files).
