@@ -61,12 +61,36 @@ async function sampleWoo(): Promise<Partial<SamplePools>> {
 // SoftOne: παραλείπεται σκόπιμα στην v1 (απαιτεί πλήρη ροή login/authenticate/
 // GetTable με win1253 αποκωδικοποίηση). Αν προστεθεί, ΜΟΝΟ επίσημα S1 services.
 
+// Προτεραιότητα δειγματοληψίας: τοπικές οντότητες (Customer/Product) → Woo → fallback pools.
+// Οι τοπικές οντότητες αντιπροσωπεύουν τα πραγματικά δεδομένα του tenant, οπότε αν υπάρχουν
+// ενεργές εγγραφές τοπικά, προηγούνται της κλήσης προς το WooCommerce (και την αποφεύγουν).
 export async function buildSamplePools(): Promise<SamplePools> {
   const pools: SamplePools = { customers: [...FALLBACK_POOLS.customers], products: [...FALLBACK_POOLS.products] };
+
+  let hasLocalCustomers = false;
+  let hasLocalProducts = false;
+  try {
+    const { prisma } = await import("@/lib/prisma");
+    const [customers, products] = await Promise.all([
+      prisma.customer.findMany({ where: { isActive: true }, select: { name: true }, take: LIMIT }),
+      prisma.product.findMany({ where: { isActive: true }, select: { name: true }, take: LIMIT }),
+    ]);
+    if (customers.length) {
+      pools.customers = customers.map((c) => c.name).filter(Boolean);
+      hasLocalCustomers = true;
+    }
+    if (products.length) {
+      pools.products = products.map((p) => p.name).filter(Boolean);
+      hasLocalProducts = true;
+    }
+  } catch { /* σφάλμα DB → συνέχισε στο Woo/fallback */ }
+
+  if (hasLocalCustomers && hasLocalProducts) return pools;
+
   try {
     const woo = await sampleWoo();
-    if (woo.customers?.length) pools.customers = woo.customers;
-    if (woo.products?.length) pools.products = woo.products;
+    if (!hasLocalCustomers && woo.customers?.length) pools.customers = woo.customers;
+    if (!hasLocalProducts && woo.products?.length) pools.products = woo.products;
   } catch { /* fallback */ }
   return pools;
 }
