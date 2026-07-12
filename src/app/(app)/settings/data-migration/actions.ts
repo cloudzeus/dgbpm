@@ -58,7 +58,7 @@ export async function getMigrationOverview() {
 
 export type MigrationOverview = Awaited<ReturnType<typeof getMigrationOverview>>;
 
-const CHUNK = 25;
+const CHUNK = 10;
 
 /** Βήμα 4 — δημιουργία demo instances. ΜΟΝΟ εγγραφές ΒΔ, καμία ειδοποίηση. */
 export async function generateDemoInstances(input: {
@@ -198,7 +198,7 @@ export async function generateDemoInstances(input: {
           fieldValues += fv.length;
         }
       }
-    });
+    }, { timeout: 120_000, maxWait: 15_000 });
   }
 
   revalidatePath("/dashboard");
