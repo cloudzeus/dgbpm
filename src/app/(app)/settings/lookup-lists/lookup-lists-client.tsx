@@ -33,14 +33,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   createLookupList,
   updateLookupList,
   deleteLookupList,
   importLookupItems,
 } from "./actions";
+import { treeOrder, withDescendants } from "@/lib/entities/tree";
 import { ArrowUp, ArrowDown, Trash2, Upload, Loader2, Pencil } from "lucide-react";
 
-type LookupItem = { id: string; value: string; label: string; order: number };
+type LookupItem = { id: string; value: string; label: string; order: number; parentId: string | null };
 
 type LookupList = {
   id: string;
@@ -50,7 +58,9 @@ type LookupList = {
   _count: { fields: number };
 };
 
-type ItemInput = { rowId: string; value: string; label: string };
+type ItemInput = { rowId: string; value: string; label: string; parentValue: string };
+
+const NO_PARENT = "__none__";
 
 export function LookupListsClient({ lists }: { lists: LookupList[] }) {
   const [open, setOpen] = useState(false);
@@ -84,11 +94,13 @@ export function LookupListsClient({ lists }: { lists: LookupList[] }) {
     setEditId(list.id);
     setName(list.name);
     setDescription(list.description ?? "");
+    const valueById = new Map(list.items.map((it) => [it.id, it.value]));
     setItems(
       list.items.map((it) => ({
         rowId: crypto.randomUUID(),
         value: it.value,
         label: it.label,
+        parentValue: (it.parentId && valueById.get(it.parentId)) || "",
       }))
     );
     setFormError(null);
@@ -96,29 +108,47 @@ export function LookupListsClient({ lists }: { lists: LookupList[] }) {
   }
 
   function addItem() {
-    setItems((prev) => [...prev, { rowId: crypto.randomUUID(), value: "", label: "" }]);
+    setItems((prev) => [...prev, { rowId: crypto.randomUUID(), value: "", label: "", parentValue: "" }]);
   }
 
-  function updateItem(index: number, updates: Partial<ItemInput>) {
+  function updateItem(rowId: string, updates: Partial<ItemInput>) {
+    setItems((prev) => prev.map((it) => (it.rowId === rowId ? { ...it, ...updates } : it)));
+  }
+
+  function removeItem(rowId: string) {
+    setItems((prev) => prev.filter((it) => it.rowId !== rowId));
+  }
+
+  function moveItem(rowId: string, dir: -1 | 1) {
     setItems((prev) => {
-      const next = [...prev];
-      next[index] = { ...next[index], ...updates };
-      return next;
-    });
-  }
-
-  function removeItem(index: number) {
-    setItems((prev) => prev.filter((_, i) => i !== index));
-  }
-
-  function moveItem(index: number, dir: -1 | 1) {
-    setItems((prev) => {
+      const index = prev.findIndex((it) => it.rowId === rowId);
       const target = index + dir;
-      if (target < 0 || target >= prev.length) return prev;
+      if (index < 0 || target < 0 || target >= prev.length) return prev;
       const next = [...prev];
       [next[index], next[target]] = [next[target], next[index]];
       return next;
     });
+  }
+
+  // Δέντρο πάνω στα draft items: id = rowId, γονέας μέσω parentValue → rowId.
+  const rowIdByValue = new Map<string, string>();
+  for (const it of items) {
+    const v = it.value.trim();
+    if (v && !rowIdByValue.has(v)) rowIdByValue.set(v, it.rowId);
+  }
+  const treeNodes = items.map((it) => ({
+    ...it,
+    id: it.rowId,
+    parentId: it.parentValue.trim() ? rowIdByValue.get(it.parentValue.trim()) ?? null : null,
+  }));
+  const orderedItems = treeOrder(treeNodes);
+
+  /** Επιλογές γονέα για μια γραμμή: όλα εκτός από τον εαυτό της και τους απογόνους της. */
+  function parentOptions(rowId: string) {
+    const excluded = withDescendants(treeNodes, rowId);
+    return orderedItems.filter(
+      (o) => !excluded.has(o.rowId) && o.value.trim() !== "" && rowIdByValue.get(o.value.trim()) === o.rowId
+    );
   }
 
   async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
@@ -129,11 +159,19 @@ export function LookupListsClient({ lists }: { lists: LookupList[] }) {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      const rows = await importLookupItems(formData);
+      const result = await importLookupItems(formData);
       setItems((prev) => [
         ...prev,
-        ...rows.map((r) => ({ rowId: crypto.randomUUID(), value: r.value, label: r.label })),
+        ...result.items.map((r) => ({
+          rowId: crypto.randomUUID(),
+          value: r.value,
+          label: r.label,
+          parentValue: r.parentValue ?? "",
+        })),
       ]);
+      if (result.errors.length > 0) {
+        setFormError(`Προειδοποιήσεις ιεραρχίας: ${result.errors.join(" · ")}`);
+      }
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Αποτυχία εισαγωγής αρχείου.");
     } finally {
@@ -148,20 +186,31 @@ export function LookupListsClient({ lists }: { lists: LookupList[] }) {
     setFormError(null);
     try {
       const payloadItems = items
-        .map((it) => ({ value: it.value.trim(), label: it.label.trim() }))
+        .map((it) => ({
+          value: it.value.trim(),
+          label: it.label.trim(),
+          parentValue: it.parentValue.trim() || null,
+        }))
         .filter((it) => it.value !== "");
       const data = {
         name: name.trim(),
         description: description.trim() || undefined,
         items: payloadItems,
       };
+      let result: { warnings: string[] };
       if (editId) {
-        await updateLookupList(editId, data);
+        result = await updateLookupList(editId, data);
       } else {
-        await createLookupList(data);
+        const created = await createLookupList(data);
+        setEditId(created.id); // επόμενο submit = update, όχι διπλή δημιουργία
+        result = created;
       }
-      setOpen(false);
-      resetForm();
+      if (result.warnings.length > 0) {
+        setFormError(`Αποθηκεύτηκε με προειδοποιήσεις: ${result.warnings.join(" · ")}`);
+      } else {
+        setOpen(false);
+        resetForm();
+      }
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Αποτυχία αποθήκευσης.");
     } finally {
@@ -309,7 +358,7 @@ export function LookupListsClient({ lists }: { lists: LookupList[] }) {
               <div className="rounded-md border">
                 {items.length === 0 ? (
                   <p className="text-muted-foreground text-sm p-4">
-                    Καμία τιμή ακόμη. Προσθέστε μία ή κάντε εισαγωγή από αρχείο Excel (στήλες value/label).
+                    Καμία τιμή ακόμη. Προσθέστε μία ή κάντε εισαγωγή από αρχείο Excel (στήλες value/label και προαιρετικά «Γονικός Κωδικός»).
                   </p>
                 ) : (
                   <Table>
@@ -317,64 +366,96 @@ export function LookupListsClient({ lists }: { lists: LookupList[] }) {
                       <TableRow>
                         <TableHead>Τιμή (value)</TableHead>
                         <TableHead>Ετικέτα (label)</TableHead>
+                        <TableHead>Γονέας</TableHead>
                         <TableHead className="text-right">Σειρά</TableHead>
                         <TableHead />
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {items.map((it, index) => (
-                        <TableRow key={it.rowId}>
-                          <TableCell>
-                            <Input
-                              value={it.value}
-                              onChange={(e) => updateItem(index, { value: e.target.value })}
-                              placeholder="value"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              value={it.label}
-                              onChange={(e) => updateItem(index, { label: e.target.value })}
-                              placeholder="label"
-                            />
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-1">
+                      {orderedItems.map((it) => {
+                        const baseIndex = items.findIndex((x) => x.rowId === it.rowId);
+                        return (
+                          <TableRow key={it.rowId}>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                {it.depth > 0 && (
+                                  <span className="text-muted-foreground whitespace-nowrap text-xs">
+                                    {"— ".repeat(it.depth)}
+                                  </span>
+                                )}
+                                <Input
+                                  value={it.value}
+                                  onChange={(e) => updateItem(it.rowId, { value: e.target.value })}
+                                  placeholder="value"
+                                />
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                value={it.label}
+                                onChange={(e) => updateItem(it.rowId, { label: e.target.value })}
+                                placeholder="label"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Select
+                                value={it.parentValue.trim() || NO_PARENT}
+                                onValueChange={(v) =>
+                                  updateItem(it.rowId, { parentValue: v === NO_PARENT ? "" : v })
+                                }
+                              >
+                                <SelectTrigger className="w-[160px]">
+                                  <SelectValue placeholder="—" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value={NO_PARENT}>— (καμία)</SelectItem>
+                                  {parentOptions(it.rowId).map((o) => (
+                                    <SelectItem key={o.rowId} value={o.value.trim()}>
+                                      {"— ".repeat(o.depth)}
+                                      {o.label.trim() || o.value.trim()}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-1">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="size-8"
+                                  onClick={() => moveItem(it.rowId, -1)}
+                                  disabled={baseIndex <= 0}
+                                >
+                                  <ArrowUp className="size-4" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="size-8"
+                                  onClick={() => moveItem(it.rowId, 1)}
+                                  disabled={baseIndex === items.length - 1}
+                                >
+                                  <ArrowDown className="size-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right">
                               <Button
                                 type="button"
                                 variant="ghost"
                                 size="icon"
-                                className="size-8"
-                                onClick={() => moveItem(index, -1)}
-                                disabled={index === 0}
+                                className="size-8 text-destructive"
+                                onClick={() => removeItem(it.rowId)}
                               >
-                                <ArrowUp className="size-4" />
+                                <Trash2 className="size-4" />
                               </Button>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="size-8"
-                                onClick={() => moveItem(index, 1)}
-                                disabled={index === items.length - 1}
-                              >
-                                <ArrowDown className="size-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="size-8 text-destructive"
-                              onClick={() => removeItem(index)}
-                            >
-                              <Trash2 className="size-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 )}

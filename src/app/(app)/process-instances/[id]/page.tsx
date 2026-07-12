@@ -10,6 +10,7 @@ import { formatDateTime } from "@/lib/format";
 import { ProcessInstanceDetail } from "./process-instance-detail";
 import type { EditableField, PriorField, StoredFieldValue } from "@/components/process-fields/task-fields-form";
 import { resolveEntityLabels } from "@/lib/entities/resolve";
+import { treeOrder } from "@/lib/entities/tree";
 
 export default async function ProcessInstancePage({
   params,
@@ -81,7 +82,12 @@ export default async function ProcessInstancePage({
         name: f.name,
         type: f.type,
         required: f.required,
-        options: f.lookupList?.items.map((it) => ({ id: it.id, label: it.label })) ?? [],
+        options: f.lookupList
+          ? treeOrder(f.lookupList.items).map((it) => ({
+              id: it.id,
+              label: `${"— ".repeat(it.depth)}${it.label}`,
+            }))
+          : [],
         entityKind: f.entityKind,
         value: storedValue(f.id),
       }));

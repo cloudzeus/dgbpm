@@ -379,8 +379,13 @@ model LookupListItem {
   value        String
   label        String
   order        Int
+  parentId     String?
+  parent       LookupListItem?     @relation("LookupItemTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children     LookupListItem[]    @relation("LookupItemTree")
   lookupList   LookupList          @relation(fields: [lookupListId], references: [id], onDelete: Cascade)
   usedByValues ProcessFieldValue[]
+
+  @@index([parentId])
 }
 
 // ============== Connectors (διασυνδέσεις με τρίτες εφαρμογές) ==============
