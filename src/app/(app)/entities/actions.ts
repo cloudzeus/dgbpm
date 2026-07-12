@@ -85,6 +85,17 @@ function validateEntityData(kind: EntityKind, input: Record<string, unknown>): V
     }
   }
 
+  // Σχέσεις προϊόντος (selects στο dialog) — δεν είναι registry columns.
+  if (kind === "PRODUCT") {
+    for (const key of ["categoryId", "colorId", "sizeId"] as const) {
+      if (key in input) {
+        const raw = input[key];
+        const str = raw === undefined || raw === null ? "" : String(raw).trim();
+        data[key] = str === "" ? null : str;
+      }
+    }
+  }
+
   return { ok: true, data };
 }
 
