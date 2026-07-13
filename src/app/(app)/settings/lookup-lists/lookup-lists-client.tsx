@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -298,24 +299,29 @@ export function LookupListsClient({ lists }: { lists: LookupList[] }) {
         <DialogTrigger asChild>
           <Button onClick={openCreate}>Νέα λίστα</Button>
         </DialogTrigger>
-        <DialogContent>
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{editId ? "Επεξεργασία λίστας τιμών" : "Νέα λίστα τιμών"}</DialogTitle>
+            <DialogDescription>
+              Ορίστε τις τιμές της λίστας και, προαιρετικά, την ιεραρχία τους μέσω γονέα.
+            </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-6">
-            <section className="space-y-3">
-              <div className="space-y-2">
-                <Label>Όνομα</Label>
+            <section className="grid gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="lookup-name">Όνομα</Label>
                 <Input
+                  id="lookup-name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
                   placeholder="π.χ. Τμήματα εταιρείας"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Περιγραφή</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="lookup-description">Περιγραφή</Label>
                 <Textarea
+                  id="lookup-description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Σύντομη περιγραφή αυτής της λίστας"
@@ -334,7 +340,7 @@ export function LookupListsClient({ lists }: { lists: LookupList[] }) {
                     size="sm"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={importing}
-                    className="gap-1.5"
+                    className="h-8 gap-1.5 text-xs"
                   >
                     {importing ? (
                       <Loader2 className="size-3.5 animate-spin" />
@@ -350,25 +356,31 @@ export function LookupListsClient({ lists }: { lists: LookupList[] }) {
                     className="hidden"
                     onChange={handleImport}
                   />
-                  <Button type="button" variant="outline" size="sm" onClick={addItem}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs"
+                    onClick={addItem}
+                  >
                     Προσθήκη τιμής
                   </Button>
                 </div>
               </div>
-              <div className="rounded-md border">
+              <div className="overflow-hidden rounded-md border">
                 {items.length === 0 ? (
-                  <p className="text-muted-foreground text-sm p-4">
+                  <p className="ui-body-muted p-4">
                     Καμία τιμή ακόμη. Προσθέστε μία ή κάντε εισαγωγή από αρχείο Excel (στήλες value/label και προαιρετικά «Γονικός Κωδικός»).
                   </p>
                 ) : (
                   <Table>
                     <TableHeader>
-                      <TableRow>
-                        <TableHead>Τιμή (value)</TableHead>
-                        <TableHead>Ετικέτα (label)</TableHead>
-                        <TableHead>Γονέας</TableHead>
-                        <TableHead className="text-right">Σειρά</TableHead>
-                        <TableHead />
+                      <TableRow className="bg-muted/60 hover:bg-muted/60">
+                        <TableHead className="ui-eyebrow h-9">Τιμή (value)</TableHead>
+                        <TableHead className="ui-eyebrow h-9">Ετικέτα (label)</TableHead>
+                        <TableHead className="ui-eyebrow h-9 w-[170px]">Γονέας</TableHead>
+                        <TableHead className="ui-eyebrow h-9 w-[88px] text-right">Σειρά</TableHead>
+                        <TableHead className="h-9 w-[44px]" />
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -376,10 +388,10 @@ export function LookupListsClient({ lists }: { lists: LookupList[] }) {
                         const baseIndex = items.findIndex((x) => x.rowId === it.rowId);
                         return (
                           <TableRow key={it.rowId}>
-                            <TableCell>
+                            <TableCell className="py-1.5">
                               <div className="flex items-center gap-1">
                                 {it.depth > 0 && (
-                                  <span className="text-muted-foreground whitespace-nowrap text-xs">
+                                  <span className="ui-meta whitespace-nowrap">
                                     {"— ".repeat(it.depth)}
                                   </span>
                                 )}
@@ -387,24 +399,26 @@ export function LookupListsClient({ lists }: { lists: LookupList[] }) {
                                   value={it.value}
                                   onChange={(e) => updateItem(it.rowId, { value: e.target.value })}
                                   placeholder="value"
+                                  className="h-8 text-xs"
                                 />
                               </div>
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="py-1.5">
                               <Input
                                 value={it.label}
                                 onChange={(e) => updateItem(it.rowId, { label: e.target.value })}
                                 placeholder="label"
+                                className="h-8 text-xs"
                               />
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="py-1.5">
                               <Select
                                 value={it.parentValue.trim() || NO_PARENT}
                                 onValueChange={(v) =>
                                   updateItem(it.rowId, { parentValue: v === NO_PARENT ? "" : v })
                                 }
                               >
-                                <SelectTrigger className="w-[160px]">
+                                <SelectTrigger className="h-8 w-[160px] text-xs">
                                   <SelectValue placeholder="—" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -418,8 +432,8 @@ export function LookupListsClient({ lists }: { lists: LookupList[] }) {
                                 </SelectContent>
                               </Select>
                             </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex justify-end gap-1">
+                            <TableCell className="py-1.5 text-right">
+                              <div className="flex justify-end gap-0.5">
                                 <Button
                                   type="button"
                                   variant="ghost"
@@ -442,12 +456,12 @@ export function LookupListsClient({ lists }: { lists: LookupList[] }) {
                                 </Button>
                               </div>
                             </TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className="py-1.5 text-right">
                               <Button
                                 type="button"
                                 variant="ghost"
                                 size="icon"
-                                className="size-8 text-destructive"
+                                className="size-8 text-muted-foreground hover:text-destructive"
                                 onClick={() => removeItem(it.rowId)}
                               >
                                 <Trash2 className="size-4" />
