@@ -85,7 +85,7 @@ export async function createLookupList(data: {
     });
     const warnings = await linkItemParents(tx, list.id, data.items);
     return { id: list.id, warnings };
-  });
+  }, { timeout: 120_000, maxWait: 15_000 }); // αργή remote MySQL — αποφυγή P2028
   revalidatePath("/settings/lookup-lists");
   return result;
 }
@@ -115,7 +115,7 @@ export async function updateLookupList(id: string, data: {
       order++;
     }
     return linkItemParents(tx, id, data.items);
-  });
+  }, { timeout: 120_000, maxWait: 15_000 }); // αργή remote MySQL — αποφυγή P2028
   revalidatePath("/settings/lookup-lists");
   return { warnings };
 }
