@@ -1,7 +1,7 @@
 import type { EntityKind } from "@prisma/client";
 
 export const ENTITY_KINDS: EntityKind[] = [
-  "SUPPLIER", "CUSTOMER", "PRODUCT", "PRODUCT_CATEGORY", "COLOR", "SIZE",
+  "SUPPLIER", "CUSTOMER", "PRODUCT", "PRODUCT_CATEGORY", "BRAND", "COLOR", "SIZE",
 ];
 
 export type EntityColumn = {
@@ -26,7 +26,7 @@ export type EntityMeta = {
   kind: EntityKind;
   labelGr: string; // «Προμηθευτές» κλπ.
   labelSingularGr: string;
-  prismaModel: "supplier" | "customer" | "product" | "productCategory" | "color" | "size";
+  prismaModel: "supplier" | "customer" | "product" | "productCategory" | "brand" | "color" | "size";
   columns: EntityColumn[]; // ordered· τα πρώτα δύο πάντα code, name
 };
 
@@ -49,6 +49,7 @@ const PRODUCT_COLUMNS: EntityColumn[] = [
   { key: "priceRetail", headerGr: "Τιμή λιανικής", kind: "number" },
   { key: "vatPct", headerGr: "ΦΠΑ %", kind: "number" },
   { key: "unit", headerGr: "Μονάδα μέτρησης", kind: "string" },
+  { key: "imageUrl", headerGr: "Εικόνα (URL)", kind: "string" },
 ];
 
 const IS_ACTIVE_COLUMN: EntityColumn = { key: "isActive", headerGr: "Ενεργός", kind: "boolean" };
@@ -86,6 +87,13 @@ const META: Record<EntityKind, EntityMeta> = {
       // Εικονική στήλη xlsx για ιεραρχία — δεν είναι DB πεδίο.
       { key: "parentCode", headerGr: "Γονικός Κωδικός", kind: "string", virtual: true },
     ],
+  },
+  BRAND: {
+    kind: "BRAND",
+    labelGr: "Brands",
+    labelSingularGr: "Brand",
+    prismaModel: "brand",
+    columns: [...BASE_COLUMNS, IS_ACTIVE_COLUMN],
   },
   COLOR: {
     kind: "COLOR",

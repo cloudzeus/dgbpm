@@ -69,11 +69,13 @@ export type EntityRow = {
   softoneKey?: string | null;
   wooId?: string | null;
   categoryId?: string | null;
+  brandId?: string | null;
   colorId?: string | null;
   sizeId?: string | null;
   parentId?: string | null;
   parent?: { name: string } | null;
   category?: { name: string } | null;
+  brand?: { name: string } | null;
   color?: { name: string } | null;
   size?: { name: string } | null;
 } & Record<string, unknown>;
@@ -89,8 +91,9 @@ const SOURCE_LABEL: Record<SyncSource, string> = {
   WOOCOMMERCE: "WooCommerce",
 };
 
-const RELATION_FIELDS: { key: "categoryId" | "colorId" | "sizeId"; label: string; kind: EntityKind }[] = [
+const RELATION_FIELDS: { key: "categoryId" | "brandId" | "colorId" | "sizeId"; label: string; kind: EntityKind }[] = [
   { key: "categoryId", label: "Κατηγορία", kind: "PRODUCT_CATEGORY" },
+  { key: "brandId", label: "Brand", kind: "BRAND" },
   { key: "colorId", label: "Χρώμα", kind: "COLOR" },
   { key: "sizeId", label: "Μέγεθος", kind: "SIZE" },
 ];
@@ -495,18 +498,20 @@ function EntityPanel({
     }
     if (kind !== "PRODUCT") return;
     try {
-      const [cats, colors, sizes] = await Promise.all([
+      const [cats, brands, colors, sizes] = await Promise.all([
         listEntities("PRODUCT_CATEGORY", {}),
+        listEntities("BRAND", {}),
         listEntities("COLOR", {}),
         listEntities("SIZE", {}),
       ]);
       setOptions({
         categoryId: (cats.rows as unknown as EntityRow[]).map((r) => ({ id: r.id, name: r.name })),
+        brandId: (brands.rows as unknown as EntityRow[]).map((r) => ({ id: r.id, name: r.name })),
         colorId: (colors.rows as unknown as EntityRow[]).map((r) => ({ id: r.id, name: r.name })),
         sizeId: (sizes.rows as unknown as EntityRow[]).map((r) => ({ id: r.id, name: r.name })),
       });
     } catch {
-      setOptions({ categoryId: [], colorId: [], sizeId: [] });
+      setOptions({ categoryId: [], brandId: [], colorId: [], sizeId: [] });
     }
   }
 
@@ -530,6 +535,7 @@ function EntityPanel({
     setFormActive(row.isActive);
     setRelations({
       categoryId: row.categoryId ?? "",
+      brandId: row.brandId ?? "",
       colorId: row.colorId ?? "",
       sizeId: row.sizeId ?? "",
       parentId: row.parentId ?? "",
@@ -803,6 +809,7 @@ function EntityPanel({
               {kind === "PRODUCT" && (
                 <>
                   <TableHead>Κατηγορία</TableHead>
+                  <TableHead>Brand</TableHead>
                   <TableHead>Χρώμα</TableHead>
                   <TableHead>Μέγεθος</TableHead>
                 </>
@@ -816,7 +823,7 @@ function EntityPanel({
             {(rows ?? []).length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={displayColumns.length + (kind === "PRODUCT" ? 6 : 3)}
+                  colSpan={displayColumns.length + (kind === "PRODUCT" ? 7 : 3)}
                   className="text-center text-muted-foreground py-8"
                 >
                   {isPending || rows === null ? "Φόρτωση…" : "Δεν βρέθηκαν εγγραφές."}
@@ -827,7 +834,19 @@ function EntityPanel({
                 <TableRow key={row.id} className={row.isActive ? "" : "opacity-60"}>
                   {displayColumns.map((c) => (
                     <TableCell key={c.key} className={c.key === "code" ? "font-medium" : ""}>
-                      {isCategory && c.key === "name" && row.depth > 0 ? (
+                      {c.key === "imageUrl" ? (
+                        typeof row.imageUrl === "string" && row.imageUrl.trim() !== "" ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={row.imageUrl}
+                            alt={row.name}
+                            className="size-9 rounded-md border object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          "—"
+                        )
+                      ) : isCategory && c.key === "name" && row.depth > 0 ? (
                         <span style={{ paddingLeft: `${row.depth * 16}px` }} className="text-muted-foreground">
                           {"— "}
                           <span className="text-foreground">{formatCell(row[c.key], c.kind)}</span>
@@ -840,6 +859,7 @@ function EntityPanel({
                   {kind === "PRODUCT" && (
                     <>
                       <TableCell>{row.category?.name ?? "—"}</TableCell>
+                      <TableCell>{row.brand?.name ?? "—"}</TableCell>
                       <TableCell>{row.color?.name ?? "—"}</TableCell>
                       <TableCell>{row.size?.name ?? "—"}</TableCell>
                     </>

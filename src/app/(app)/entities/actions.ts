@@ -90,7 +90,7 @@ function validateEntityData(kind: EntityKind, input: Record<string, unknown>): V
 
   // Σχέσεις προϊόντος (selects στο dialog) — δεν είναι registry columns.
   if (kind === "PRODUCT") {
-    for (const key of ["categoryId", "colorId", "sizeId"] as const) {
+    for (const key of ["categoryId", "brandId", "colorId", "sizeId"] as const) {
       if (key in input) {
         const raw = input[key];
         const str = raw === undefined || raw === null ? "" : String(raw).trim();
@@ -149,6 +149,7 @@ export async function listEntities(
       ? {
           include: {
             category: { select: { name: true } },
+            brand: { select: { name: true } },
             color: { select: { name: true } },
             size: { select: { name: true } },
           },

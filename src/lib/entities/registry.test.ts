@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import { ENTITY_KINDS, entityMeta, xlsxHeadersFor, rowFromRecord, recordFromRow } from "./registry";
 
 describe("entities registry", () => {
-  it("covers all six kinds with Greek labels and code+name columns", () => {
-    expect(ENTITY_KINDS).toHaveLength(6);
+  it("covers all seven kinds with Greek labels and code+name columns", () => {
+    expect(ENTITY_KINDS).toHaveLength(7);
     for (const kind of ENTITY_KINDS) {
       const m = entityMeta(kind);
       expect(m.labelGr.length).toBeGreaterThan(0);
