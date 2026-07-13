@@ -24,6 +24,7 @@ export const ENTITY_KIND_LABELS: Record<EntityKind, string> = {
   CUSTOMER: "Πελάτης",
   PRODUCT: "Προϊόν",
   PRODUCT_CATEGORY: "Κατηγορία προϊόντος",
+  BRAND: "Brand",
   COLOR: "Χρώμα",
   SIZE: "Μέγεθος",
 };

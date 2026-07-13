@@ -568,7 +568,14 @@ export function ProcessTemplatesClient({
   templates: Template[];
   departments: { id: string; name: string }[];
   positions: { id: string; name: string; department: { name: string } }[];
-  lookupLists: { id: string; name: string; items: { id: string; value: string; label: string }[] }[];
+  lookupLists: {
+    id: string;
+    name: string;
+    valueHeader: string | null;
+    labelHeader: string | null;
+    extraColumns?: unknown;
+    items: { id: string; value: string; label: string }[];
+  }[];
 }) {
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -676,6 +683,7 @@ export function ProcessTemplatesClient({
       required: f.required,
       captureTaskOrder: f.captureTaskOrder,
       lookupListId: f.lookupListId,
+      lookupDisplayKey: f.lookupDisplayKey ?? null,
       entityKind: f.entityKind ?? null,
     }));
     if (editId) {

@@ -89,7 +89,14 @@ export function TemplateWizard(props: {
   initial?: WizardState;
   departments: { id: string; name: string }[];
   positions: { id: string; name: string; department: { name: string } }[];
-  lookupLists: { id: string; name: string; items: { id: string; value: string; label: string }[] }[];
+  lookupLists: {
+    id: string;
+    name: string;
+    valueHeader: string | null;
+    labelHeader: string | null;
+    extraColumns?: unknown;
+    items: { id: string; value: string; label: string }[];
+  }[];
   onSubmit: (state: WizardState) => Promise<void>;
   onCancel?: () => void;
   submitLabel?: string;
@@ -133,6 +140,7 @@ export function TemplateWizard(props: {
           required: f.required,
           captureTaskOrder: f.captureTaskOrder,
           lookupListId: null,
+          lookupDisplayKey: null,
           entityKind: null,
         })),
       }));

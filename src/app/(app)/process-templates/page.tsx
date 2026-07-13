@@ -38,6 +38,7 @@ export default async function ProcessTemplatesPage() {
           required: true,
           captureTaskOrder: true,
           lookupListId: true,
+          lookupDisplayKey: true,
           entityKind: true,
         },
       },
@@ -60,6 +61,9 @@ export default async function ProcessTemplatesPage() {
     select: {
       id: true,
       name: true,
+      valueHeader: true,
+      labelHeader: true,
+      extraColumns: true,
       items: {
         orderBy: { order: "asc" },
         select: { id: true, value: true, label: true },

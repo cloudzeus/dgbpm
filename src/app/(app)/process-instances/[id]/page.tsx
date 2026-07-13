@@ -11,6 +11,7 @@ import { ProcessInstanceDetail } from "./process-instance-detail";
 import type { EditableField, PriorField, StoredFieldValue } from "@/components/process-fields/task-fields-form";
 import { resolveEntityLabels } from "@/lib/entities/resolve";
 import { treeOrder } from "@/lib/entities/tree";
+import { lookupItemDisplay } from "@/lib/lookup-lists/display";
 
 export default async function ProcessInstancePage({
   params,
@@ -52,7 +53,7 @@ export default async function ProcessInstancePage({
   });
   const fieldValues = await prisma.processFieldValue.findMany({
     where: { processInstanceId: instance.id },
-    include: { listItem: { select: { label: true } } },
+    include: { listItem: { select: { label: true, value: true, extra: true } } },
   });
   const valueByField = new Map(fieldValues.map((v) => [v.fieldDefinitionId, v]));
 
@@ -69,7 +70,15 @@ export default async function ProcessInstancePage({
   function storedValue(fieldId: string): StoredFieldValue {
     const v = valueByField.get(fieldId);
     if (!v) return null;
-    return { ...v, entityLabel: v.valueEntityId ? entityLabels.get(v.valueEntityId) ?? null : null };
+    const def = defById.get(fieldId);
+    return {
+      ...v,
+      // Η εμφάνιση της επιλεγμένης τιμής ακολουθεί τη στήλη εμφάνισης του πεδίου.
+      listItem: v.listItem
+        ? { label: lookupItemDisplay(v.listItem, def?.lookupDisplayKey) }
+        : v.listItem,
+      entityLabel: v.valueEntityId ? entityLabels.get(v.valueEntityId) ?? null : null,
+    };
   }
 
   const taskFields: Record<string, { editable: EditableField[]; readOnly: PriorField[] }> = {};
@@ -85,7 +94,7 @@ export default async function ProcessInstancePage({
         options: f.lookupList
           ? treeOrder(f.lookupList.items).map((it) => ({
               id: it.id,
-              label: `${"— ".repeat(it.depth)}${it.label}`,
+              label: `${"— ".repeat(it.depth)}${lookupItemDisplay(it, f.lookupDisplayKey)}`,
             }))
           : [],
         entityKind: f.entityKind,

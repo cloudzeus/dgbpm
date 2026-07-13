@@ -19,6 +19,8 @@ export type FieldInput = {
   required: boolean;
   captureTaskOrder: number | null;
   lookupListId: string | null;
+  /** Στήλη λίστας για εμφάνιση στο combo: null="label", "value" ή key extra στήλης. */
+  lookupDisplayKey: string | null;
   entityKind: EntityKind | null;
 };
 
@@ -371,6 +373,7 @@ export async function createProcessTemplatesFromBlueprints(
         required: f.required,
         captureTaskOrder: f.captureTaskOrder,
         lookupListId: null,
+        lookupDisplayKey: null,
         entityKind: null,
       };
     });
@@ -495,6 +498,7 @@ export async function createProcessTemplate(data: {
           required: f.required,
           captureTaskOrder: f.captureTaskOrder,
           lookupListId: f.lookupListId ?? undefined,
+          lookupDisplayKey: f.lookupDisplayKey ?? undefined,
           entityKind: f.entityKind ?? undefined,
         },
       });
@@ -619,11 +623,11 @@ export async function updateProcessTemplate(
         }
         await tx.processFieldDefinition.update({
           where: { id: f.id },
-          data: { name: f.name, key: f.key, type: f.type, order: f.order, required: f.required, captureTaskOrder: f.captureTaskOrder, lookupListId: f.lookupListId ?? null, entityKind: f.entityKind ?? null },
+          data: { name: f.name, key: f.key, type: f.type, order: f.order, required: f.required, captureTaskOrder: f.captureTaskOrder, lookupListId: f.lookupListId ?? null, lookupDisplayKey: f.lookupDisplayKey ?? null, entityKind: f.entityKind ?? null },
         });
       } else {
         await tx.processFieldDefinition.create({
-          data: { processTemplateId: id, name: f.name, key: f.key, type: f.type, order: f.order, required: f.required, captureTaskOrder: f.captureTaskOrder, lookupListId: f.lookupListId ?? undefined, entityKind: f.entityKind ?? undefined },
+          data: { processTemplateId: id, name: f.name, key: f.key, type: f.type, order: f.order, required: f.required, captureTaskOrder: f.captureTaskOrder, lookupListId: f.lookupListId ?? undefined, lookupDisplayKey: f.lookupDisplayKey ?? undefined, entityKind: f.entityKind ?? undefined },
         });
       }
     }

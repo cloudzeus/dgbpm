@@ -18,15 +18,25 @@ import {
 } from "@/components/ui/select";
 
 import { slugifyKey } from "@/lib/process-fields/slug";
+import { parseLookupColumns } from "@/lib/lookup-lists/display";
 
 const NONE = "__none__";
+
+export type LookupListOption = {
+  id: string;
+  name: string;
+  valueHeader: string | null;
+  labelHeader: string | null;
+  extraColumns?: unknown;
+  items: { id: string; value: string; label: string }[];
+};
 
 export { slugifyKey };
 
 export function StepFields(props: {
   fields: FieldInput[];
   taskOptions: { order: number; name: string }[];
-  lookupLists: { id: string; name: string }[];
+  lookupLists: LookupListOption[];
   onChange: (fields: FieldInput[]) => void;
 }) {
   const { fields, taskOptions, lookupLists, onChange } = props;
@@ -46,6 +56,7 @@ export function StepFields(props: {
         required: false,
         captureTaskOrder: taskOptions[0]?.order ?? null,
         lookupListId: null,
+        lookupDisplayKey: null,
         entityKind: null,
       },
     ]);
@@ -122,7 +133,7 @@ function FieldRow(props: {
   index: number;
   field: FieldInput;
   taskOptions: { order: number; name: string }[];
-  lookupLists: { id: string; name: string }[];
+  lookupLists: LookupListOption[];
   dupKey: boolean;
   onUpdate: (patch: Partial<FieldInput>) => void;
   onRemove: () => void;
@@ -184,6 +195,7 @@ function FieldRow(props: {
               onUpdate({
                 type: v as FieldInput["type"],
                 lookupListId: v === "SELECT" ? f.lookupListId : null,
+                lookupDisplayKey: v === "SELECT" ? f.lookupDisplayKey : null,
                 entityKind: v === "ENTITY" ? f.entityKind : null,
               })
             }
@@ -268,7 +280,7 @@ function FieldRow(props: {
           <Label className="text-xs font-medium text-foreground">Λίστα τιμών</Label>
           <Select
             value={f.lookupListId ?? undefined}
-            onValueChange={(v) => onUpdate({ lookupListId: v })}
+            onValueChange={(v) => onUpdate({ lookupListId: v, lookupDisplayKey: null })}
             disabled={lookupLists.length === 0}
           >
             <SelectTrigger className="h-9 w-full max-w-sm">
@@ -282,6 +294,40 @@ function FieldRow(props: {
               ))}
             </SelectContent>
           </Select>
+          {f.lookupListId && (() => {
+            const list = lookupLists.find((l) => l.id === f.lookupListId);
+            if (!list) return null;
+            const cols = parseLookupColumns(list.extraColumns);
+            return (
+              <div className="space-y-1.5 pt-1">
+                <Label className="text-xs text-muted-foreground">Στήλη εμφάνισης στο combo</Label>
+                <Select
+                  value={f.lookupDisplayKey ?? "label"}
+                  onValueChange={(v) => onUpdate({ lookupDisplayKey: v === "label" ? null : v })}
+                >
+                  <SelectTrigger className="h-9 w-full max-w-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="label">
+                      {list.labelHeader?.trim() || "Ετικέτα (label)"}
+                    </SelectItem>
+                    <SelectItem value="value">
+                      {list.valueHeader?.trim() || "Τιμή (value)"}
+                    </SelectItem>
+                    {cols.map((c) => (
+                      <SelectItem key={c.key} value={c.key}>
+                        {c.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="ui-meta">
+                  Ο χρήστης θα βλέπει αυτή τη στήλη στις επιλογές του πεδίου.
+                </p>
+              </div>
+            );
+          })()}
           {lookupLists.length === 0 ? (
             <p className="ui-meta">
               Δεν υπάρχουν λίστες τιμών. Δημιουργήστε μία από τις Ρυθμίσεις → Λίστες Τιμών.
