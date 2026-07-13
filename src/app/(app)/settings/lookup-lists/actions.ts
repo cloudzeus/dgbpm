@@ -22,7 +22,35 @@ async function requireAdmin() {
   requireRole(session.user.role, [Role.SUPER_ADMIN]);
 }
 
-type ItemPayload = { value: string; label: string; parentValue?: string | null };
+export type LookupColumn = { key: string; label: string };
+
+type ItemPayload = {
+  value: string;
+  label: string;
+  parentValue?: string | null;
+  /** Τιμές extra στηλών: { [columnKey]: string } */
+  extra?: Record<string, string> | null;
+};
+
+/** Κρατά μόνο τα keys των δηλωμένων στηλών, πετά κενά. */
+function sanitizeExtra(
+  extra: Record<string, string> | null | undefined,
+  columns: LookupColumn[]
+): Record<string, string> | undefined {
+  if (!extra) return undefined;
+  const keys = new Set(columns.map((c) => c.key));
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(extra)) {
+    if (keys.has(k) && v.trim() !== "") out[k] = v.trim();
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
+function sanitizeColumns(columns: LookupColumn[] | undefined | null): LookupColumn[] {
+  return (columns ?? [])
+    .map((c) => ({ key: c.key.trim(), label: c.label.trim() }))
+    .filter((c) => c.key !== "" && c.label !== "");
+}
 
 /**
  * Πάσο 2: σύνδεση γονέων με βάση το value. Άγνωστος γονέας / self /
@@ -72,15 +100,29 @@ async function linkItemParents(
 export async function createLookupList(data: {
   name: string;
   description?: string;
+  valueHeader?: string | null;
+  labelHeader?: string | null;
+  extraColumns?: LookupColumn[];
   items: ItemPayload[];
 }): Promise<{ id: string; warnings: string[] }> {
   await requireAdmin();
+  const columns = sanitizeColumns(data.extraColumns);
   const result = await prisma.$transaction(async (tx) => {
     const list = await tx.lookupList.create({
       data: {
         name: data.name,
         description: data.description ?? undefined,
-        items: { create: data.items.map((it, i) => ({ value: it.value, label: it.label, order: i })) },
+        valueHeader: data.valueHeader?.trim() || null,
+        labelHeader: data.labelHeader?.trim() || null,
+        extraColumns: columns.length > 0 ? columns : Prisma.JsonNull,
+        items: {
+          create: data.items.map((it, i) => ({
+            value: it.value,
+            label: it.label,
+            order: i,
+            extra: sanitizeExtra(it.extra, columns),
+          })),
+        },
       },
     });
     const warnings = await linkItemParents(tx, list.id, data.items);
@@ -93,11 +135,24 @@ export async function createLookupList(data: {
 export async function updateLookupList(id: string, data: {
   name: string;
   description?: string;
+  valueHeader?: string | null;
+  labelHeader?: string | null;
+  extraColumns?: LookupColumn[];
   items: ItemPayload[];
 }): Promise<{ warnings: string[] }> {
   await requireAdmin();
+  const columns = sanitizeColumns(data.extraColumns);
   const warnings = await prisma.$transaction(async (tx) => {
-    await tx.lookupList.update({ where: { id }, data: { name: data.name, description: data.description ?? undefined } });
+    await tx.lookupList.update({
+      where: { id },
+      data: {
+        name: data.name,
+        description: data.description ?? undefined,
+        valueHeader: data.valueHeader?.trim() || null,
+        labelHeader: data.labelHeader?.trim() || null,
+        extraColumns: columns.length > 0 ? columns : Prisma.JsonNull,
+      },
+    });
     // items referenced by values must survive: delete only unreferenced, upsert by (list,value)
     const existing = await tx.lookupListItem.findMany({ where: { lookupListId: id } });
     const keepValues = new Set(data.items.map((i) => i.value));
@@ -110,14 +165,130 @@ export async function updateLookupList(id: string, data: {
     let order = 0;
     for (const it of data.items) {
       const found = byValue.get(it.value);
-      if (found) await tx.lookupListItem.update({ where: { id: found.id }, data: { label: it.label, order } });
-      else await tx.lookupListItem.create({ data: { lookupListId: id, value: it.value, label: it.label, order } });
+      const extra = sanitizeExtra(it.extra, columns) ?? Prisma.JsonNull;
+      if (found)
+        await tx.lookupListItem.update({ where: { id: found.id }, data: { label: it.label, order, extra } });
+      else
+        await tx.lookupListItem.create({ data: { lookupListId: id, value: it.value, label: it.label, order, extra } });
       order++;
     }
     return linkItemParents(tx, id, data.items);
   }, { timeout: 120_000, maxWait: 15_000 }); // αργή remote MySQL — αποφυγή P2028
   revalidatePath("/settings/lookup-lists");
   return { warnings };
+}
+
+/** Γρήγορη καταχώρηση μίας τιμής σε υπάρχουσα λίστα (από τη γραμμή του πίνακα). */
+export async function addLookupListItem(
+  listId: string,
+  item: {
+    value: string;
+    label: string;
+    parentValue?: string | null;
+    extra?: Record<string, string> | null;
+  }
+): Promise<{ warnings: string[] }> {
+  await requireAdmin();
+  const value = item.value.trim();
+  const label = item.label.trim() || value;
+  if (!value) throw new Error("Απαιτείται τιμή (value).");
+
+  const warnings = await prisma.$transaction(async (tx) => {
+    const list = await tx.lookupList.findUnique({ where: { id: listId }, select: { extraColumns: true } });
+    if (!list) throw new Error("Η λίστα δεν βρέθηκε.");
+    const columns = sanitizeColumns((list.extraColumns as LookupColumn[] | null) ?? []);
+    const existing = await tx.lookupListItem.findFirst({
+      where: { lookupListId: listId, value },
+      select: { id: true },
+    });
+    if (existing) throw new Error(`Η τιμή «${value}» υπάρχει ήδη στη λίστα.`);
+    const max = await tx.lookupListItem.aggregate({
+      where: { lookupListId: listId },
+      _max: { order: true },
+    });
+    await tx.lookupListItem.create({
+      data: {
+        lookupListId: listId,
+        value,
+        label,
+        order: (max._max.order ?? -1) + 1,
+        extra: sanitizeExtra(item.extra, columns),
+      },
+    });
+    const parentValue = item.parentValue?.trim() || null;
+    if (!parentValue) return [] as string[];
+    const parent = await tx.lookupListItem.findFirst({
+      where: { lookupListId: listId, value: parentValue },
+      select: { id: true },
+    });
+    if (!parent) return [`${value}: Ο γονέας «${parentValue}» δεν βρέθηκε.`];
+    await tx.lookupListItem.updateMany({
+      where: { lookupListId: listId, value },
+      data: { parentId: parent.id },
+    });
+    return [] as string[];
+  }, { timeout: 120_000, maxWait: 15_000 }); // αργή remote MySQL — αποφυγή P2028
+  revalidatePath("/settings/lookup-lists");
+  return { warnings };
+}
+
+/** Inline αλλαγή επικεφαλίδων στηλών από το expand του πίνακα. */
+export async function updateLookupListHeaders(
+  listId: string,
+  data: { valueHeader?: string | null; labelHeader?: string | null }
+): Promise<void> {
+  await requireAdmin();
+  await prisma.lookupList.update({
+    where: { id: listId },
+    data: {
+      ...(data.valueHeader !== undefined ? { valueHeader: data.valueHeader?.trim() || null } : {}),
+      ...(data.labelHeader !== undefined ? { labelHeader: data.labelHeader?.trim() || null } : {}),
+    },
+  });
+  revalidatePath("/settings/lookup-lists");
+}
+
+/** Inline επεξεργασία τιμής από το expand του πίνακα. */
+export async function updateLookupListItem(
+  itemId: string,
+  data: { value: string; label: string; extra?: Record<string, string> | null }
+): Promise<void> {
+  await requireAdmin();
+  const value = data.value.trim();
+  const label = data.label.trim() || value;
+  if (!value) throw new Error("Απαιτείται τιμή (value).");
+  const item = await prisma.lookupListItem.findUnique({
+    where: { id: itemId },
+    select: { lookupListId: true, lookupList: { select: { extraColumns: true } } },
+  });
+  if (!item) throw new Error("Η τιμή δεν βρέθηκε.");
+  const dup = await prisma.lookupListItem.findFirst({
+    where: { lookupListId: item.lookupListId, value, id: { not: itemId } },
+    select: { id: true },
+  });
+  if (dup) throw new Error(`Η τιμή «${value}» υπάρχει ήδη στη λίστα.`);
+  const columns = sanitizeColumns((item.lookupList.extraColumns as LookupColumn[] | null) ?? []);
+  await prisma.lookupListItem.update({
+    where: { id: itemId },
+    data: {
+      value,
+      label,
+      ...(data.extra !== undefined
+        ? { extra: sanitizeExtra(data.extra, columns) ?? Prisma.JsonNull }
+        : {}),
+    },
+  });
+  revalidatePath("/settings/lookup-lists");
+}
+
+/** Inline διαγραφή τιμής — μπλοκάρεται αν χρησιμοποιείται σε διαδικασία. */
+export async function deleteLookupListItem(itemId: string): Promise<void> {
+  await requireAdmin();
+  const refs = await prisma.processFieldValue.count({ where: { valueListItemId: itemId } });
+  if (refs > 0)
+    throw new Error("Η τιμή χρησιμοποιείται σε καταχωρήσεις διαδικασιών και δεν μπορεί να διαγραφεί.");
+  await prisma.lookupListItem.delete({ where: { id: itemId } });
+  revalidatePath("/settings/lookup-lists");
 }
 
 export async function deleteLookupList(id: string) {
@@ -170,7 +341,14 @@ export type CommitLookupImportResult = {
 
 /** Οριστική εισαγωγή: εγγράφει ΑΚΡΙΒΩΣ το προεπισκοπημένο πλάνο, σε μία συναλλαγή. */
 export async function commitLookupImport(
-  target: { listId?: string | null; name?: string; description?: string },
+  target: {
+    listId?: string | null;
+    name?: string;
+    description?: string;
+    /** Ονόματα στηλών του Excel — γίνονται επικεφαλίδες της λίστας. */
+    valueHeader?: string | null;
+    labelHeader?: string | null;
+  },
   plannedItems: PlannedItem[]
 ): Promise<CommitLookupImportResult> {
   await requireAdmin();
@@ -188,13 +366,19 @@ export async function commitLookupImport(
   const result = await prisma.$transaction(
     async (tx) => {
       let listId = target.listId ?? null;
+      const headers = {
+        valueHeader: target.valueHeader?.trim() || null,
+        labelHeader: target.labelHeader?.trim() || null,
+      };
       if (!listId) {
         const name = target.name?.trim();
         if (!name) throw new Error("Απαιτείται όνομα λίστας.");
         const list = await tx.lookupList.create({
-          data: { name, description: target.description?.trim() || undefined },
+          data: { name, description: target.description?.trim() || undefined, ...headers },
         });
         listId = list.id;
+      } else if (headers.valueHeader || headers.labelHeader) {
+        await tx.lookupList.update({ where: { id: listId }, data: headers });
       }
 
       const existing = await tx.lookupListItem.findMany({ where: { lookupListId: listId } });

@@ -331,6 +331,8 @@ model ProcessFieldDefinition {
   required          Boolean   @default(false)
   captureTaskOrder  Int?      // matches ProcessTaskTemplate.order at runtime
   lookupListId      String?
+  /// Ποια στήλη της λίστας εμφανίζεται στο combo: null="label", "value", ή key extra στήλης.
+  lookupDisplayKey  String?
   entityKind        EntityKind?
   deletedAt         DateTime?
 
@@ -367,6 +369,11 @@ model LookupList {
   id          String                   @id @default(cuid())
   name        String
   description String?                  @db.Text
+  /// Εμφανιζόμενα ονόματα στηλών ανά λίστα (π.χ. «Κωδικός» / «Όνομα»).
+  valueHeader String?
+  labelHeader String?
+  /// Επιπλέον στήλες που ορίζει ο χρήστης: [{ key, label }] με σταθερό key.
+  extraColumns Json?
   items       LookupListItem[]
   fields      ProcessFieldDefinition[]
   createdAt DateTime @default(now())
@@ -378,6 +385,8 @@ model LookupListItem {
   lookupListId String
   value        String
   label        String
+  /// Τιμές των extra στηλών της λίστας: { [columnKey]: string }.
+  extra        Json?
   order        Int
   parentId     String?
   parent       LookupListItem?     @relation("LookupItemTree", fields: [parentId], references: [id], onDelete: SetNull)
@@ -457,6 +466,7 @@ enum EntityKind {
   CUSTOMER
   PRODUCT
   PRODUCT_CATEGORY
+  BRAND
   COLOR
   SIZE
 }
@@ -521,6 +531,22 @@ model ProductCategory {
   updatedAt DateTime @updatedAt
 }
 
+model Brand {
+  id         String  @id @default(cuid())
+  code       String  @unique @db.VarChar(25)
+  name       String  @db.VarChar(128)
+  isActive   Boolean @default(true)
+  isDemo     Boolean @default(false)
+  softoneKey String?
+  wooId      String?
+  magentoId  String?
+  opencardId String?
+  products   Product[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Color {
   id         String  @id @default(cuid())
   code       String  @unique @db.VarChar(25)
@@ -560,8 +586,10 @@ model Product {
   priceRetail    Float?
   vatPct         Float?
   unit           String? @db.VarChar(20)
+  brandId        String?
   colorId        String?
   sizeId         String?
+  imageUrl       String? @db.VarChar(500)
   isActive       Boolean @default(true)
   isDemo     Boolean @default(false)
   softoneKey     String?
@@ -570,6 +598,7 @@ model Product {
   opencardId     String?
 
   category ProductCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  brand    Brand?           @relation(fields: [brandId], references: [id], onDelete: SetNull)
   color    Color?           @relation(fields: [colorId], references: [id], onDelete: SetNull)
   size     Size?            @relation(fields: [sizeId], references: [id], onDelete: SetNull)
 

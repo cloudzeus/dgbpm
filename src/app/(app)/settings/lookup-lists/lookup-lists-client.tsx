@@ -46,6 +46,10 @@ import {
   createLookupList,
   updateLookupList,
   deleteLookupList,
+  addLookupListItem,
+  updateLookupListHeaders,
+  updateLookupListItem,
+  deleteLookupListItem,
   analyzeLookupWorkbook,
   previewLookupImport,
   commitLookupImport,
@@ -68,19 +72,69 @@ import {
   AlertTriangle,
   ChevronDown,
   ChevronRight,
+  ListPlus,
+  Check,
 } from "lucide-react";
 
-type LookupItem = { id: string; value: string; label: string; order: number; parentId: string | null };
+type LookupItem = {
+  id: string;
+  value: string;
+  label: string;
+  extra?: unknown;
+  order: number;
+  parentId: string | null;
+};
+
+type LookupColumn = { key: string; label: string };
+
+function parseColumns(json: unknown): LookupColumn[] {
+  if (!Array.isArray(json)) return [];
+  return json.filter(
+    (c): c is LookupColumn =>
+      !!c && typeof c === "object" && typeof (c as LookupColumn).key === "string" &&
+      typeof (c as LookupColumn).label === "string"
+  );
+}
+
+function parseExtra(json: unknown): Record<string, string> {
+  if (!json || typeof json !== "object" || Array.isArray(json)) return {};
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(json as Record<string, unknown>)) {
+    if (typeof v === "string") out[k] = v;
+  }
+  return out;
+}
+
+function newColumnKey() {
+  return `c_${crypto.randomUUID().slice(0, 8)}`;
+}
 
 type LookupList = {
   id: string;
   name: string;
   description: string | null;
+  valueHeader: string | null;
+  labelHeader: string | null;
+  extraColumns?: unknown;
   items: LookupItem[];
   _count: { fields: number };
 };
 
-type ItemInput = { rowId: string; value: string; label: string; parentValue: string };
+/** Επικεφαλίδες στηλών της λίστας — προσαρμοσμένες ή γενικές. */
+function listHeaders(list: { valueHeader: string | null; labelHeader: string | null }) {
+  return {
+    value: list.valueHeader?.trim() || "Τιμή (value)",
+    label: list.labelHeader?.trim() || "Ετικέτα (label)",
+  };
+}
+
+type ItemInput = {
+  rowId: string;
+  value: string;
+  label: string;
+  parentValue: string;
+  extra: Record<string, string>;
+};
 
 const NO_PARENT = "__none__";
 
@@ -93,14 +147,22 @@ export function LookupListsClient({ lists }: { lists: LookupList[] }) {
   const [formError, setFormError] = useState<string | null>(null);
   const [formWarnings, setFormWarnings] = useState<string[]>([]);
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [quickAddList, setQuickAddList] = useState<LookupList | null>(null);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [valueHeader, setValueHeader] = useState("");
+  const [labelHeader, setLabelHeader] = useState("");
+  const [extraCols, setExtraCols] = useState<LookupColumn[]>([]);
   const [items, setItems] = useState<ItemInput[]>([]);
 
   function resetForm() {
     setName("");
     setDescription("");
+    setValueHeader("");
+    setLabelHeader("");
+    setExtraCols([]);
     setItems([]);
     setEditId(null);
     setFormError(null);
@@ -116,6 +178,9 @@ export function LookupListsClient({ lists }: { lists: LookupList[] }) {
     setEditId(list.id);
     setName(list.name);
     setDescription(list.description ?? "");
+    setValueHeader(list.valueHeader ?? "");
+    setLabelHeader(list.labelHeader ?? "");
+    setExtraCols(parseColumns(list.extraColumns));
     const valueById = new Map(list.items.map((it) => [it.id, it.value]));
     setItems(
       list.items.map((it) => ({
@@ -123,6 +188,7 @@ export function LookupListsClient({ lists }: { lists: LookupList[] }) {
         value: it.value,
         label: it.label,
         parentValue: (it.parentId && valueById.get(it.parentId)) || "",
+        extra: parseExtra(it.extra),
       }))
     );
     setFormError(null);
@@ -130,7 +196,10 @@ export function LookupListsClient({ lists }: { lists: LookupList[] }) {
   }
 
   function addItem() {
-    setItems((prev) => [...prev, { rowId: crypto.randomUUID(), value: "", label: "", parentValue: "" }]);
+    setItems((prev) => [
+      ...prev,
+      { rowId: crypto.randomUUID(), value: "", label: "", parentValue: "", extra: {} },
+    ]);
   }
 
   function updateItem(rowId: string, updates: Partial<ItemInput>) {
@@ -182,6 +251,7 @@ export function LookupListsClient({ lists }: { lists: LookupList[] }) {
         value: r.value,
         label: r.label,
         parentValue: r.parentValue ?? "",
+        extra: {},
       }))
     );
   }
@@ -197,11 +267,15 @@ export function LookupListsClient({ lists }: { lists: LookupList[] }) {
           value: it.value.trim(),
           label: it.label.trim(),
           parentValue: it.parentValue.trim() || null,
+          extra: it.extra,
         }))
         .filter((it) => it.value !== "");
       const data = {
         name: name.trim(),
         description: description.trim() || undefined,
+        valueHeader: valueHeader.trim() || null,
+        labelHeader: labelHeader.trim() || null,
+        extraColumns: extraCols.filter((c) => c.label.trim() !== ""),
         items: payloadItems,
       };
       let result: { warnings: string[] };
@@ -276,7 +350,22 @@ export function LookupListsClient({ lists }: { lists: LookupList[] }) {
         rowKey={(list) => list.id}
         columnToggle
         emptyMessage="Δεν υπάρχουν λίστες τιμών ακόμη."
+        expandedKeys={expanded}
+        onToggleExpand={(list) =>
+          setExpanded((prev) => {
+            const next = new Set(prev);
+            if (next.has(list.id)) next.delete(list.id);
+            else next.add(list.id);
+            return next;
+          })
+        }
+        renderExpanded={(list) => <LookupItemsEditor list={list} />}
         actions={(list) => [
+          {
+            label: "Προσθήκη τιμής",
+            icon: <ListPlus className="size-4" />,
+            onSelect: () => setQuickAddList(list),
+          },
           {
             label: "Επεξεργασία",
             icon: <Pencil className="size-4" />,
@@ -305,7 +394,7 @@ export function LookupListsClient({ lists }: { lists: LookupList[] }) {
         <DialogTrigger asChild>
           <Button onClick={openCreate}>Νέα λίστα</Button>
         </DialogTrigger>
-        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle>{editId ? "Επεξεργασία λίστας τιμών" : "Νέα λίστα τιμών"}</DialogTitle>
             <DialogDescription>
@@ -337,6 +426,95 @@ export function LookupListsClient({ lists }: { lists: LookupList[] }) {
             </section>
 
             <section className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="ui-subsection-title">Στήλες</h3>
+                  <p className="ui-meta">
+                    Ορίστε τις στήλες της λίστας — ο πίνακας τιμών παρακάτω δημιουργείται από αυτές.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs"
+                  onClick={() =>
+                    setExtraCols((prev) => [...prev, { key: newColumnKey(), label: "" }])
+                  }
+                >
+                  Προσθήκη στήλης
+                </Button>
+              </div>
+              <div className="space-y-2 rounded-md border p-3">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="w-24 shrink-0 justify-center font-normal">
+                    Κλειδί
+                  </Badge>
+                  <Input
+                    value={valueHeader}
+                    onChange={(e) => setValueHeader(e.target.value)}
+                    placeholder="Όνομα στήλης-κλειδιού, π.χ. id"
+                    className="h-8 text-xs"
+                  />
+                  <span className="ui-meta hidden w-56 shrink-0 sm:block">
+                    Μοναδικός κωδικός κάθε εγγραφής
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="w-24 shrink-0 justify-center font-normal">
+                    Εμφάνιση
+                  </Badge>
+                  <Input
+                    value={labelHeader}
+                    onChange={(e) => setLabelHeader(e.target.value)}
+                    placeholder="Όνομα στήλης εμφάνισης, π.χ. Όνομα"
+                    className="h-8 text-xs"
+                  />
+                  <span className="ui-meta hidden w-56 shrink-0 sm:block">
+                    Αυτό βλέπει ο χρήστης στο dropdown
+                  </span>
+                </div>
+                {extraCols.map((c, i) => (
+                  <div key={c.key} className="flex items-center gap-2">
+                    <Badge variant="secondary" className="w-24 shrink-0 justify-center font-normal">
+                      Στήλη {i + 3}
+                    </Badge>
+                    <Input
+                      value={c.label}
+                      onChange={(e) =>
+                        setExtraCols((prev) =>
+                          prev.map((x) => (x.key === c.key ? { ...x, label: e.target.value } : x))
+                        )
+                      }
+                      placeholder="Όνομα στήλης, π.χ. Email"
+                      className="h-8 text-xs"
+                      autoFocus={c.label === ""}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="size-8 shrink-0 text-muted-foreground hover:text-destructive"
+                      onClick={() => {
+                        setExtraCols((prev) => prev.filter((x) => x.key !== c.key));
+                        // καθάρισμα τιμών της στήλης από τα draft items
+                        setItems((prev) =>
+                          prev.map((it) => {
+                            const rest = { ...it.extra };
+                            delete rest[c.key];
+                            return { ...it, extra: rest };
+                          })
+                        );
+                      }}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="space-y-3">
               <div className="flex justify-between items-center">
                 <h3 className="ui-subsection-title">Τιμές</h3>
                 <div className="flex gap-2">
@@ -361,7 +539,7 @@ export function LookupListsClient({ lists }: { lists: LookupList[] }) {
                   </Button>
                 </div>
               </div>
-              <div className="overflow-hidden rounded-md border">
+              <div className="overflow-x-auto rounded-md border">
                 {items.length === 0 ? (
                   <p className="ui-body-muted p-4">
                     Καμία τιμή ακόμη. Προσθέστε μία ή κάντε εισαγωγή από αρχείο Excel (στήλες value/label και προαιρετικά «Γονικός Κωδικός»).
@@ -370,8 +548,17 @@ export function LookupListsClient({ lists }: { lists: LookupList[] }) {
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-muted/60 hover:bg-muted/60">
-                        <TableHead className="ui-eyebrow h-9">Τιμή (value)</TableHead>
-                        <TableHead className="ui-eyebrow h-9">Ετικέτα (label)</TableHead>
+                        <TableHead className="ui-eyebrow h-9">
+                          {valueHeader.trim() || "Τιμή (value)"}
+                        </TableHead>
+                        <TableHead className="ui-eyebrow h-9">
+                          {labelHeader.trim() || "Ετικέτα (label)"}
+                        </TableHead>
+                        {extraCols.map((c) => (
+                          <TableHead key={c.key} className="ui-eyebrow h-9">
+                            {c.label.trim() || "—"}
+                          </TableHead>
+                        ))}
                         <TableHead className="ui-eyebrow h-9 w-[170px]">Γονέας</TableHead>
                         <TableHead className="ui-eyebrow h-9 w-[88px] text-right">Σειρά</TableHead>
                         <TableHead className="h-9 w-[44px]" />
@@ -405,6 +592,20 @@ export function LookupListsClient({ lists }: { lists: LookupList[] }) {
                                 className="h-8 text-xs"
                               />
                             </TableCell>
+                            {extraCols.map((c) => (
+                              <TableCell key={c.key} className="py-1.5">
+                                <Input
+                                  value={it.extra[c.key] ?? ""}
+                                  onChange={(e) =>
+                                    updateItem(it.rowId, {
+                                      extra: { ...it.extra, [c.key]: e.target.value },
+                                    })
+                                  }
+                                  placeholder={c.label.trim() || "—"}
+                                  className="h-8 text-xs"
+                                />
+                              </TableCell>
+                            ))}
                             <TableCell className="py-1.5">
                               <Select
                                 value={it.parentValue.trim() || NO_PARENT}
@@ -500,6 +701,8 @@ export function LookupListsClient({ lists }: { lists: LookupList[] }) {
         </DialogContent>
       </Dialog>
 
+      <QuickAddItemDialog list={quickAddList} onClose={() => setQuickAddList(null)} />
+
       <LookupImportWizard
         open={wizardOpen}
         onOpenChange={setWizardOpen}
@@ -541,6 +744,372 @@ export function LookupListsClient({ lists }: { lists: LookupList[] }) {
         </AlertDialogContent>
       </AlertDialog>
     </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Expanded row: επεξεργάσιμος πίνακας τιμών (inline edit label/value + διαγραφή).
+
+/** Επικεφαλίδα στήλης με inline επεξεργασία (κλικ → input → Enter/blur = αποθήκευση). */
+function EditableHeader({
+  current,
+  fallback,
+  onSave,
+}: {
+  current: string | null;
+  fallback: string;
+  onSave: (v: string) => Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function commit() {
+    setEditing(false);
+    if (draft.trim() === (current ?? "").trim()) return;
+    setBusy(true);
+    try {
+      await onSave(draft);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (editing) {
+    return (
+      <Input
+        autoFocus
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={() => void commit()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            void commit();
+          }
+          if (e.key === "Escape") setEditing(false);
+        }}
+        placeholder={fallback}
+        className="h-7 max-w-40 text-xs"
+      />
+    );
+  }
+  return (
+    <button
+      type="button"
+      className="ui-eyebrow group flex items-center gap-1 hover:text-foreground"
+      title="Κλικ για μετονομασία στήλης"
+      onClick={() => {
+        setDraft(current ?? "");
+        setEditing(true);
+      }}
+      disabled={busy}
+    >
+      {busy ? <Loader2 className="size-3 animate-spin" /> : null}
+      {current?.trim() || fallback}
+      <Pencil className="size-3 opacity-0 transition-opacity group-hover:opacity-60" />
+    </button>
+  );
+}
+
+function LookupItemsEditor({ list }: { list: LookupList }) {
+  if (list.items.length === 0) {
+    return <p className="ui-body-muted px-4 py-3">Καμία τιμή ακόμη.</p>;
+  }
+  const ordered = treeOrder(list.items);
+  const labelById = new Map(list.items.map((it) => [it.id, it.label || it.value]));
+  const cols = parseColumns(list.extraColumns);
+  return (
+    <div className="px-4 py-3">
+      <div className="max-h-80 overflow-x-auto overflow-y-auto rounded-md border bg-background">
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/60 hover:bg-muted/60">
+              <TableHead className="h-9">
+                <EditableHeader
+                  current={list.labelHeader}
+                  fallback="Ετικέτα (label)"
+                  onSave={(v) => updateLookupListHeaders(list.id, { labelHeader: v })}
+                />
+              </TableHead>
+              <TableHead className="h-9">
+                <EditableHeader
+                  current={list.valueHeader}
+                  fallback="Τιμή (value)"
+                  onSave={(v) => updateLookupListHeaders(list.id, { valueHeader: v })}
+                />
+              </TableHead>
+              {cols.map((c) => (
+                <TableHead key={c.key} className="ui-eyebrow h-9">
+                  {c.label}
+                </TableHead>
+              ))}
+              <TableHead className="ui-eyebrow h-9">Γονέας</TableHead>
+              <TableHead className="h-9 w-[88px]" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {ordered.map((node) => (
+              <EditableItemRow
+                key={`${node.id}:${node.value}:${node.label}:${JSON.stringify(node.extra ?? null)}`}
+                item={node}
+                cols={cols}
+                depth={node.depth}
+                parentLabel={node.parentId ? labelById.get(node.parentId) ?? "—" : "—"}
+              />
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
+
+function EditableItemRow({
+  item,
+  cols,
+  depth,
+  parentLabel,
+}: {
+  item: LookupItem;
+  cols: LookupColumn[];
+  depth: number;
+  parentLabel: string;
+}) {
+  const initialExtra = parseExtra(item.extra);
+  const [label, setLabel] = useState(item.label);
+  const [value, setValue] = useState(item.value);
+  const [extra, setExtra] = useState<Record<string, string>>(initialExtra);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const dirty =
+    label !== item.label ||
+    value !== item.value ||
+    JSON.stringify(extra) !== JSON.stringify(initialExtra);
+
+  async function handleSave() {
+    setBusy(true);
+    setError(null);
+    try {
+      await updateLookupListItem(item.id, { value, label, extra });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Αποτυχία αποθήκευσης.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!window.confirm(`Διαγραφή της τιμής «${item.label || item.value}»;`)) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await deleteLookupListItem(item.id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Αποτυχία διαγραφής.");
+      setBusy(false);
+    }
+  }
+
+  return (
+    <TableRow>
+      <TableCell className="py-1.5">
+        <div className="flex items-center gap-1">
+          {depth > 0 && (
+            <span className="ui-meta whitespace-nowrap">{"— ".repeat(depth)}</span>
+          )}
+          <Input
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            className="h-8 max-w-72 text-xs"
+            disabled={busy}
+          />
+        </div>
+        {error && <p className="mt-1 text-xs text-destructive">{error}</p>}
+      </TableCell>
+      <TableCell className="py-1.5">
+        <Input
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          className="h-8 max-w-48 text-xs"
+          disabled={busy}
+        />
+      </TableCell>
+      {cols.map((c) => (
+        <TableCell key={c.key} className="py-1.5">
+          <Input
+            value={extra[c.key] ?? ""}
+            onChange={(e) => setExtra((prev) => ({ ...prev, [c.key]: e.target.value }))}
+            placeholder="—"
+            className="h-8 max-w-48 text-xs"
+            disabled={busy}
+          />
+        </TableCell>
+      ))}
+      <TableCell className="py-1.5 text-muted-foreground">{parentLabel}</TableCell>
+      <TableCell className="py-1.5 text-right">
+        <div className="flex justify-end gap-0.5">
+          {dirty && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-8 text-emerald-600 hover:text-emerald-700"
+              onClick={handleSave}
+              disabled={busy || value.trim() === ""}
+              title="Αποθήκευση"
+            >
+              {busy ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
+            </Button>
+          )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-8 text-muted-foreground hover:text-destructive"
+            onClick={handleDelete}
+            disabled={busy}
+            title="Διαγραφή"
+          >
+            <Trash2 className="size-4" />
+          </Button>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Γρήγορη καταχώρηση μίας τιμής σε υπάρχουσα λίστα (row action).
+
+function QuickAddItemDialog({
+  list,
+  onClose,
+}: {
+  list: LookupList | null;
+  onClose: () => void;
+}) {
+  const [value, setValue] = useState("");
+  const [label, setLabel] = useState("");
+  const [extra, setExtra] = useState<Record<string, string>>({});
+  const [parentValue, setParentValue] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [lastListId, setLastListId] = useState<string | null>(null);
+
+  // Καθάρισμα φόρμας όταν ανοίγει για άλλη λίστα.
+  if (list && list.id !== lastListId) {
+    setLastListId(list.id);
+    setValue("");
+    setLabel("");
+    setExtra({});
+    setParentValue("");
+    setError(null);
+  }
+
+  const quickCols = list ? parseColumns(list.extraColumns) : [];
+
+  const parentTree = list ? treeOrder(list.items) : [];
+  const headers = list ? listHeaders(list) : { value: "Τιμή (value)", label: "Ετικέτα (label)" };
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!list) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const { warnings } = await addLookupListItem(list.id, {
+        value,
+        label,
+        parentValue: parentValue.trim() || null,
+        extra,
+      });
+      if (warnings.length > 0) {
+        setError(warnings.join(" · "));
+      } else {
+        onClose();
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Αποτυχία καταχώρησης.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Dialog open={!!list} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Προσθήκη τιμής</DialogTitle>
+          <DialogDescription>
+            Νέα τιμή στη λίστα «{list?.name}».
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="quick-value">{headers.value}</Label>
+            <Input
+              id="quick-value"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              required
+              placeholder="π.χ. laptop"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="quick-label">{headers.label}</Label>
+            <Input
+              id="quick-label"
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder="π.χ. Φορητός υπολογιστής"
+            />
+          </div>
+          {quickCols.map((c) => (
+            <div key={c.key} className="space-y-1.5">
+              <Label htmlFor={`quick-extra-${c.key}`}>{c.label}</Label>
+              <Input
+                id={`quick-extra-${c.key}`}
+                value={extra[c.key] ?? ""}
+                onChange={(e) => setExtra((prev) => ({ ...prev, [c.key]: e.target.value }))}
+              />
+            </div>
+          ))}
+          {parentTree.length > 0 && (
+            <div className="space-y-1.5">
+              <Label>Γονέας</Label>
+              <Select
+                value={parentValue || NO_PARENT}
+                onValueChange={(v) => setParentValue(v === NO_PARENT ? "" : v)}
+              >
+                <SelectTrigger className="h-8 w-full text-xs">
+                  <SelectValue placeholder="—" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NO_PARENT}>— (καμία)</SelectItem>
+                  {parentTree.map((o) => (
+                    <SelectItem key={o.id} value={o.value}>
+                      {"— ".repeat(o.depth)}
+                      {o.label || o.value}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Άκυρο
+            </Button>
+            <Button type="submit" disabled={busy || value.trim() === ""}>
+              {busy && <Loader2 className="size-4 animate-spin" />}
+              Καταχώρηση
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -694,7 +1263,14 @@ function LookupImportWizard({
     setError(null);
     try {
       const committed = await commitLookupImport(
-        { listId, name: listName, description: listDescription },
+        {
+          listId,
+          name: listName,
+          description: listDescription,
+          // Τα ονόματα των στηλών του Excel γίνονται επικεφαλίδες της λίστας.
+          valueHeader: mapValue || null,
+          labelHeader: mapLabel || mapValue || null,
+        },
         plan.items
       );
       setResult(committed);
