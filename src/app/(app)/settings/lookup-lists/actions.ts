@@ -219,11 +219,19 @@ export async function commitLookupImport(
       }
 
       // Σύνδεση γονέων από το πλάνο (τα parentRef είναι values του ίδιου συνόλου).
+      // Server-side κυκλο-προστασία: δεν εμπιστευόμαστε το client plan για acyclicity.
+      const plannedParent = ordered.map((it) => ({
+        id: idByValue.get(it.value)!,
+        parentId: it.parentRef !== null ? idByValue.get(it.parentRef) ?? null : null,
+      }));
+      const cyclic = new Set(detectCycles(plannedParent));
       let linked = 0;
       let unlinked = 0;
       for (const it of ordered) {
         const id = idByValue.get(it.value)!;
-        const parentId = it.parentRef !== null ? idByValue.get(it.parentRef) ?? null : null;
+        const parentId = cyclic.has(id)
+          ? null
+          : it.parentRef !== null ? idByValue.get(it.parentRef) ?? null : null;
         if ((oldParentById.get(id) ?? null) !== parentId) {
           await tx.lookupListItem.update({ where: { id }, data: { parentId } });
         }
