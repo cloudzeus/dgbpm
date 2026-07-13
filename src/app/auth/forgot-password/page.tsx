@@ -7,8 +7,8 @@ export default function ForgotPasswordPage() {
   return (
     <div className="flex min-h-svh flex-col items-center justify-center gap-8 bg-muted/30 p-4">
       <Image
-        src="/HappyOnLineFullLogo.svg"
-        alt="HappyOnLine"
+        src="/smartProcessWhiteNoBg.svg"
+        alt="BPM"
         width={220}
         height={55}
         className="h-14 w-auto object-contain"

@@ -40,9 +40,13 @@ export default async function DashboardPage() {
     session.user.role === "SUPER_ADMIN" || session.user.role === "ADMIN";
 
   const tasks = await prisma.processTaskAssignment.findMany({
+    // Μόνο εργασίες ενεργών διαδικασιών — όχι ακυρωμένων/ολοκληρωμένων.
     where: isSuperOrAdmin
-      ? {}
-      : { possibleAssignees: { some: { id: session.user.id } } },
+      ? { processInstance: { status: "RUNNING" } }
+      : {
+          possibleAssignees: { some: { id: session.user.id } },
+          processInstance: { status: "RUNNING" },
+        },
     include: {
       processInstance: {
         select: {
@@ -147,6 +151,7 @@ export default async function DashboardPage() {
       where: {
         status: { notIn: ["APPROVED", "REJECTED", "SKIPPED"] },
         possibleAssignees: { some: { id: session.user.id } },
+        processInstance: { status: "RUNNING" },
       },
     });
 
@@ -197,6 +202,7 @@ export default async function DashboardPage() {
     where: {
       possibleAssignees: { some: { id: session.user.id } },
       status: { notIn: ["APPROVED", "REJECTED", "SKIPPED"] },
+      processInstance: { status: "RUNNING" },
     },
   });
   const myProcesses = await prisma.processInstance.count({

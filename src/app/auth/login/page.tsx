@@ -17,8 +17,8 @@ export default async function LoginPage() {
       </div>
       <div className="relative z-10 flex min-h-svh w-full flex-col items-center justify-center gap-8 p-4">
       <Image
-        src="/HappyOnLineFullLogo.svg"
-        alt="HappyOnLine"
+        src="/smartProcessWhiteNoBg.svg"
+        alt="BPM"
         width={220}
         height={55}
         className="h-14 w-auto object-contain"

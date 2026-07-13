@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "timestamp": "2026-07-10T05:45:29.169Z",
+  "timestamp": "2026-07-13T11:25:09.329Z",
   "source": "auto-postool",
   "partial": false,
   "phase": null,
@@ -22,7 +22,27 @@
     },
     {
       "status": "M",
-      "path": "src/app/(app)/process-instances/[id]/process-instance-detail.tsx"
+      "path": "prisma/schema.prisma"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/dashboard/page.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/entities/actions.ts"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/entities/entities-client.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/my-tasks/page.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/process-instances/[id]/page.tsx"
     },
     {
       "status": "M",
@@ -30,9 +50,77 @@
     },
     {
       "status": "M",
-      "path": "src/lib/email.ts"
+      "path": "src/app/(app)/process-templates/actions.ts"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/process-templates/page.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/process-templates/process-templates-client.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/process-templates/wizard/step-fields.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/process-templates/wizard/template-wizard.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/settings/lookup-lists/actions.ts"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/settings/lookup-lists/lookup-lists-client.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/users/page.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/(app)/users/users-client.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/auth/forgot-password/page.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/auth/login/page.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/app/auth/register/page.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/components/app-sidebar.tsx"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/entities/registry.test.ts"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/entities/registry.ts"
+    },
+    {
+      "status": "M",
+      "path": "src/lib/process-fields/field-types.ts"
+    },
+    {
+      "status": "??",
+      "path": "public/smartProcessWhiteNoBg.svg"
+    },
+    {
+      "status": "??",
+      "path": "src/lib/lookup-lists/display.ts"
     }
   ],
   "next_action": null,
-  "context_notes": "Recent commits:\nde045b3 feat(process-instances): redesign step timeline/modal + enforce sequential workflow\n8e4a62f feat(ui): professional redesign of process-template step flow + assorted updates\na2225f4 feat(users+advisor): advanced users table & BPM-oriented AI advisor\n2cdd350 feat(settings): Connectors — διασυνδέσεις με τρίτες εφαρμογές (eshop & ERP)\nba9b9ae style(dashboard): align process launcher + Kanban board with app design"
+  "context_notes": "Recent commits:\nc2aacfb fix(lookup-lists): transaction timeouts on create/update (slow remote MySQL, P2028)\n83530e8 fix(lookup-lists): server-side cycle guard on import commit\n6209f5c feat(lookup-lists): 3-step import wizard — column mapping, parent match by code/name, tree preview, auto-create missing parents\n4a99c54 style(lookup-lists): align edit dialog with app table/typography conventions\n6374c0d feat(entities): multi-sheet xlsx import with column mapping wizard"
 }

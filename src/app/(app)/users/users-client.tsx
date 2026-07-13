@@ -55,14 +55,14 @@ type User = {
   image: string | null;
   role: Role;
   positions: {
-    position: { id: string; name: string; department: { name: string } };
+    position: { id: string; name: string; department: { id: string; name: string; color: string } };
   }[];
 };
 
 type Position = {
   id: string;
   name: string;
-  department: { name: string };
+  department: { id: string; name: string; color: string };
 };
 
 const ROLES: Role[] = ["SUPER_ADMIN", "ADMIN", "MANAGER", "EMPLOYEE"];
@@ -131,6 +131,102 @@ function AvatarUploader({ user, size = "md" }: { user: User; size?: "sm" | "md" 
         </button>
       )}
       <input ref={inputRef} type="file" accept="image/*" hidden onChange={onFile} />
+    </div>
+  );
+}
+
+// ---- Position multi-select (grouped by department, searchable) -------------
+function PositionPicker({
+  positions,
+  selected,
+  onChange,
+}: {
+  positions: Position[];
+  selected: Set<string>;
+  onChange: (next: Set<string>) => void;
+}) {
+  const [q, setQ] = useState("");
+
+  const groups = useMemo(() => {
+    const byDept = new Map<string, { dept: Position["department"]; items: Position[] }>();
+    for (const p of positions) {
+      const g = byDept.get(p.department.id) ?? { dept: p.department, items: [] };
+      g.items.push(p);
+      byDept.set(p.department.id, g);
+    }
+    const needle = q.trim().toLowerCase();
+    return [...byDept.values()]
+      .map((g) => ({
+        ...g,
+        items: needle
+          ? g.items.filter(
+              (p) =>
+                p.name.toLowerCase().includes(needle) || g.dept.name.toLowerCase().includes(needle),
+            )
+          : g.items,
+      }))
+      .filter((g) => g.items.length > 0);
+  }, [positions, q]);
+
+  function toggle(id: string, on: boolean) {
+    const next = new Set(selected);
+    if (on) next.add(id);
+    else next.delete(id);
+    onChange(next);
+  }
+
+  function toggleDept(items: Position[], on: boolean) {
+    const next = new Set(selected);
+    for (const p of items) {
+      if (on) next.add(p.id);
+      else next.delete(p.id);
+    }
+    onChange(next);
+  }
+
+  return (
+    <div className="rounded-md border bg-background">
+      <div className="flex items-center gap-2 border-b p-2">
+        <Input
+          className="h-7 text-xs"
+          placeholder="Αναζήτηση θέσης ή τμήματος…"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
+        <span className="shrink-0 ui-meta">{selected.size} επιλεγμένες</span>
+      </div>
+      <div className="max-h-56 space-y-3 overflow-y-auto p-2.5">
+        {groups.length === 0 && <p className="ui-meta">Καμία θέση δεν ταιριάζει.</p>}
+        {groups.map((g) => {
+          const allOn = g.items.every((p) => selected.has(p.id));
+          const someOn = !allOn && g.items.some((p) => selected.has(p.id));
+          return (
+            <div key={g.dept.id}>
+              <label className="flex cursor-pointer items-center gap-1.5">
+                <Checkbox
+                  checked={allOn || (someOn && "indeterminate")}
+                  onCheckedChange={(v) => toggleDept(g.items, v === true)}
+                  className="size-3.5"
+                />
+                <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: g.dept.color }} />
+                <span className="ui-eyebrow">{g.dept.name}</span>
+              </label>
+              <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 pl-6">
+                {g.items.map((p) => (
+                  <label key={p.id} className="flex cursor-pointer items-center gap-1.5 text-xs">
+                    <Checkbox
+                      checked={selected.has(p.id)}
+                      onCheckedChange={(v) => toggle(p.id, v === true)}
+                      className="size-3.5"
+                    />
+                    <span>{p.name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -224,13 +320,20 @@ export function UsersClient({
 
   // -- create dialog + delete --
   const [createOpen, setCreateOpen] = useState(false);
+  const [createPositionIds, setCreatePositionIds] = useState<Set<string>>(new Set());
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+
+  function openCreate(open: boolean) {
+    setCreateOpen(open);
+    if (open) setCreatePositionIds(new Set());
+  }
 
   async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setCreating(true);
     const fd = new FormData(e.currentTarget);
+    createPositionIds.forEach((pid) => fd.append("positionIds", pid));
     try {
       await createUser(fd);
       setCreateOpen(false);
@@ -293,12 +396,28 @@ export function UsersClient({
           u.positions.length ? (
             <div className="flex flex-wrap gap-1">
               {u.positions.slice(0, 2).map((p, i) => (
-                <Badge key={i} variant="outline" className="max-w-[140px] truncate px-1.5 py-0 text-[10px] font-normal">
-                  {p.position.name}
+                <Badge
+                  key={i}
+                  variant="outline"
+                  className="max-w-[160px] gap-1 px-1.5 py-0 text-[10px] font-normal"
+                  title={`${p.position.name} — ${p.position.department.name}`}
+                >
+                  <span
+                    className="size-1.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: p.position.department.color }}
+                  />
+                  <span className="truncate">{p.position.name}</span>
                 </Badge>
               ))}
               {u.positions.length > 2 && (
-                <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
+                <Badge
+                  variant="secondary"
+                  className="px-1.5 py-0 text-[10px]"
+                  title={u.positions
+                    .slice(2)
+                    .map((p) => `${p.position.name} — ${p.position.department.name}`)
+                    .join("\n")}
+                >
                   +{u.positions.length - 2}
                 </Badge>
               )}
@@ -342,7 +461,7 @@ export function UsersClient({
         onToggleExpand={toggleExpand}
         emptyMessage="Δεν βρέθηκαν χρήστες."
         toolbar={
-          <Button size="sm" className="h-8 gap-1.5 text-xs" onClick={() => setCreateOpen(true)}>
+          <Button size="sm" className="h-8 gap-1.5 text-xs" onClick={() => openCreate(true)}>
             <Plus className="size-3.5" />
             Νέος χρήστης
           </Button>
@@ -453,28 +572,11 @@ export function UsersClient({
                       <Briefcase className="size-3" />
                       Θέσεις εργασίας
                     </div>
-                    <div className="flex max-h-28 flex-wrap gap-x-4 gap-y-1.5 overflow-y-auto rounded-md border bg-background p-2.5">
-                      {positions.map((p) => {
-                        const checked = draft.positionIds.has(p.id);
-                        return (
-                          <label key={p.id} className="flex cursor-pointer items-center gap-1.5 text-xs">
-                            <Checkbox
-                              checked={checked}
-                              onCheckedChange={(v) => {
-                                const next = new Set(draft.positionIds);
-                                if (v) next.add(p.id);
-                                else next.delete(p.id);
-                                patchDraft(u.id, { positionIds: next });
-                              }}
-                              className="size-3.5"
-                            />
-                            <span>
-                              {p.name} <span className="text-muted-foreground">({p.department.name})</span>
-                            </span>
-                          </label>
-                        );
-                      })}
-                    </div>
+                    <PositionPicker
+                      positions={positions}
+                      selected={draft.positionIds}
+                      onChange={(next) => patchDraft(u.id, { positionIds: next })}
+                    />
                   </div>
                 </div>
               </div>
@@ -496,7 +598,7 @@ export function UsersClient({
       />
 
       {/* -------- Create dialog -------- */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+      <Dialog open={createOpen} onOpenChange={openCreate}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Δημιουργία χρήστη</DialogTitle>
@@ -550,16 +652,7 @@ export function UsersClient({
             </div>
             <div className="space-y-1.5">
               <Label>Θέσεις εργασίας</Label>
-              <div className="max-h-40 space-y-2 overflow-y-auto rounded-md border p-2">
-                {positions.map((p) => (
-                  <label key={p.id} className="flex cursor-pointer items-center gap-2">
-                    <input type="checkbox" name="positionIds" value={p.id} className="rounded border-input" />
-                    <span className="text-sm">
-                      {p.name} <span className="text-muted-foreground">({p.department.name})</span>
-                    </span>
-                  </label>
-                ))}
-              </div>
+              <PositionPicker positions={positions} selected={createPositionIds} onChange={setCreatePositionIds} />
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>

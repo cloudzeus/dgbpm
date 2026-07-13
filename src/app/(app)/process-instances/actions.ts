@@ -290,7 +290,7 @@ export async function assertRequiredFieldsFilled(taskId: string) {
   const byField = new Map(values.map((v) => [v.fieldDefinitionId, v]));
   for (const f of required) {
     const v = byField.get(f.id);
-    const empty = !v || (v.valueString == null && v.valueNumber == null && v.valueDate == null && v.valueBool == null && v.valueListItemId == null);
+    const empty = !v || (v.valueString == null && v.valueNumber == null && v.valueDate == null && v.valueBool == null && v.valueListItemId == null && v.valueEntityId == null);
     if (empty) throw new Error(`Συμπληρώστε το υποχρεωτικό πεδίο «${f.name}» πριν ολοκληρώσετε το βήμα.`);
   }
 }
@@ -315,6 +315,14 @@ async function assertPriorTasksComplete(taskId: string) {
     include: { templateTask: { select: { name: true, order: true } } },
     orderBy: { templateTask: { order: "asc" } },
   });
+
+  // Απορριφθένο προηγούμενο βήμα ⇒ η διαδικασία έχει διακοπεί και δεν συνεχίζεται.
+  const rejected = priors.find((p) => p.status === "REJECTED");
+  if (rejected) {
+    throw new Error(
+      `Η διαδικασία έχει διακοπεί: το βήμα «${rejected.templateTask.name}» (Βήμα ${rejected.templateTask.order + 1}) απορρίφθηκε.`
+    );
+  }
 
   const blocking = priors.find(
     (p) => p.status !== "APPROVED" && p.status !== "SKIPPED"
@@ -494,8 +502,12 @@ export async function uploadTaskFile(
   taskId: string,
   formData: FormData
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const session = await auth();
-  if (!session?.user) return { ok: false, error: "Μη εξουσιοδοτημένη πρόσβαση" };
+  let session;
+  try {
+    session = await requireActiveSession();
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Μη εξουσιοδοτημένη πρόσβαση" };
+  }
 
   const task = await prisma.processTaskAssignment.findUnique({
     where: { id: taskId },

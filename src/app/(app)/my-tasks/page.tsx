@@ -11,6 +11,8 @@ export default async function MyTasksPage() {
     where: {
       possibleAssignees: { some: { id: session.user.id } },
       status: { notIn: ["APPROVED", "REJECTED", "SKIPPED"] },
+      // Μόνο εργασίες ενεργών διαδικασιών (όχι ακυρωμένων/ολοκληρωμένων).
+      processInstance: { status: "RUNNING" },
     },
     include: {
       processInstance: {

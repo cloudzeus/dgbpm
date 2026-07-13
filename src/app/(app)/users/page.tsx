@@ -14,7 +14,7 @@ export default async function UsersPage() {
     include: {
       positions: {
         include: {
-          position: { select: { id: true, name: true, department: { select: { name: true } } } },
+          position: { select: { id: true, name: true, department: { select: { id: true, name: true, color: true } } } },
         },
       },
     },
@@ -22,7 +22,7 @@ export default async function UsersPage() {
   });
 
   const positions = await prisma.jobPosition.findMany({
-    include: { department: { select: { name: true } } },
+    include: { department: { select: { id: true, name: true, color: true } } },
     orderBy: [{ department: { name: "asc" } }, { name: "asc" }],
   });
 

@@ -52,8 +52,8 @@ export function AppSidebar({ role }: { role: Role | undefined }) {
                   />
                 ) : (
                   <Image
-                    src="/HappyOnLineFullLogo.svg"
-                    alt="HappyOnLine"
+                    src="/smartProcessWhiteNoBg.svg"
+                    alt="BPM"
                     width={180}
                     height={44}
                     className="h-11 w-auto max-w-[180px] object-contain object-left"
