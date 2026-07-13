@@ -9,6 +9,60 @@ export type ParsedLookupItem = {
   parentValue: string | null;
 };
 
+export type LookupSheetMapping = {
+  value: string;
+  /** Αν λείπει ή ταυτίζεται με value, label = value. */
+  label?: string;
+  parent?: string;
+};
+
+/**
+ * Parse φύλλου με ρητό mapping στηλών (header → ρόλος).
+ * Γραμμή 1 = επικεφαλίδες· κενές γραμμές (χωρίς value) παραλείπονται.
+ */
+export async function parseLookupSheet(
+  buf: Buffer,
+  sheetName: string,
+  mapping: LookupSheetMapping
+): Promise<{ value: string; label: string; parent: string | null }[]> {
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(buf as unknown as ExcelJS.Buffer);
+  const ws = wb.worksheets.find((w) => w.name === sheetName) ?? wb.worksheets[0];
+  if (!ws) throw new Error("Το αρχείο δεν περιέχει φύλλο εργασίας");
+
+  const headerRow = ws.getRow(1);
+  const headerIndex = new Map<string, number>();
+  const colCount = ws.actualColumnCount ?? ws.columnCount;
+  for (let i = 1; i <= colCount; i++) {
+    const text = (headerRow.getCell(i).text ?? "").trim();
+    if (text !== "" && !headerIndex.has(text)) headerIndex.set(text, i);
+  }
+
+  const idxOf = (header: string | undefined, role: string): number | null => {
+    if (!header || header.trim() === "") return null;
+    const idx = headerIndex.get(header.trim());
+    if (idx === undefined) throw new Error(`Η στήλη «${header}» (${role}) δεν υπάρχει στο φύλλο «${ws.name}»`);
+    return idx;
+  };
+
+  const valueIdx = idxOf(mapping.value, "Τιμή");
+  if (valueIdx === null) throw new Error("Απαιτείται αντιστοίχιση για τη στήλη «Τιμή»");
+  const labelIdx = idxOf(mapping.label, "Ετικέτα");
+  const parentIdx = idxOf(mapping.parent, "Γονέας");
+
+  const rows: { value: string; label: string; parent: string | null }[] = [];
+  const lastRowNumber = ws.actualRowCount ?? ws.rowCount;
+  for (let rowNumber = 2; rowNumber <= lastRowNumber; rowNumber++) {
+    const row = ws.getRow(rowNumber);
+    const value = (row.getCell(valueIdx).text ?? "").trim();
+    if (!value) continue;
+    const label = labelIdx !== null ? (row.getCell(labelIdx).text ?? "").trim() || value : value;
+    const parent = parentIdx !== null ? (row.getCell(parentIdx).text ?? "").trim() || null : null;
+    rows.push({ value, label, parent });
+  }
+  return rows;
+}
+
 /**
  * First sheet, row 1 is a header (skipped). Col A = value, Col B = label (defaults to value).
  * Προαιρετική στήλη «Γονικός Κωδικός» (αναγνωρίζεται από τον header, αλλιώς στήλη C):

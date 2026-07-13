@@ -40,14 +40,35 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   createLookupList,
   updateLookupList,
   deleteLookupList,
-  importLookupItems,
+  analyzeLookupWorkbook,
+  previewLookupImport,
+  commitLookupImport,
+  type CommitLookupImportResult,
 } from "./actions";
 import { treeOrder, withDescendants } from "@/lib/entities/tree";
-import { ArrowUp, ArrowDown, Trash2, Upload, Loader2, Pencil } from "lucide-react";
+import type { WorkbookSheetInfo } from "@/lib/entities/xlsx-mapping";
+import {
+  suggestLookupMapping,
+  type LookupImportPlan,
+  type ParentMatchMode,
+} from "@/lib/lookup-lists/import-plan";
+import {
+  ArrowUp,
+  ArrowDown,
+  Trash2,
+  Upload,
+  Loader2,
+  Pencil,
+  AlertTriangle,
+  ChevronDown,
+  ChevronRight,
+} from "lucide-react";
 
 type LookupItem = { id: string; value: string; label: string; order: number; parentId: string | null };
 
@@ -69,14 +90,13 @@ export function LookupListsClient({ lists }: { lists: LookupList[] }) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [importing, setImporting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [formWarnings, setFormWarnings] = useState<string[]>([]);
+  const [wizardOpen, setWizardOpen] = useState(false);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [items, setItems] = useState<ItemInput[]>([]);
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   function resetForm() {
     setName("");
@@ -84,6 +104,7 @@ export function LookupListsClient({ lists }: { lists: LookupList[] }) {
     setItems([]);
     setEditId(null);
     setFormError(null);
+    setFormWarnings([]);
   }
 
   function openCreate() {
@@ -152,39 +173,24 @@ export function LookupListsClient({ lists }: { lists: LookupList[] }) {
     );
   }
 
-  async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setImporting(true);
-    setFormError(null);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const result = await importLookupItems(formData);
-      setItems((prev) => [
-        ...prev,
-        ...result.items.map((r) => ({
-          rowId: crypto.randomUUID(),
-          value: r.value,
-          label: r.label,
-          parentValue: r.parentValue ?? "",
-        })),
-      ]);
-      if (result.errors.length > 0) {
-        setFormError(`Προειδοποιήσεις ιεραρχίας: ${result.errors.join(" · ")}`);
-      }
-    } catch (err) {
-      setFormError(err instanceof Error ? err.message : "Αποτυχία εισαγωγής αρχείου.");
-    } finally {
-      setImporting(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
+  /** Ολοκλήρωση wizard: συγχρονισμός τοπικής φόρμας με ό,τι γράφτηκε στη ΒΔ. */
+  function handleImported(result: CommitLookupImportResult) {
+    setEditId(result.listId);
+    setItems(
+      result.items.map((r) => ({
+        rowId: crypto.randomUUID(),
+        value: r.value,
+        label: r.label,
+        parentValue: r.parentValue ?? "",
+      }))
+    );
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setFormError(null);
+    setFormWarnings([]);
     try {
       const payloadItems = items
         .map((it) => ({
@@ -207,7 +213,7 @@ export function LookupListsClient({ lists }: { lists: LookupList[] }) {
         result = created;
       }
       if (result.warnings.length > 0) {
-        setFormError(`Αποθηκεύτηκε με προειδοποιήσεις: ${result.warnings.join(" · ")}`);
+        setFormWarnings(result.warnings);
       } else {
         setOpen(false);
         resetForm();
@@ -338,24 +344,12 @@ export function LookupListsClient({ lists }: { lists: LookupList[] }) {
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={importing}
+                    onClick={() => setWizardOpen(true)}
                     className="h-8 gap-1.5 text-xs"
                   >
-                    {importing ? (
-                      <Loader2 className="size-3.5 animate-spin" />
-                    ) : (
-                      <Upload className="size-3.5" />
-                    )}
-                    {importing ? "Εισαγωγή..." : "Εισαγωγή Excel"}
+                    <Upload className="size-3.5" />
+                    Εισαγωγή Excel
                   </Button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".xlsx"
-                    className="hidden"
-                    onChange={handleImport}
-                  />
                   <Button
                     type="button"
                     variant="outline"
@@ -478,6 +472,22 @@ export function LookupListsClient({ lists }: { lists: LookupList[] }) {
 
             {formError && <p className="text-sm text-destructive">{formError}</p>}
 
+            {formWarnings.length > 0 && (
+              <div className="flex gap-2.5 rounded-md border border-amber-500/40 bg-amber-500/10 px-4 py-3">
+                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                <div className="space-y-1">
+                  <p className="ui-body font-medium text-amber-800 dark:text-amber-300">
+                    Αποθηκεύτηκε με {formWarnings.length}{" "}
+                    {formWarnings.length === 1 ? "προειδοποίηση" : "προειδοποιήσεις"}
+                  </p>
+                  <p className="ui-meta text-amber-700 dark:text-amber-400/80">
+                    {formWarnings.slice(0, 5).join(" · ")}
+                    {formWarnings.length > 5 && ` · … και ${formWarnings.length - 5} ακόμη`}
+                  </p>
+                </div>
+              </div>
+            )}
+
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                 Άκυρο
@@ -489,6 +499,15 @@ export function LookupListsClient({ lists }: { lists: LookupList[] }) {
           </form>
         </DialogContent>
       </Dialog>
+
+      <LookupImportWizard
+        open={wizardOpen}
+        onOpenChange={setWizardOpen}
+        listId={editId}
+        listName={name}
+        listDescription={description}
+        onImported={handleImported}
+      />
 
       <AlertDialog
         open={!!deleteId}
@@ -522,5 +541,476 @@ export function LookupListsClient({ lists }: { lists: LookupList[] }) {
         </AlertDialogContent>
       </AlertDialog>
     </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Wizard εισαγωγής Excel 3 βημάτων: Αρχείο → Αντιστοίχιση → Προεπισκόπηση.
+
+const NO_COLUMN = "__none__";
+
+type WizardStep = "file" | "map" | "preview" | "done";
+
+const PARENT_MATCH_LABEL: Record<ParentMatchMode, string> = {
+  auto: "Αυτόματα (προτείνεται)",
+  value: "Τιμή (κωδικό)",
+  label: "Ετικέτα (όνομα)",
+};
+
+function StatChip({ label, count }: { label: string; count: number }) {
+  return (
+    <div className="flex items-baseline gap-1.5 rounded-md border bg-muted/40 px-2.5 py-1.5">
+      <span className="ui-data font-semibold tabular-nums">{count}</span>
+      <span className="ui-meta">{label}</span>
+    </div>
+  );
+}
+
+function LookupImportWizard({
+  open,
+  onOpenChange,
+  listId,
+  listName,
+  listDescription,
+  onImported,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  listId: string | null;
+  listName: string;
+  listDescription: string;
+  onImported: (result: CommitLookupImportResult) => void;
+}) {
+  const [step, setStep] = useState<WizardStep>("file");
+  const [file, setFile] = useState<File | null>(null);
+  const [sheets, setSheets] = useState<WorkbookSheetInfo[]>([]);
+  const [sheetName, setSheetName] = useState("");
+  const [mapValue, setMapValue] = useState("");
+  const [mapLabel, setMapLabel] = useState("");
+  const [mapParent, setMapParent] = useState("");
+  const [parentMatch, setParentMatch] = useState<ParentMatchMode>("auto");
+  const [createMissing, setCreateMissing] = useState(false);
+  const [plan, setPlan] = useState<LookupImportPlan | null>(null);
+  const [unresolvedExpanded, setUnresolvedExpanded] = useState(false);
+  const [result, setResult] = useState<CommitLookupImportResult | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  function reset() {
+    setStep("file");
+    setFile(null);
+    setSheets([]);
+    setSheetName("");
+    setMapValue("");
+    setMapLabel("");
+    setMapParent("");
+    setParentMatch("auto");
+    setCreateMissing(false);
+    setPlan(null);
+    setUnresolvedExpanded(false);
+    setResult(null);
+    setBusy(false);
+    setError(null);
+  }
+
+  function handleOpenChange(o: boolean) {
+    if (!o) reset();
+    onOpenChange(o);
+  }
+
+  function applySuggestion(sheet: WorkbookSheetInfo) {
+    const suggested = suggestLookupMapping(sheet.headers);
+    setMapValue(suggested.value ?? "");
+    setMapLabel(suggested.label ?? suggested.value ?? "");
+    setMapParent(suggested.parent ?? "");
+  }
+
+  async function handleAnalyze(f: File) {
+    setBusy(true);
+    setError(null);
+    try {
+      const fd = new FormData();
+      fd.set("file", f);
+      const { sheets: analyzed } = await analyzeLookupWorkbook(fd);
+      const nonEmpty = analyzed.filter((s) => s.headers.length > 0);
+      if (nonEmpty.length === 0) {
+        setError("Το αρχείο δεν περιέχει δεδομένα.");
+        return;
+      }
+      const initial = nonEmpty.reduce((a, b) => (b.rowCount > a.rowCount ? b : a));
+      setFile(f);
+      setSheets(nonEmpty);
+      setSheetName(initial.name);
+      applySuggestion(initial);
+      setStep("map");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Αποτυχία ανάλυσης αρχείου.");
+    } finally {
+      setBusy(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
+  function handleSheetChange(nextName: string) {
+    setSheetName(nextName);
+    const sheet = sheets.find((s) => s.name === nextName);
+    if (sheet) applySuggestion(sheet);
+  }
+
+  async function runPreview(withCreateMissing: boolean) {
+    if (!file || !mapValue) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const fd = new FormData();
+      fd.set("file", file);
+      fd.set("sheetName", sheetName);
+      fd.set(
+        "mapping",
+        JSON.stringify({
+          value: mapValue,
+          label: mapLabel || mapValue,
+          ...(mapParent ? { parent: mapParent } : {}),
+        })
+      );
+      fd.set("parentMatch", mapParent ? parentMatch : "auto");
+      fd.set("createMissingParents", withCreateMissing ? "1" : "0");
+      if (listId) fd.set("listId", listId);
+      const nextPlan = await previewLookupImport(fd);
+      setPlan(nextPlan);
+      setCreateMissing(withCreateMissing);
+      setStep("preview");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Αποτυχία προεπισκόπησης.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleCommit() {
+    if (!plan) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const committed = await commitLookupImport(
+        { listId, name: listName, description: listDescription },
+        plan.items
+      );
+      setResult(committed);
+      setStep("done");
+      onImported(committed);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Αποτυχία εισαγωγής.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const currentSheet = sheets.find((s) => s.name === sheetName);
+  const headerOptions = currentSheet?.headers.filter((h) => h.trim() !== "") ?? [];
+  const canPreview = mapValue !== "" && (mapLabel !== "" || headerOptions.length === 1);
+  const needsListName = !listId && listName.trim() === "";
+  const previewTree = plan
+    ? treeOrder(plan.items.map((i) => ({ ...i, id: i.value, parentId: i.parentRef })))
+    : [];
+  const unresolvedShown = plan
+    ? unresolvedExpanded
+      ? plan.unresolved
+      : plan.unresolved.slice(0, 5)
+    : [];
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>
+            {step === "file" && "Εισαγωγή Excel — Αρχείο"}
+            {step === "map" && "Εισαγωγή Excel — Αντιστοίχιση στηλών"}
+            {step === "preview" && "Εισαγωγή Excel — Προεπισκόπηση"}
+            {step === "done" && "Εισαγωγή Excel — Ολοκληρώθηκε"}
+          </DialogTitle>
+          <DialogDescription>
+            {step === "file" && "Επιλέξτε αρχείο .xlsx με τις τιμές της λίστας."}
+            {step === "map" && "Ορίστε ποια στήλη αντιστοιχεί σε κάθε πεδίο."}
+            {step === "preview" && "Ελέγξτε το τελικό αποτέλεσμα πριν από την εγγραφή."}
+            {step === "done" && "Οι τιμές γράφτηκαν στη λίστα."}
+          </DialogDescription>
+        </DialogHeader>
+
+        {error && (
+          <div className="rounded-md border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-400">
+            {error}
+          </div>
+        )}
+
+        {step === "file" && (
+          <div className="space-y-3">
+            <p className="ui-body-muted">
+              Η πρώτη γραμμή του φύλλου θεωρείται επικεφαλίδες. Στο επόμενο βήμα θα
+              αντιστοιχίσετε τις στήλες σε Τιμή, Ετικέτα και (προαιρετικά) Γονέα.
+            </p>
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".xlsx"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) void handleAnalyze(f);
+              }}
+            />
+            <Button type="button" onClick={() => fileRef.current?.click()} disabled={busy}>
+              {busy ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
+              Επιλογή αρχείου…
+            </Button>
+          </div>
+        )}
+
+        {step === "map" && currentSheet && (
+          <div className="space-y-4">
+            {sheets.length > 1 && (
+              <div className="space-y-1.5">
+                <Label className="ui-field-label">Φύλλο εργασίας</Label>
+                <Select value={sheetName} onValueChange={handleSheetChange}>
+                  <SelectTrigger className="h-8 w-full text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sheets.map((s) => (
+                      <SelectItem key={s.name} value={s.name}>
+                        {s.name} ({s.rowCount} γραμμές)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              {(
+                [
+                  { key: "value", label: "Τιμή (κωδικός)", required: true, val: mapValue, set: setMapValue },
+                  { key: "label", label: "Ετικέτα (όνομα)", required: true, val: mapLabel, set: setMapLabel },
+                  { key: "parent", label: "Γονέας", required: false, val: mapParent, set: setMapParent },
+                ] as const
+              ).map((f) => (
+                <div key={f.key} className="space-y-1.5">
+                  <Label className="ui-field-label">
+                    {f.label}
+                    {f.required && <span className="text-destructive"> *</span>}
+                  </Label>
+                  <Select
+                    value={f.val || NO_COLUMN}
+                    onValueChange={(v) => f.set(v === NO_COLUMN ? "" : v)}
+                  >
+                    <SelectTrigger className="h-8 w-full text-xs">
+                      <SelectValue placeholder="— Καμία —" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NO_COLUMN}>— Καμία —</SelectItem>
+                      {headerOptions.map((h) => (
+                        <SelectItem key={h} value={h}>
+                          {h}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ))}
+            </div>
+
+            {mapParent && (
+              <div className="space-y-1.5">
+                <Label className="ui-field-label">Αντιστοίχιση γονέα με:</Label>
+                <Select
+                  value={parentMatch}
+                  onValueChange={(v) => setParentMatch(v as ParentMatchMode)}
+                >
+                  <SelectTrigger className="h-8 w-full text-xs sm:w-64">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(Object.keys(PARENT_MATCH_LABEL) as ParentMatchMode[]).map((m) => (
+                      <SelectItem key={m} value={m}>
+                        {PARENT_MATCH_LABEL[m]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {currentSheet.sampleRows.length > 0 && (
+              <div className="overflow-x-auto rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/60 hover:bg-muted/60">
+                      {headerOptions.map((h) => (
+                        <TableHead key={h} className="ui-eyebrow h-9 whitespace-nowrap">
+                          {h}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {currentSheet.sampleRows.map((row, i) => (
+                      <TableRow key={i}>
+                        {headerOptions.map((h, j) => {
+                          const idx = currentSheet.headers.indexOf(h);
+                          return (
+                            <TableCell key={j} className="py-1.5 text-xs whitespace-nowrap">
+                              {row[idx]?.trim() || "—"}
+                            </TableCell>
+                          );
+                        })}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={reset} disabled={busy}>
+                Πίσω
+              </Button>
+              <Button
+                type="button"
+                onClick={() => runPreview(false)}
+                disabled={busy || !canPreview}
+              >
+                {busy && <Loader2 className="size-4 animate-spin" />}
+                Προεπισκόπηση
+              </Button>
+            </DialogFooter>
+          </div>
+        )}
+
+        {step === "preview" && plan && (
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              <StatChip label="Σύνολο γραμμών" count={plan.stats.total} />
+              <StatChip label="Νέες" count={plan.stats.created} />
+              <StatChip label="Ενημερώσεις" count={plan.stats.updated} />
+              <StatChip label="Ρίζες" count={plan.stats.roots} />
+              <StatChip label="Επίπεδα βάθους" count={plan.stats.depth} />
+            </div>
+
+            {(plan.unresolved.length > 0 || plan.cycles.length > 0) && (
+              <div className="space-y-2.5 rounded-md border border-amber-500/40 bg-amber-500/10 px-4 py-3">
+                {plan.unresolved.length > 0 && (
+                  <div className="flex gap-2.5">
+                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                    <div className="min-w-0 space-y-1">
+                      <p className="ui-body font-medium text-amber-800 dark:text-amber-300">
+                        Δεν βρέθηκαν {plan.unresolved.length}{" "}
+                        {plan.unresolved.length === 1 ? "γονέας" : "γονείς"}:
+                      </p>
+                      <p className="ui-meta text-amber-700 dark:text-amber-400/80">
+                        {unresolvedShown
+                          .map((u) => `«${u.name}» (${u.count} ${u.count === 1 ? "γραμμή" : "γραμμές"})`)
+                          .join(", ")}
+                        {!unresolvedExpanded && plan.unresolved.length > 5 && "…"}
+                      </p>
+                      {plan.unresolved.length > 5 && (
+                        <button
+                          type="button"
+                          className="ui-meta flex items-center gap-0.5 font-medium text-amber-800 hover:underline dark:text-amber-300"
+                          onClick={() => setUnresolvedExpanded((v) => !v)}
+                        >
+                          {unresolvedExpanded ? (
+                            <ChevronDown className="size-3.5" />
+                          ) : (
+                            <ChevronRight className="size-3.5" />
+                          )}
+                          {unresolvedExpanded
+                            ? "Λιγότερα"
+                            : `Εμφάνιση και των ${plan.unresolved.length - 5} ακόμη`}
+                        </button>
+                      )}
+                      <label className="mt-1.5 flex items-start gap-2">
+                        <Checkbox
+                          checked={createMissing}
+                          disabled={busy}
+                          onCheckedChange={(c) => void runPreview(c === true)}
+                          className="mt-0.5"
+                        />
+                        <span className="ui-meta text-amber-800 dark:text-amber-300">
+                          Αυτόματη δημιουργία γονέων που λείπουν ως νέες τιμές (ρίζες)
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                )}
+                {plan.cycles.length > 0 && (
+                  <div className="flex gap-2.5">
+                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                    <p className="ui-meta text-amber-700 dark:text-amber-400/80">
+                      Κυκλική ιεραρχία σε {plan.cycles.length}{" "}
+                      {plan.cycles.length === 1 ? "τιμή" : "τιμές"} (
+                      {plan.cycles.slice(0, 5).join(", ")}
+                      {plan.cycles.length > 5 ? "…" : ""}) — θα εισαχθούν χωρίς γονέα.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="max-h-72 overflow-y-auto rounded-md border">
+              <ul className="divide-y">
+                {previewTree.map((node) => (
+                  <li
+                    key={node.value}
+                    className="flex items-center gap-2 px-3 py-1.5"
+                    style={{ paddingLeft: `${12 + node.depth * 20}px` }}
+                  >
+                    <span className="ui-body truncate">{node.label}</span>
+                    <span className="ui-meta shrink-0">({node.value})</span>
+                    {node.isNew && (
+                      <Badge variant="secondary" className="h-5 shrink-0 px-1.5 text-[10px]">
+                        νέο
+                      </Badge>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {needsListName && (
+              <p className="ui-body-muted">
+                Συμπληρώστε πρώτα το όνομα της λίστας στη φόρμα για να γίνει η εισαγωγή.
+              </p>
+            )}
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setStep("map")} disabled={busy}>
+                Πίσω
+              </Button>
+              <Button type="button" onClick={handleCommit} disabled={busy || needsListName}>
+                {busy && <Loader2 className="size-4 animate-spin" />}
+                Εισαγωγή
+              </Button>
+            </DialogFooter>
+          </div>
+        )}
+
+        {step === "done" && result && (
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              <StatChip label="Νέες" count={result.created} />
+              <StatChip label="Ενημερώσεις" count={result.updated} />
+              <StatChip label="Συνδέσεις γονέα" count={result.linked} />
+              <StatChip label="Αποσυνδέσεις" count={result.unlinked} />
+            </div>
+            <DialogFooter>
+              <Button type="button" onClick={() => handleOpenChange(false)}>
+                Κλείσιμο
+              </Button>
+            </DialogFooter>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }

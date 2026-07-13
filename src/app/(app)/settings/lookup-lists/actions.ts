@@ -5,8 +5,16 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/rbac";
 import { Prisma, Role } from "@prisma/client";
 import { revalidatePath } from "next/cache";
-import { parseLookupItemsFromWorkbook, validateLookupHierarchy } from "@/lib/lookup-lists/excel-import";
-import { planParentLinks, detectCycles } from "@/lib/entities/tree";
+import { parseLookupSheet, type LookupSheetMapping } from "@/lib/lookup-lists/excel-import";
+import {
+  planLookupImport,
+  type LookupImportPlan,
+  type ParentMatchMode,
+  type PlannedItem,
+} from "@/lib/lookup-lists/import-plan";
+import { analyzeWorkbook } from "@/lib/entities/xlsx";
+import type { WorkbookSheetInfo } from "@/lib/entities/xlsx-mapping";
+import { planParentLinks, detectCycles, treeOrder } from "@/lib/entities/tree";
 
 async function requireAdmin() {
   const session = await auth();
@@ -120,24 +128,125 @@ export async function deleteLookupList(id: string) {
   revalidatePath("/settings/lookup-lists");
 }
 
-export async function importLookupItems(formData: FormData): Promise<{
-  items: { value: string; label: string; parentValue: string | null }[];
-  errors: string[];
-}> {
+/** Βήμα 1 wizard: ανάλυση αρχείου — φύλλα, επικεφαλίδες, δείγμα, πλήθος γραμμών. */
+export async function analyzeLookupWorkbook(
+  formData: FormData
+): Promise<{ sheets: WorkbookSheetInfo[] }> {
   await requireAdmin();
   const file = formData.get("file") as File | null;
   if (!file) throw new Error("Δεν επιλέχθηκε αρχείο.");
-  const buf = await file.arrayBuffer();
-  const parsed = await parseLookupItemsFromWorkbook(buf);
-  const hierarchyErrors = validateLookupHierarchy(parsed);
-  const invalid = new Set(hierarchyErrors.map((e) => e.value));
-  return {
-    items: parsed.map((p) => ({
-      value: p.value,
-      label: p.label,
-      // Άκυρος γονέας (άγνωστος/κύκλος) → εισαγωγή χωρίς γονέα, με μήνυμα.
-      parentValue: invalid.has(p.value) ? null : p.parentValue,
-    })),
-    errors: hierarchyErrors.map((e) => `${e.value}: ${e.message}`),
-  };
+  return analyzeWorkbook(Buffer.from(await file.arrayBuffer()));
+}
+
+/** Βήμα 3 wizard: πλήρης υπολογισμός αποτελέσματος ΧΩΡΙΣ εγγραφές. */
+export async function previewLookupImport(formData: FormData): Promise<LookupImportPlan> {
+  await requireAdmin();
+  const file = formData.get("file") as File | null;
+  if (!file) throw new Error("Δεν επιλέχθηκε αρχείο.");
+  const sheetName = String(formData.get("sheetName") ?? "");
+  const mapping = JSON.parse(String(formData.get("mapping") ?? "{}")) as LookupSheetMapping;
+  const parentMatch = (String(formData.get("parentMatch") ?? "auto") || "auto") as ParentMatchMode;
+  const createMissingParents = formData.get("createMissingParents") === "1";
+  const listId = String(formData.get("listId") ?? "") || null;
+
+  const rows = await parseLookupSheet(Buffer.from(await file.arrayBuffer()), sheetName, mapping);
+  const existing = listId
+    ? await prisma.lookupListItem.findMany({
+        where: { lookupListId: listId },
+        select: { id: true, value: true, label: true, parentId: true },
+      })
+    : [];
+  return planLookupImport({ rows, existing, parentMatch, createMissingParents });
+}
+
+export type CommitLookupImportResult = {
+  listId: string;
+  created: number;
+  updated: number;
+  linked: number;
+  unlinked: number;
+  items: { value: string; label: string; parentValue: string | null }[];
+};
+
+/** Οριστική εισαγωγή: εγγράφει ΑΚΡΙΒΩΣ το προεπισκοπημένο πλάνο, σε μία συναλλαγή. */
+export async function commitLookupImport(
+  target: { listId?: string | null; name?: string; description?: string },
+  plannedItems: PlannedItem[]
+): Promise<CommitLookupImportResult> {
+  await requireAdmin();
+  if (plannedItems.length === 0) throw new Error("Δεν υπάρχουν στοιχεία προς εισαγωγή.");
+
+  // Σειρά γονέων πριν από παιδιά + σταθερή σειρά εμφάνισης (order).
+  const byValue = new Map(plannedItems.map((p) => [p.value, p]));
+  const ordered = treeOrder(
+    plannedItems.map((p) => ({
+      id: p.value,
+      parentId: p.parentRef !== null && byValue.has(p.parentRef) ? p.parentRef : null,
+    }))
+  ).map((n) => byValue.get(n.id)!);
+
+  const result = await prisma.$transaction(
+    async (tx) => {
+      let listId = target.listId ?? null;
+      if (!listId) {
+        const name = target.name?.trim();
+        if (!name) throw new Error("Απαιτείται όνομα λίστας.");
+        const list = await tx.lookupList.create({
+          data: { name, description: target.description?.trim() || undefined },
+        });
+        listId = list.id;
+      }
+
+      const existing = await tx.lookupListItem.findMany({ where: { lookupListId: listId } });
+      const idByValue = new Map(existing.map((e) => [e.value, e.id]));
+      const oldParentById = new Map(existing.map((e) => [e.id, e.parentId]));
+
+      let created = 0;
+      let updated = 0;
+      for (let i = 0; i < ordered.length; i++) {
+        const it = ordered[i];
+        const found = idByValue.get(it.value);
+        if (found) {
+          await tx.lookupListItem.update({ where: { id: found }, data: { label: it.label, order: i } });
+          updated++;
+        } else {
+          const row = await tx.lookupListItem.create({
+            data: { lookupListId: listId, value: it.value, label: it.label, order: i },
+          });
+          idByValue.set(it.value, row.id);
+          created++;
+        }
+      }
+
+      // Σύνδεση γονέων από το πλάνο (τα parentRef είναι values του ίδιου συνόλου).
+      let linked = 0;
+      let unlinked = 0;
+      for (const it of ordered) {
+        const id = idByValue.get(it.value)!;
+        const parentId = it.parentRef !== null ? idByValue.get(it.parentRef) ?? null : null;
+        if ((oldParentById.get(id) ?? null) !== parentId) {
+          await tx.lookupListItem.update({ where: { id }, data: { parentId } });
+        }
+        if (parentId !== null) linked++;
+        else if (oldParentById.get(id)) unlinked++;
+      }
+
+      return {
+        listId,
+        created,
+        updated,
+        linked,
+        unlinked,
+        items: ordered.map((it) => ({
+          value: it.value,
+          label: it.label,
+          parentValue: it.parentRef,
+        })),
+      };
+    },
+    { timeout: 120_000, maxWait: 15_000 }
+  );
+
+  revalidatePath("/settings/lookup-lists");
+  return result;
 }

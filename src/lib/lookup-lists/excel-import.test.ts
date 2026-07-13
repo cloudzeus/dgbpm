@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import ExcelJS from "exceljs";
-import { parseLookupItemsFromWorkbook, validateLookupHierarchy } from "./excel-import";
+import { parseLookupItemsFromWorkbook, parseLookupSheet, validateLookupHierarchy } from "./excel-import";
 
 async function makeBuffer(
   rows: string[][],
@@ -52,6 +52,34 @@ describe("parseLookupItemsFromWorkbook", () => {
     const buf = await makeBuffer([["ATH", "Αθήνα"]]);
     const items = await parseLookupItemsFromWorkbook(buf);
     expect(items).toEqual([{ value: "ATH", label: "Αθήνα", order: 0, parentValue: null }]);
+  });
+});
+
+describe("parseLookupSheet", () => {
+  it("parses with explicit column mapping in any column order", async () => {
+    const buf = await makeBuffer(
+      [["Αθήνα", "ΑΤΤΙΚΗ", "ATH"], ["", "", ""]],
+      ["Όνομα", "Γονέας", "Κωδικός"]
+    );
+    const rows = await parseLookupSheet(Buffer.from(buf), "Sheet1", {
+      value: "Κωδικός",
+      label: "Όνομα",
+      parent: "Γονέας",
+    });
+    expect(rows).toEqual([{ value: "ATH", label: "Αθήνα", parent: "ΑΤΤΙΚΗ" }]);
+  });
+
+  it("label falls back to value when label maps to the same column or is omitted", async () => {
+    const buf = await makeBuffer([["SOLO"]], ["Τιμή"]);
+    const rows = await parseLookupSheet(Buffer.from(buf), "Sheet1", { value: "Τιμή", label: "Τιμή" });
+    expect(rows).toEqual([{ value: "SOLO", label: "SOLO", parent: null }]);
+  });
+
+  it("throws Greek error for missing mapped column", async () => {
+    const buf = await makeBuffer([["A"]], ["Τιμή"]);
+    await expect(
+      parseLookupSheet(Buffer.from(buf), "Sheet1", { value: "Λάθος" })
+    ).rejects.toThrow(/Λάθος/);
   });
 });
 
